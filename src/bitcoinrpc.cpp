@@ -307,7 +307,7 @@ static const CRPCCommand vRPCCommands[] =
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
 	{"jl777json",				&jl777json,	     	     false,	 false},  //bitcoindark: jl777json rpc
-	{ "jl777",            &jl777_JSON,            false,  false },
+	{ "jl777",            &jl777,            false,  false },
 	};
 
 CRPCTable::CRPCTable()
@@ -1240,10 +1240,11 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
 	if (strMethod == "jl777json"     && n > 0) ConvertTo<Array>(params[0]);
 	if (strMethod == "jl777json"     && n > 1) ConvertTo<Array>(params[1]);
 
+    if (strMethod == "jl777"              && n > 1) ConvertTo<std::string>(params[0]);
     if (strMethod == "jl777"              && n > 2) ConvertTo<int64_t>(params[1]);
     if (strMethod == "jl777"              && n > 3) ConvertTo<int64_t>(params[2]);
     if (strMethod == "jl777"              && n > 4) ConvertTo<int64_t>(params[3]);
-
+    if (strMethod == "jl777"              && n > 5) ConvertTo<int64_t>(params[4]);
 
 
     return params;
