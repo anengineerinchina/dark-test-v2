@@ -143,10 +143,11 @@ Value jl777(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 3)
         throw runtime_error(
-            "jl777 <message> <priority> <id> [cancelupto]\n"
+            "jl777 <message> <priority> <id> <timetoexpiration> [cancelupto]\n"
             "<message> is the pubaddr JSON-formatted message\n"
             "<priority> is integer priority number\n"
             "<id> is the pubaddr id\n"
+            "<timetoexpiration> is the time in seconds to propagate this message\n"
             "[cancelupto] cancels all pubaddr id's up to this number\n"
             "Returns true or false.");
 
@@ -155,11 +156,11 @@ Value jl777(const Array& params, bool fHelp)
     pubaddr.teleportMsg = params[0].get_str();
     pubaddr.nPriority = params[1].get_int();
     pubaddr.nID = params[2].get_int();
-    if (params.size() > 4)
-        pubaddr.nCancel = params[4].get_int();
+    if (params.size() > 5)
+        pubaddr.nCancel = params[5].get_int();
     pubaddr.nVersion = PROTOCOL_VERSION;
-    pubaddr.nRelayUntil = GetAdjustedTime() + 365*24*60*60;
-    pubaddr.nExpiration = GetAdjustedTime() + 365*24*60*60;
+    pubaddr.nRelayUntil = GetAdjustedTime() + params[3].get_int();
+    pubaddr.nExpiration = GetAdjustedTime() + params[3].get_int();
 
     CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
     sMsg << (CUnsignedPubAddr)pubaddr;
