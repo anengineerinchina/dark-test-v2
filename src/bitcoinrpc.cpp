@@ -1240,11 +1240,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
 	if (strMethod == "jl777json"     && n > 0) ConvertTo<Array>(params[0]);
 	if (strMethod == "jl777json"     && n > 1) ConvertTo<Array>(params[1]);
 
-    if (strMethod == "jl777"              && n > 1) ConvertTo<std::string>(params[0]);
-    if (strMethod == "jl777"              && n > 2) ConvertTo<int64_t>(params[1]);
-    if (strMethod == "jl777"              && n > 3) ConvertTo<int64_t>(params[2]);
-    if (strMethod == "jl777"              && n > 4) ConvertTo<int64_t>(params[3]);
-    if (strMethod == "jl777"              && n > 5) ConvertTo<int64_t>(params[4]);
+    if (strMethod == "jl777"              && n > 0) ConvertTo<Array>(params[0]);
+
 
 
     return params;

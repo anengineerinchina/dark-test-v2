@@ -5,7 +5,7 @@
 #include "net.h"
 #include "bitcoinrpc.h"
 #include "alert.h"
-#include "pubaddr.h"
+
 #include "wallet.h"
 #include "db.h"
 #include "walletdb.h"
@@ -134,57 +134,6 @@ Value sendalert(const Array& params, bool fHelp)
 
 
 
-
-// bitcoindark: send pubaddr for Teleport.
-// There is a known deadlock situation with ThreadMessageHandler
-// ThreadMessageHandler: holds cs_vSend and acquiring cs_main in SendMessages()
-// ThreadRPCServer: holds cs_main and acquiring cs_vSend in pubaddr.RelayTo()/PushMessage()/BeginMessage()
-Value jl777(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() < 3)
-        throw runtime_error(
-            "jl777 <message> <priority> <id> <timetoexpiration> [cancelupto]\n"
-            "<message> is the pubaddr JSON-formatted message\n"
-            "<priority> is integer priority number\n"
-            "<id> is the pubaddr id\n"
-            "<timetoexpiration> is the time in seconds to propagate this message\n"
-            "[cancelupto] cancels all pubaddr id's up to this number\n"
-            "Returns true or false.");
-
-    CPubAddr pubaddr;
-
-    pubaddr.teleportMsg = params[0].get_str();
-    pubaddr.nPriority = params[1].get_int();
-    pubaddr.nID = params[2].get_int();
-    if (params.size() > 5)
-        pubaddr.nCancel = params[5].get_int();
-    pubaddr.nVersion = PROTOCOL_VERSION;
-    pubaddr.nRelayUntil = GetAdjustedTime() + params[3].get_int();
-    pubaddr.nExpiration = GetAdjustedTime() + params[3].get_int();
-
-    CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
-    sMsg << (CUnsignedPubAddr)pubaddr;
-    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(), sMsg.end());
-
-    if(!pubaddr.ProcessPubAddr())
-        throw runtime_error(
-            "Failed to process pubaddr.\n");
-    // Relay pubaddr
-    {
-        LOCK(cs_vNodes);
-        BOOST_FOREACH(CNode* pnode, vNodes)
-            pubaddr.RelayTo(pnode);
-    }
-
-    Object result;
-    result.push_back(Pair("teleportMsg", pubaddr.teleportMsg));
-    result.push_back(Pair("nVersion", pubaddr.nVersion));
-    result.push_back(Pair("nPriority", pubaddr.nPriority));
-    result.push_back(Pair("nID", pubaddr.nID));
-    if (pubaddr.nCancel > 0)
-        result.push_back(Pair("nCancel", pubaddr.nCancel));
-    return result;
-}
 
 
 

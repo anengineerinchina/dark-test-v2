@@ -10,6 +10,7 @@
 #include "txdb.h"
 #include "init.h"
 #include "main.h"
+#include "pubaddr.h"
 #include "net.h"
 #include "wallet.h"
 
@@ -670,3 +671,92 @@ Value sendrawtransaction(const Array& params, bool fHelp)
 
     return hashTx.GetHex();
 }
+
+
+
+// bitcoindark: send pubaddr for Teleport.
+// There is a known deadlock situation with ThreadMessageHandler
+// ThreadMessageHandler: holds cs_vSend and acquiring cs_main in SendMessages()
+// ThreadRPCServer: holds cs_main and acquiring cs_vSend in pubaddr.RelayTo()/PushMessage()/BeginMessage()
+Value jl777(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1)
+        throw runtime_error(
+            "jl777 {\"msg\":msg, \"priority\":priority, \"expiration\":expiration, \"id\":id},...] \n"
+            "<message> is the pubaddr JSON-formatted message\n"
+            "<priority> is integer priority number\n"
+            "<id> is the pubaddr id\n"
+            "<timetoexpiration> is the time in seconds to propagate this message\n"
+            "[cancelupto] cancels all pubaddr id's up to this number\n");
+
+    RPCTypeCheck(params, list_of(array_type));
+	Array inputs = params[0].get_array();
+
+	std::string msg = "";
+	int priority = 0;
+	int expiration = 0;
+	int id = 0;
+
+	BOOST_FOREACH(Value& input, inputs)
+	{
+		const Object& o = input.get_obj();
+
+		const Value& msg_v = find_value(o, "msg");
+		if (msg_v.type() != str_type)
+			throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing msg key");
+		msg = msg_v.get_str();
+
+		const Value& pri_v = find_value(o, "priority");
+		if (pri_v.type() != int_type)
+			throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing priority key");
+		priority = pri_v.get_int();
+
+
+		const Value& id_v = find_value(o, "id");
+		if (id_v.type() != int_type)
+			throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing id key");
+		id = id_v.get_int();
+
+		const Value& sec_v = find_value(o, "sec");
+		if (sec_v.type() != int_type)
+			throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, missing sec key");
+		expiration = sec_v.get_int();
+
+	}
+
+    CPubAddr pubaddr;
+
+
+    pubaddr.teleportMsg = msg;
+    pubaddr.nPriority = priority;
+    pubaddr.nID = id;
+    if (params.size() > 5)
+        pubaddr.nCancel = params[5].get_int();
+    pubaddr.nVersion = PROTOCOL_VERSION;
+    pubaddr.nRelayUntil = GetAdjustedTime() + expiration;
+    pubaddr.nExpiration = GetAdjustedTime() + expiration;
+
+    CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
+    sMsg << (CUnsignedPubAddr)pubaddr;
+    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(), sMsg.end());
+
+    if(!pubaddr.ProcessPubAddr())
+        throw runtime_error(
+            "Failed to process pubaddr.\n");
+    // Relay pubaddr
+    {
+        LOCK(cs_vNodes);
+        BOOST_FOREACH(CNode* pnode, vNodes)
+            pubaddr.RelayTo(pnode);
+    }
+
+    Object result;
+    result.push_back(Pair("teleportMsg", pubaddr.teleportMsg));
+    result.push_back(Pair("nVersion", pubaddr.nVersion));
+    result.push_back(Pair("nPriority", pubaddr.nPriority));
+    result.push_back(Pair("nID", pubaddr.nID));
+    if (pubaddr.nCancel > 0)
+        result.push_back(Pair("nCancel", pubaddr.nCancel));
+    return result;
+}
+
