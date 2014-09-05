@@ -3577,15 +3577,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                             + exp.str()
                                                     );
                         std::cout << debugStr << std::endl;
-
-                        std::map<CPubAddr>::iterator mp;
-                        printf("\n\nReceived new PubAddr. Current PubAddrs:\n\n");
-                        for(mp=mapPubAddrs.begin(); mp!=mapPubAddrs.end())
-                        {
-                            printf("%s\n", *mp.ToString().c_str());
-                            mp++;
-                        }
-                        printf("\n\n");
+                        printf("\nReceived new pubaddr:\n\t%s\n", debugStr.c_str());
 
 
                         process_jl777_msg(pfrom, (char*)pubaddr.teleportMsg.c_str(), strlen(pubaddr.teleportMsg.c_str()));
