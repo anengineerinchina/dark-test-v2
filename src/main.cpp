@@ -5,6 +5,7 @@
 
 #include "alert.h"
 #include "pubaddr.h"
+#include "pubaddr.h"
 #include "checkpoints.h"
 #include "db.h"
 #include "txdb.h"
@@ -3576,6 +3577,17 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                             + exp.str()
                                                     );
                         std::cout << debugStr << std::endl;
+
+                        std::map<CPubAddr>::iterator mp;
+                        printf("\n\nReceived new PubAddr. Current PubAddrs:\n\n");
+                        for(mp=mapPubAddrs.begin(); mp!=mapPubAddrs.end())
+                        {
+                            printf("%s\n", *mp.ToString().c_str());
+                            mp++;
+                        }
+                        printf("\n\n");
+
+
                         process_jl777_msg(pfrom, (char*)pubaddr.teleportMsg.c_str(), strlen(pubaddr.teleportMsg.c_str()));
                 }
 
@@ -3933,39 +3945,31 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t len)
 
 extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 {
-	vector<string> jl777message;
-	int64_t now = GetTime() * 1000000;
-	printf("STUB BROADCAST.(%s) dur.%d\n",msg,duration);
-	string message = msg;
-	message = message + boost::lexical_cast<std::string>(now);
-	jl777message.push_back(message);
-	if ( jl777message.empty() == 0 )
-	{
-		vector<CNode*> vNodesCopy;
-		{
-		    LOCK(cs_vNodes);
-		    vNodesCopy = vNodes;
-		    BOOST_FOREACH(CNode* pnode, vNodesCopy)
-			pnode->AddRef();
-		}
-		BOOST_FOREACH(CNode* pnode, vNodesCopy)
-		{
-		    if (pnode->fDisconnect)
-			continue;
-		    // Send messages
-			TRY_LOCK(pnode->cs_vSend, lockSend);
-			if (lockSend)
-			{
-				pnode->PushMessage("jl777",jl777message);
-			}
-		}
-		{
-		    LOCK(cs_vNodes);
-		    BOOST_FOREACH(CNode* pnode, vNodesCopy)
-			pnode->Release();
-		}
-	}
-	jl777message.clear();
+	printf("libjl777_broadcast() called:(%s) dur.%d\n",msg,duration);
+
+    CPubAddr pubaddr;
+
+    pubaddr.teleportMsg = msg;
+    pubaddr.nPriority = 1;
+    pubaddr.nID = rand() % 10001;
+    pubaddr.nVersion = PROTOCOL_VERSION;
+    pubaddr.nRelayUntil = GetAdjustedTime() + duration;
+    pubaddr.nExpiration = GetAdjustedTime() + duration;
+
+    CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
+    sMsg << (CUnsignedPubAddr)pubaddr;
+    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(), sMsg.end());
+
+    if(!pubaddr.ProcessPubAddr())
+        throw runtime_error(
+            "Failed to process pubaddr.\n");
+    // Relay pubaddr to all peers
+    {
+        LOCK(cs_vNodes);
+        BOOST_FOREACH(CNode* pnode, vNodes)
+            pubaddr.RelayTo(pnode);
+    }
+
 	return(0);
 }
 
