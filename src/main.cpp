@@ -3940,10 +3940,8 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t len)
 	return(retbuf);
 }
 
-extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
+void broadcastPubAddr(char *msg, int32_t duration)
 {
-	printf("libjl777_broadcast() called:(%s) dur.%d\n",msg,duration);
-
     CPubAddr pubaddr;
 
     pubaddr.teleportMsg = msg;
@@ -3953,7 +3951,7 @@ extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
     pubaddr.nRelayUntil = GetAdjustedTime() + duration;
     pubaddr.nExpiration = GetAdjustedTime() + duration;
 
-    CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
+	CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
     sMsg << (CUnsignedPubAddr)pubaddr;
     pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(), sMsg.end());
 
@@ -3966,6 +3964,16 @@ extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
         BOOST_FOREACH(CNode* pnode, vNodes)
             pubaddr.RelayTo(pnode);
     }
+
+}
+
+extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
+{
+	printf("libjl777_broadcast() called:(%s) dur.%d\n",msg,duration);
+
+	broadcastPubAddr(msg, duration);
+
+
 
 	return(0);
 }
