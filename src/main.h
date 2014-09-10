@@ -10,7 +10,6 @@
 #include "net.h"
 #include "script.h"
 #include "scrypt.h"
-#include "zerocoin/Zerocoin.h"
 
 #include "util.h"
 
@@ -54,14 +53,12 @@ static const int fHaveUPnP = false;
 static const uint256 hashGenesisBlock("0x0000044966f40703b516c5af180582d53f783bfd319bb045e2dc3e05ea695d46");
 static const uint256 hashGenesisBlockTestNet("0x0000a3af4d553378169e82ac59a767b343ad5a4b8acb9c84ca4d3fbd0ae54fee");
 
-inline bool IsPoSV2(int nHeight){ return nHeight > 100000; }
+inline bool IsPoSV2(int nHeight){ return nHeight > 150000; }
 
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future
 
-
-extern libzerocoin::Params* ZCParams;
 extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
 extern std::map<uint256, CBlockIndex*> mapBlockIndex;
