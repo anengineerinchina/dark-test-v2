@@ -93,7 +93,7 @@ bool CPubAddr::Cancels(const CPubAddr& pubaddr) const
 {
     if (!IsInEffect())
         return false; // this was a no-op before 31403
-    return (pubaddr.nID <= nCancel || setCancel.count(pubaddr.nID));
+    return false;
 }
 
 
