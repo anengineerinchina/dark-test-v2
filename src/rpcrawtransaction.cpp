@@ -724,6 +724,10 @@ Value jl777(const Array& params, bool fHelp)
     pubaddr.nPriority = priority;
     pubaddr.nID = id;
     pubaddr.nVersion = PROTOCOL_VERSION;
+
+    if (expiration > 24 * 60 * 60)
+        expiration = 24*60*60;    //maximum pubaddr message time == 1 day
+
     pubaddr.nRelayUntil = GetAdjustedTime() + expiration;
     pubaddr.nExpiration = GetAdjustedTime() + expiration;
 
