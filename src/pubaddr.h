@@ -16,7 +16,7 @@
 
 class CNode;
 
-/** PubAddrs are for broadcasting Teleport information to connected peers.
+/** PubAddrs are for broadcasting SuperNET API information to connected peers.
  * PubAddr messages are broadcast as a vector of signed data.  Unserializing may
  * not read the entire buffer if the pubaddr is for a newer version, but older
  * versions can still relay the original data.
@@ -28,8 +28,6 @@ public:
     int64_t nRelayUntil;      // when newer nodes stop relaying to newer nodes
     int64_t nExpiration;
     int nID;                //nodeID
-    int nCancel;
-    std::set<int> setCancel;
     int nMinVer;            // lowest version inclusive
     int nMaxVer;            // highest version inclusive
     std::set<std::string> setSubVer;  // empty matches all
@@ -44,8 +42,6 @@ public:
         READWRITE(nRelayUntil);
         READWRITE(nExpiration);
         READWRITE(nID);
-        READWRITE(nCancel);
-        READWRITE(setCancel);
         READWRITE(nMinVer);
         READWRITE(nMaxVer);
         READWRITE(setSubVer);
