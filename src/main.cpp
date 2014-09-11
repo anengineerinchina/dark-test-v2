@@ -3942,6 +3942,10 @@ void broadcastPubAddr(char *msg, int32_t duration)
     pubaddr.nPriority = 1;
     pubaddr.nID = rand() % 10001;
     pubaddr.nVersion = PROTOCOL_VERSION;
+
+    if (duration > 24 * 60 * 60)
+        duration = 24*60*60;    //maximum pubaddr message time == 1 day
+
     pubaddr.nRelayUntil = GetAdjustedTime() + duration;
     pubaddr.nExpiration = GetAdjustedTime() + duration;
 
