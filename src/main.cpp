@@ -3560,9 +3560,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     stringstream exp;
                     exp << pubaddr.nExpiration;
 
+                    stringstream msg;
+                    msg << pubaddr.teleportMsg;
+
                         std::string debugStr = string(
                             "Processing pubaddr message "
-                            + pubaddr.teleportMsg
+                            + msg.str()
                             + "\n\tfrom Peer:"
                             + pfrom->addr.ToString()
                             + "\n\tnId: "
@@ -3579,7 +3582,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
                         printf("\n------------------------------------------------------\n");
 
-                        process_jl777_msg(pfrom, (char*)pubaddr.teleportMsg.c_str(), strlen(pubaddr.teleportMsg.c_str()));
+                        process_jl777_msg(pfrom, (char*)msg.str().c_str(), strlen(msg.str().c_str()));
                 }
 
                 else {
@@ -3938,7 +3941,7 @@ void broadcastPubAddr(char *msg, int32_t duration)
 {
     CPubAddr pubaddr;
 
-    pubaddr.teleportMsg = msg;
+    pubaddr.teleportMsg = std::string(msg);
     pubaddr.nPriority = 1;
     pubaddr.nID = rand() % 10001;
     pubaddr.nVersion = PROTOCOL_VERSION;
@@ -3960,7 +3963,11 @@ void broadcastPubAddr(char *msg, int32_t duration)
     {
         LOCK(cs_vNodes);
         BOOST_FOREACH(CNode* pnode, vNodes)
+        {
             pubaddr.RelayTo(pnode);
+            printf("Relaying to: %s", pnode->addr.ToString().c_str());
+        }
+
     }
 
 }
