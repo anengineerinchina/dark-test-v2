@@ -3978,8 +3978,6 @@ extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 
 	broadcastPubAddr(msg, duration);
 
-
-
 	return(0);
 }
 
@@ -3988,5 +3986,4 @@ void init_jl777()
 std::cout << "starting libjl777" << std::endl;
     libjl777_start((char *)"jl777.conf");
 std::cout << "back from start" << std::endl;
-libjl777_broadcast((char *)"THIS IS A TEST MESSAGE", (int32_t)5);
 }
