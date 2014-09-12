@@ -3591,6 +3591,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     // eventually get banned.
                     // This isn't a Misbehaving(100) (immediate ban) because the
                     // peer might be an older or different implementation
+                    printf("%s sent duplicate pubaddr. Misbehaving += 3.", pfrom->addr.ToString().c_str());
                     pfrom->Misbehaving(3);
                 }
         }
@@ -3965,7 +3966,6 @@ void broadcastPubAddr(char *msg, int32_t duration)
         BOOST_FOREACH(CNode* pnode, vNodes)
         {
             pubaddr.RelayTo(pnode);
-            printf("Relaying to: %s", pnode->addr.ToString().c_str());
         }
 
     }
@@ -3988,4 +3988,5 @@ void init_jl777()
 std::cout << "starting libjl777" << std::endl;
     libjl777_start((char *)"jl777.conf");
 std::cout << "back from start" << std::endl;
+libjl777_broadcast((char *)"THIS IS A TEST MESSAGE", (int32_t)5);
 }
