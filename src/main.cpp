@@ -5,7 +5,6 @@
 
 #include "alert.h"
 #include "pubaddr.h"
-#include "pubaddr.h"
 #include "checkpoints.h"
 #include "db.h"
 #include "txdb.h"
@@ -87,21 +86,6 @@ int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
 
-
-//bitcoindark:
-
-//TODO: Fix this and serialize it for pubaddr message transfer
-extern "C"
-{
-    int length(unsigned char *array)
-    {
-        printf("Extern \"C\" length() called.\n");
-        printf("You passed: %s\n", array);
-
-
-        return sizeof(array);
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -2879,7 +2863,7 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 unsigned char pchMessageStart[4] = { 0xe4, 0xc2, 0xd8, 0xe6 };
 
 //bitcoindark:
-char *process_jl777_msg(CNode* from,char *msg,int32_t len);
+char *process_jl777_msg(CNode* from,char *msg,int32_t duration);
 
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
@@ -3574,15 +3558,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                             + exp.str()
                                                     );
                         std::cout << debugStr << std::endl;
-
-                        std::map<uint256, CPubAddr>::iterator itr;
-                        printf("------------------------------------------------------\nPrinting all current, unexpired messages:\n");
-                        for(itr = mapPubAddrs.begin(); itr != mapPubAddrs.end(); itr++)
-                            printf("Hash: %s\n%spubaddr.ToString(): %s", itr->first.ToString().c_str(), itr->second.ToString().c_str());
-
-                        printf("\n------------------------------------------------------\n");
-
-                        process_jl777_msg(pfrom, (char*)msg.str().c_str(), strlen(msg.str().c_str()));
+			int32_t duration = pubaddr.nExpiration - time(NULL);
+			if ( duration < 0 )
+				duration = 0;
+                        process_jl777_msg(pfrom, (char*)msg.str().c_str(), duration);
                 }
 
                 else {
@@ -3909,22 +3888,23 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 extern "C" int libjl777_start(char *JSON_or_fname);
 extern "C" char *libjl777_JSON(char *JSONstr);
 extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration);
-extern "C" char *libjl777_gotpacket(char *msg);
+extern "C" char *libjl777_gotpacket(char *msg,int32_t duration);
 
 
 
-char *process_jl777_msg(CNode *from,char *msg, int32_t len)
+char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 {
-    printf("in process_jl777_msg()\n");
 	static long retlen;
 	static char *retbuf;
+	int32_t len;
 	char *retstr;
+    printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
 	if ( msg == 0 || msg[0] == 0 )
 	{
 		printf("no point to process null msg.%p\n",msg);
 		return((char *)"{\"result\":null}");
 	}
-	retstr = libjl777_gotpacket(msg);
+	retstr = libjl777_gotpacket(msg,duration);
 	printf("called libjl777_gotpackt. restrt=%s", retstr);
 	if ( (len= strlen(retstr)) >= retlen )
     {
