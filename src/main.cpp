@@ -15,12 +15,14 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include<boost/lexical_cast.hpp>
+#include <boost/lexical_cast.hpp>
 
 
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include "libjl777.h"
+
 using namespace std;
 using namespace boost;
 
@@ -2863,7 +2865,6 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 unsigned char pchMessageStart[4] = { 0xe4, 0xc2, 0xd8, 0xe6 };
 
 //bitcoindark:
-char *process_jl777_msg(CNode* from,char *msg,int32_t duration);
 
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
@@ -3706,7 +3707,6 @@ bool ProcessMessages(CNode* pfrom)
 
 bool SendMessages(CNode* pto, bool fSendTrickle)
 {
-	void init_jl777();
     static int didinit;
 	if ( didinit == 0 )
 	{
@@ -3885,12 +3885,6 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 }
 
 //bitcoindark:
-extern "C" int libjl777_start(char *JSON_or_fname);
-extern "C" char *libjl777_JSON(char *JSONstr);
-extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration);
-extern "C" char *libjl777_gotpacket(char *msg,int32_t duration);
-
-
 
 char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 {
@@ -3904,17 +3898,20 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 		printf("no point to process null msg.%p\n",msg);
 		return((char *)"{\"result\":null}");
 	}
-	retstr = libjl777_gotpacket(msg,duration);
+	retstr = 0;//libjl777_gotpacket(msg,duration);
 	printf("called libjl777_gotpackt. restrt=%s", retstr);
-	if ( (len= strlen(retstr)) >= retlen )
-    {
-        printf("in if, retlen=%ld",retlen);
-		retlen = len + 1;
-		retbuf = (char *)realloc(retbuf,len+1);
+	if ( retstr != 0 )
+	{
+		if ( (len= strlen(retstr)) >= retlen )
+		{
+		printf("in if, retlen=%ld",retlen);
+			retlen = len + 1;
+			retbuf = (char *)realloc(retbuf,len+1);
+		}
+		strcpy(retbuf,retstr);
+		free(retstr);
+		printf("\n\treceived message. msg: %s from %s retstr.(%s)\n", msg, from->addr.ToString().c_str(),retstr);
 	}
-	strcpy(retbuf,retstr);
-	free(retstr);
-	printf("\n\treceived message. msg: %s from %s retstr.(%s)\n", msg, from->addr.ToString().c_str(),retstr);
 	return(retbuf);
 }
 
@@ -3964,6 +3961,6 @@ extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 void init_jl777()
 {
 std::cout << "starting libjl777" << std::endl;
-    libjl777_start((char *)"jl777.conf");
+//    libjl777_start((char *)"jl777.conf");
 std::cout << "back from start" << std::endl;
 }
