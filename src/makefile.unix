@@ -136,7 +136,6 @@ OBJS= \
     obj/scrypt-x86_64.o
 
 all: BitcoinDarkd
-    cd ../libjl777; ./m; cd ../src
 
 LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a ../libjl777/libjl777.so libuv.a -lnacl randombytes.o -lcurl -lz -ldl -lm
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
