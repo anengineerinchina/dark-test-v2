@@ -136,8 +136,9 @@ OBJS= \
     obj/scrypt-x86_64.o
 
 all: BitcoinDarkd
+    cd ../libjl777; ./m; cd ../src
 
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a -ljl777 libuv.a -lnacl randombytes.o -lcurl -lz -ldl -lm
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a ../libjl777/libjl777.so libuv.a -lnacl randombytes.o -lcurl -lz -ldl -lm
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 OBJS += obj/txdb-leveldb.o
@@ -177,5 +178,6 @@ clean:
 	-rm -f obj/*.o
 	-rm -f obj/*.P
 	-rm -f obj/build.h
+    cd ../libjl777; ./clean; cd ../src
 
 FORCE:
