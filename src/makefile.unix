@@ -137,7 +137,7 @@ OBJS= \
 
 all: BitcoinDarkd
 
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a libjl777.a libothers.a libwebsockets.a libuv.a libnacl.a randombytes.o -lcurl -lz -ldl -lm
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a -ljl777 libuv.a -lnacl randombytes.o -lcurl -lz -ldl -lm
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 OBJS += obj/txdb-leveldb.o
