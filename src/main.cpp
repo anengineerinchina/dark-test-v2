@@ -2954,7 +2954,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (pfrom->fOneShot || pfrom->nVersion >= CADDR_TIME_VERSION || addrman.size() < 1000)
             {
                 //bitcoindark:
-                pfrom->PushMessage("getpubaddr");
+               // pfrom->PushMessage("getpubaddr");
                 pfrom->PushMessage("getaddr");
                 pfrom->fGetAddr = true;
             }
@@ -2987,11 +2987,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         }
 
         //bitcoindark: Relay pubaddrs
-        {
-            LOCK(cs_mapPubAddrs);
-            BOOST_FOREACH(PAIRTYPE(const uint256, CPubAddr)& item, mapPubAddrs)
-                item.second.RelayTo(pfrom);
-        }
+       // {
+          //  LOCK(cs_mapPubAddrs);
+         //   BOOST_FOREACH(PAIRTYPE(const uint256, CPubAddr)& item, mapPubAddrs)
+           //     item.second.RelayTo(pfrom);
+       // }
         // Relay sync-checkpoint
         {
             LOCK(Checkpoints::cs_hashSyncCheckpoint);
@@ -3706,13 +3706,13 @@ bool ProcessMessages(CNode* pfrom)
 
 bool SendMessages(CNode* pto, bool fSendTrickle)
 {
-	void init_jl777();
-    static int didinit;
-	if ( didinit == 0 )
-	{
-		init_jl777();
-		didinit = 1;
-	}
+	//void init_jl777();
+    //static int didinit;
+	//if ( didinit == 0 )
+	//{
+	//	init_jl777();
+	//	didinit = 1;
+	//}
     TRY_LOCK(cs_main, lockMain);
     if (lockMain) {
         // Don't send anything until we get their version message
