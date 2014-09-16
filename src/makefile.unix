@@ -177,6 +177,5 @@ clean:
 	-rm -f obj/*.o
 	-rm -f obj/*.P
 	-rm -f obj/build.h
-    cd ../libjl777; ./clean; cd ../src
 
 FORCE:
