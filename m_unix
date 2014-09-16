@@ -2,5 +2,6 @@ git pull
 cd libjl777
 ./m
 cd ../src
+./BitcoinDarkd stop
 make -f makefile.unix
-
+./BitcoinDarkd 
