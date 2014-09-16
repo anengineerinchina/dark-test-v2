@@ -3898,7 +3898,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 		printf("no point to process null msg.%p\n",msg);
 		return((char *)"{\"result\":null}");
 	}
-	retstr = 0;//libjl777_gotpacket(msg,duration);
+	retstr = libjl777_gotpacket(msg,duration);
 	printf("called libjl777_gotpackt. restrt=%s", retstr);
 	if ( retstr != 0 )
 	{
@@ -3961,6 +3961,6 @@ extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 void init_jl777()
 {
 std::cout << "starting libjl777" << std::endl;
-//    libjl777_start((char *)"jl777.conf");
+    libjl777_start((char *)"jl777.conf");
 std::cout << "back from start" << std::endl;
 }
