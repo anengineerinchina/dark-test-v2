@@ -1,4 +1,0 @@
-up7 "*.c *.h *.cpp"
-cd libtom
-#scp * admin1@209.126.70.170:libjl777/libtom
-cd ..
