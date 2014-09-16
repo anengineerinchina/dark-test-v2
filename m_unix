@@ -1,5 +1,6 @@
 git pull
 cd libjl777
+./clean
 ./m
 cp libjl777.a ../src
 cd libuv
