@@ -1,6 +1,7 @@
 git pull
 cd libjl777
 ./m
+cp libjl777.a ../src
 cd ../src
 ./BitcoinDarkd stop
 rm BitcoinDarkd

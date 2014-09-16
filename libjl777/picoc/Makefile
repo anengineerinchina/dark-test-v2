@@ -1,6 +1,6 @@
 CC=clang
-CFLAGS=-Wall -pedantic -g -fPIC -fms-extensions -mcmodel=large
-LIBS=-lm -lreadline -mcmodel=large
+CFLAGS=-Wall -pedantic -g -fPIC
+LIBS=-lm -lreadline 
 
 TARGET	= picoc
 SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
@@ -15,8 +15,8 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	#ar rcu  ../libjl777.a  $(OBJS) ../gzip/*.o ../libtom/*.o ../libs/randombytes.o
-	g++ -shared -o ../libjl777.so $(OBJS) ../gzip/*.o ../libtom/*.o -lcurl -lm
+	ar rcu  ../libjl777.a  $(OBJS) ../gzip/*.o ../libtom/*.o ../libs/randombytes.o
+	#g++ -shared -o ../libjl777.so $(OBJS) ../gzip/*.o ../libtom/*.o -lcurl -lm
 
 test:	all
 	(cd tests; make test)
