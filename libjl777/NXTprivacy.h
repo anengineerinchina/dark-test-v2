@@ -867,8 +867,8 @@ void NXTprivacy_idler(uv_idle_t *handle)
 //#ifndef __linux__
     if ( millis > (lastattempt + 500) )
     {
-        printf("teleport_idler disabled. Servers_started.%d\n",Servers_started);
-        //teleport_idler();
+        printf("Servers_started.%d\n",Servers_started);
+        teleport_idler();
         if ( privacyServer == 0 )
             privacyServer = pNXT_privacyServer;// != 0) ? pNXT_privacyServer:get_random_privacyServer(whitelist,blacklist);
         if ( privacyServer != 0 && NXTACCTSECRET[0] != 0 )
