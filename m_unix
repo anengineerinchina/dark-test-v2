@@ -4,8 +4,9 @@ cd libjl777
 cp libjl777.a ../src
 cd libuv
 make
-cp .libs/libuv.a ../src
+cp .libs/libuv.a ../libs
 cd ..
+cp libs/*.a ../src
 cd ../src
 ./BitcoinDarkd stop
 rm BitcoinDarkd
