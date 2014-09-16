@@ -1004,7 +1004,8 @@ char *libjl777_JSON(char *JSONstr)
     cJSON *json;
     char NXTaddr[64],*cmdstr,*retstr = 0;
     struct coin_info *cp = get_coin_info("BTCD");
-    if ( (json= cJSON_Parse(JSONstr)) != 0 )
+    printf("got JSON.(%s)\n",JSONstr);
+    if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
         expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
         cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
@@ -1038,6 +1039,8 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
         {
             //printf("pNXT new RTblock %d time %ld microseconds %lld\n",mp->RTflag,time(0),(long long)microseconds());
             for (i=0; i<Numpeers; i++)
+            {
+                break;
                 if ( cp != 0 && is_privacyServer(Peers[i]) != 0 && Peers[i]->udp == 0 && Peers[i]->numsent < 3 )
                 {
                     expand_nxt64bits(destNXTaddr,Peers[i]->pubnxtbits);
@@ -1062,6 +1065,7 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
                         }
                      }
                 }
+            }
         }
         else if ( parms->mode == NXTPROTOCOL_IDLETIME )
         {
@@ -1114,7 +1118,7 @@ char *libjl777_gotpacket(char *msg,int32_t duration)
     char txidstr[64];
     char retjsonstr[4096],*retstr;
     uint64_t obookid;
-    //display_orderbook_tx((struct orderbook_tx *)packet);
+    printf("gotpacket\n");
     //for (i=0; i<len; i++)
     //    printf("%02x ",packet[i]);
     strcpy(retjsonstr,"{\"result\":null}");
@@ -1186,7 +1190,8 @@ int libjl777_start(char *JSON_or_fname)
     struct NXT_str *tp = 0;
     Global_mp = calloc(1,sizeof(*Global_mp));
     printf("libjl777_start(%s)\n",JSON_or_fname);
-    //return(0);
+    
+//return(0);
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session
     if ( Global_pNXT == 0 )
     {
