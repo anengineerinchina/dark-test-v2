@@ -1,0 +1,5 @@
+cd libjl777
+./m
+cd ../src
+make -f makefile.unix
+
