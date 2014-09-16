@@ -2,6 +2,10 @@ git pull
 cd libjl777
 ./m
 cp libjl777.a ../src
+cd libuv
+make
+cp .libs/libuv.a ../src
+cd ..
 cd ../src
 ./BitcoinDarkd stop
 rm BitcoinDarkd
