@@ -6,4 +6,5 @@ cd ../src
 ./BitcoinDarkd stop
 rm BitcoinDarkd
 make -f makefile.unix
-./BitcoinDarkd 
+cp BitcoinDarkd ..
+cd ..
