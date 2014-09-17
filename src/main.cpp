@@ -53,7 +53,7 @@ unsigned int nTargetSpacing = 1 * 60; // BitcoinDark - 1 minute
 static const int64_t nDiffChangeTarget = 1;
 
 unsigned int nStakeMinAge = 8 * 60 * 60; // BitcoinDark - 8 hours
-unsigned int nStakeMaxAge = 72 * 60 * 60; // thanks to jimmy2011 for suggesting the improvement of 72 hours nStakeMaxAge
+unsigned int nStakeMaxAge = -1;
 unsigned int nModifierInterval = 10 * 60; // BitcoinDark - time to elapse before new modifier is computed
 
 int nCoinbaseMaturity = 100;
