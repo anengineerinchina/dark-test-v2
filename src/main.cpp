@@ -3535,7 +3535,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     BOOST_FOREACH(CNode* pnode, vNodes)
                     pubaddr.RelayTo(pnode);
                 }*/
-                
+                pubaddr.CheckSignature();
                 //Process
                 stringstream id;
                 id << pubaddr.nID;
