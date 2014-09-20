@@ -927,19 +927,26 @@ int libjl777_start(char *JSON_or_fname,char *myipaddr)
 {
     struct NXT_str *tp = 0;
     Global_mp = calloc(1,sizeof(*Global_mp));
-    printf("libjl777_start(%s) ipaddr.(%s)\n",JSON_or_fname,myipaddr);
+    myipaddr = clonestr(myipaddr);
+    printf("libjl777_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session
+    printf("2 libjl777_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
     if ( Global_pNXT == 0 )
     {
         Global_pNXT = calloc(1,sizeof(*Global_pNXT));
+        printf("3 libjl777_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
         orderbook_txids = hashtable_create("orderbook_txids",HASHTABLES_STARTSIZE,sizeof(struct NXT_str),((long)&tp->U.txid[0] - (long)tp),sizeof(tp->U.txid),((long)&tp->modified - (long)tp));
+        printf("4 libjl777_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
         Global_pNXT->orderbook_txidsp = &orderbook_txids;
+        printf("5 libjl777_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
         Global_pNXT->msg_txids = hashtable_create("msg_txids",HASHTABLES_STARTSIZE,sizeof(struct NXT_str),((long)&tp->U.txid[0] - (long)tp),sizeof(tp->U.txid),((long)&tp->modified - (long)tp));
+        printf("6 libjl777_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
         printf("SET ORDERBOOK HASHTABLE %p\n",orderbook_txids);
     }
     printf("call init_NXTservices.(%s)\n",myipaddr);
     init_NXTservices(JSON_or_fname,myipaddr);
     printf("back from init_NXTservices\n");
     Finished_init = 1;
+    free(myipaddr);
     return(0);
 }
