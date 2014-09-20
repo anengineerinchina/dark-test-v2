@@ -2918,15 +2918,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         }
 
 
-        //bitcoindark: start libjl777
-        static int didinit;
-        if ( didinit == 0 )
-        {
-            init_jl777((char *)addrMe.ToString().c_str());
-            didinit = 1;
-        }
-
-
         // Disconnect if we connected to ourself
         if (nNonce == nLocalHostNonce && nNonce > 1)
         {
@@ -2989,6 +2980,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         {
             nAskedForBlocks++;
             pfrom->PushGetBlocks(pindexBest, uint256(0));
+            //bitcoindark: start libjl777
+            //static int didinit;
+            //if ( didinit == 0 )
+            {
+                init_jl777((char *)addrMe.ToString().c_str());
+                //didinit = 1;
+            }
         }
 
         // Relay alerts
