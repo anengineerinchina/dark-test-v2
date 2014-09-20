@@ -87,7 +87,6 @@ int64_t nReserveBalance = 0;
 int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
-CAddress addrMe;
 
 
 
@@ -2891,6 +2890,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         }
 
         int64_t nTime;
+        CAddress addrMe;
         CAddress addrFrom;
         uint64_t nNonce = 1;
         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
@@ -3701,8 +3701,11 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
     static int didinit;
     if ( didinit == 0 )
     {
-        init_jl777((char *)addrMe.ToString().c_str());
-        didinit = 1;
+        if ( strcmp("[::]:0",(char *)addrSeenByPeer.ToString().c_str()) != 0 )
+        {
+            init_jl777((char *)addrSeenByPeer.ToString().c_str());
+            didinit = 1;
+        }
     }
 
     TRY_LOCK(cs_main, lockMain);
