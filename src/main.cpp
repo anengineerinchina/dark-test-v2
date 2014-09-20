@@ -2757,8 +2757,8 @@ bool LoadExternalBlockFile(FILE* fileIn)
 //CPubAddr
 //
 
-extern map<uint256, CPubAddr> mapPubAddrs;
-extern CCriticalSection cs_mapPubAddrs;
+//extern map<uint256, CPubAddr> mapPubAddrs;
+//extern CCriticalSection cs_mapPubAddrs;
 
 
 
@@ -3523,18 +3523,19 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         std::cout << "pubaddr called by peer " << pfrom->addr.ToString() << std::endl;
         CPubAddr pubaddr;
         vRecv >> pubaddr;
-        uint256 pubaddrHash = pubaddr.GetHash();
-        if ( pfrom->setKnown.count(pubaddrHash) == 0 )
+        //uint256 pubaddrHash = pubaddr.GetHash();
+        //if ( pfrom->setKnown.count(pubaddrHash) == 0 )
         {
-            if ( pubaddr.ProcessPubAddr() != 0 )
+            //if ( pubaddr.ProcessPubAddr() != 0 )
             {
                 // Relay
-                pfrom->setPubAddrKnown.insert(pubaddrHash);
+                /*pfrom->setPubAddrKnown.insert(pubaddrHash);
                 {
                     LOCK(cs_vNodes);
                     BOOST_FOREACH(CNode* pnode, vNodes)
                     pubaddr.RelayTo(pnode);
-                }
+                }*/
+                
                 //Process
                 stringstream id;
                 id << pubaddr.nID;
@@ -3542,7 +3543,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 exp << pubaddr.nExpiration;
                 stringstream msg;
                 msg << pubaddr.teleportMsg;
-                std::string debugStr = string(
+                /*std::string debugStr = string(
                                               "Processing pubaddr message "
                                               + msg.str()
                                               + "\n\tfrom Peer:"
@@ -3552,13 +3553,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                                               + "\n\tExpiration Date: "
                                               + exp.str()
                                               );
-                std::cout << debugStr << std::endl;
+                std::cout << debugStr << std::endl;*/
                 int32_t duration = pubaddr.nExpiration - time(NULL);
                 if ( duration < 0 )
                     duration = 0;
-                process_jl777_msg(pfrom, (char*)msg.str().c_str(), duration);
+                process_jl777_msg(pfrom,(char*)msg.str().c_str(),duration);
             }
-            else
+            /*else
             {
                 // Small DoS penalty so peers that send us lots of
                 // duplicate/expired/invalid-signature/whatever pubaddrs
@@ -3567,7 +3568,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 // peer might be an older or different implementation
                 printf("%s sent duplicate pubaddr. Misbehaving += 3.", pfrom->addr.ToString().c_str());
                 pfrom->Misbehaving(3);
-            }
+            }*/
         }
     }
     else
