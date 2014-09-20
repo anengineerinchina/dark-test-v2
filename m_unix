@@ -14,3 +14,5 @@ rm BitcoinDarkd
 make -f makefile.unix
 cp BitcoinDarkd ..
 cd ..
+./b
+

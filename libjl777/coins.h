@@ -542,7 +542,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
     NXTACCTSECRET[0] = 0;
     NXTADDR[0] = 0;
     exchangeflag = 0;//!strcmp(NXTACCTSECRET,"exchanges");
-    printf("init_MGWconf exchangeflag.%d\n",exchangeflag);
+    printf("init_MGWconf exchangeflag.%d myip.(%s)\n",exchangeflag,myipaddr);
     //init_filtered_bufs(); crashed ubunty
     ensure_directory("backups");
     ensure_directory("backups/telepods");
@@ -563,11 +563,8 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
             init_jdatetime(NXT_GENESISTIME,timezone * 3600);
             languagesobj = cJSON_GetObjectItem(MGWconf,"tradebot_languages");
             MIN_NQTFEE = get_API_int(cJSON_GetObjectItem(MGWconf,"MIN_NQTFEE"),(int32_t)MIN_NQTFEE);
-            printf("minfee\n");
             MIN_NXTCONFIRMS = get_API_int(cJSON_GetObjectItem(MGWconf,"MIN_NXTCONFIRMS"),MIN_NXTCONFIRMS);
-            printf("MIN_NXTCONFIRMS\n");
             GATEWAY_SIG = get_API_int(cJSON_GetObjectItem(MGWconf,"GATEWAY_SIG"),0);
-            printf("before extract str\n");
             extract_cJSON_str(ORIGBLOCK,sizeof(ORIGBLOCK),MGWconf,"ORIGBLOCK");
             extract_cJSON_str(NXTAPIURL,sizeof(NXTAPIURL),MGWconf,"NXTAPIURL");
             extract_cJSON_str(NXTISSUERACCT,sizeof(NXTISSUERACCT),MGWconf,"NXTISSUERACCT");
@@ -615,7 +612,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                     copy_cJSON(coinstr,cJSON_GetObjectItem(item,"name"));
                     if ( coinstr[0] != 0 && (cp= init_coin_info(item,coinstr)) != 0 )
                     {
-                        printf("coinstr.(%s)\n",coinstr);
+                        printf("coinstr.(%s) myip.(%s)\n",coinstr,myipaddr);
                         if ( myipaddr != 0 && myipaddr[0] != 0 )
                         {
                             safecopy(cp->myipaddr,myipaddr,sizeof(cp->myipaddr));
