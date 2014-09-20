@@ -924,12 +924,11 @@ char *libjl777_gotpacket(char *msg,int32_t duration)
     return(clonestr(retjsonstr));
 }
 
-int libjl777_start(char *JSON_or_fname)
+int libjl777_start(char *JSON_or_fname,char *myipaddr)
 {
-    char *myipaddr = 0;
     struct NXT_str *tp = 0;
     Global_mp = calloc(1,sizeof(*Global_mp));
-    printf("libjl777_start(%s)\n",JSON_or_fname);
+    printf("libjl777_start(%s) ipaddr.(%s)\n",JSON_or_fname,myipaddr);
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session
     if ( Global_pNXT == 0 )
     {
