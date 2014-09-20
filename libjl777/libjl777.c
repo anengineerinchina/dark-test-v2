@@ -68,6 +68,7 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
 {
     void *Coinloop(void *arg);
     struct NXThandler_info *mp = Global_mp;    // seems safest place to have main data structure
+    printf("init_NXTservices.(%s)\n",myipaddr);
     UV_loop = uv_default_loop();
     portable_mutex_init(&mp->hash_mutex);
     portable_mutex_init(&mp->hashtable_queue[0].mutex);
@@ -936,7 +937,7 @@ int libjl777_start(char *JSON_or_fname,char *myipaddr)
         Global_pNXT->msg_txids = hashtable_create("msg_txids",HASHTABLES_STARTSIZE,sizeof(struct NXT_str),((long)&tp->U.txid[0] - (long)tp),sizeof(tp->U.txid),((long)&tp->modified - (long)tp));
         printf("SET ORDERBOOK HASHTABLE %p\n",orderbook_txids);
     }
-    printf("call init_NXTservices\n");
+    printf("call init_NXTservices.(%s)\n",myipaddr);
     init_NXTservices(JSON_or_fname,myipaddr);
     printf("back from init_NXTservices\n");
     Finished_init = 1;
