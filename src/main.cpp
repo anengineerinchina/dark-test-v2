@@ -89,6 +89,7 @@ int64_t nMinimumInputValue = 0;
 extern enum Checkpoints::CPMode CheckpointsMode;
 
 
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // dispatching functions
@@ -2916,6 +2917,16 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             SeenLocal(addrMe);
         }
 
+
+        //bitcoindark: start libjl777
+        static int didinit;
+        if ( didinit == 0 )
+        {
+            init_jl777((char *)addrMe.ToString().c_str());
+            didinit = 1;
+        }
+
+
         // Disconnect if we connected to ourself
         if (nNonce == nLocalHostNonce && nNonce > 1)
         {
@@ -2955,7 +2966,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (pfrom->fOneShot || pfrom->nVersion >= CADDR_TIME_VERSION || addrman.size() < 1000)
             {
                 //bitcoindark:
-                pfrom->PushMessage("getpubaddr");
+               // pfrom->PushMessage("getpubaddr");
                 pfrom->PushMessage("getaddr");
                 pfrom->fGetAddr = true;
             }
@@ -2988,11 +2999,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         }
 
         //bitcoindark: Relay pubaddrs
-        {
-            LOCK(cs_mapPubAddrs);
-            BOOST_FOREACH(PAIRTYPE(const uint256, CPubAddr)& item, mapPubAddrs)
-                item.second.RelayTo(pfrom);
-        }
+       // {
+       //     LOCK(cs_mapPubAddrs);
+       //     BOOST_FOREACH(PAIRTYPE(const uint256, CPubAddr)& item, mapPubAddrs)
+       //         item.second.RelayTo(pfrom);
+       // }
         // Relay sync-checkpoint
         {
             LOCK(Checkpoints::cs_hashSyncCheckpoint);
@@ -3518,76 +3529,64 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 	//BitcoinDark Custom Message Implementation
 	else if(strCommand == "pubaddr")
 	{
-            std::cout << "pubaddr called by peer " << pfrom->addr.ToString() << std::endl;
-
-            CPubAddr pubaddr;
-            vRecv >> pubaddr;
-
-            uint256 pubaddrHash = pubaddr.GetHash();
-            if (pfrom->setKnown.count(pubaddrHash) == 0)
+        std::cout << "pubaddr called by peer " << pfrom->addr.ToString() << std::endl;
+        CPubAddr pubaddr;
+        vRecv >> pubaddr;
+        uint256 pubaddrHash = pubaddr.GetHash();
+        if ( pfrom->setKnown.count(pubaddrHash) == 0 )
+        {
+            if ( pubaddr.ProcessPubAddr() != 0 )
             {
-                if (pubaddr.ProcessPubAddr())
+                // Relay
+                pfrom->setPubAddrKnown.insert(pubaddrHash);
                 {
-                    // Relay
-                    pfrom->setPubAddrKnown.insert(pubaddrHash);
-                    {
-                        LOCK(cs_vNodes);
-                        BOOST_FOREACH(CNode* pnode, vNodes)
-                            pubaddr.RelayTo(pnode);
-                    }
-
-
-                    //Process
-
-                    stringstream id;
-                    id << pubaddr.nID;
-
-                    stringstream exp;
-                    exp << pubaddr.nExpiration;
-
-                    stringstream msg;
-                    msg << pubaddr.teleportMsg;
-
-                        std::string debugStr = string(
-                            "Processing pubaddr message "
-                            + msg.str()
-                            + "\n\tfrom Peer:"
-                            + pfrom->addr.ToString()
-                            + "\n\tnId: "
-                            + id.str()
-                            + "\n\tExpiration Date: "
-                            + exp.str()
-                                                    );
-                        std::cout << debugStr << std::endl;
-			int32_t duration = pubaddr.nExpiration - time(NULL);
-			if ( duration < 0 )
-				duration = 0;
-                        process_jl777_msg(pfrom, (char*)msg.str().c_str(), duration);
+                    LOCK(cs_vNodes);
+                    BOOST_FOREACH(CNode* pnode, vNodes)
+                    pubaddr.RelayTo(pnode);
                 }
-
-                else {
-                    // Small DoS penalty so peers that send us lots of
-                    // duplicate/expired/invalid-signature/whatever pubaddrs
-                    // eventually get banned.
-                    // This isn't a Misbehaving(100) (immediate ban) because the
-                    // peer might be an older or different implementation
-                    printf("%s sent duplicate pubaddr. Misbehaving += 3.", pfrom->addr.ToString().c_str());
-                    pfrom->Misbehaving(3);
-                }
+                //Process
+                stringstream id;
+                id << pubaddr.nID;
+                stringstream exp;
+                exp << pubaddr.nExpiration;
+                stringstream msg;
+                msg << pubaddr.teleportMsg;
+                std::string debugStr = string(
+                                              "Processing pubaddr message "
+                                              + msg.str()
+                                              + "\n\tfrom Peer:"
+                                              + pfrom->addr.ToString()
+                                              + "\n\tnId: "
+                                              + id.str()
+                                              + "\n\tExpiration Date: "
+                                              + exp.str()
+                                              );
+                std::cout << debugStr << std::endl;
+                int32_t duration = pubaddr.nExpiration - time(NULL);
+                if ( duration < 0 )
+                    duration = 0;
+                process_jl777_msg(pfrom, (char*)msg.str().c_str(), duration);
+            }
+            else
+            {
+                // Small DoS penalty so peers that send us lots of
+                // duplicate/expired/invalid-signature/whatever pubaddrs
+                // eventually get banned.
+                // This isn't a Misbehaving(100) (immediate ban) because the
+                // peer might be an older or different implementation
+                printf("%s sent duplicate pubaddr. Misbehaving += 3.", pfrom->addr.ToString().c_str());
+                pfrom->Misbehaving(3);
+            }
         }
     }
     else
     {
         // Ignore unknown commands for extensibility
     }
-
-
     // Update the last seen time for this node's address
     if (pfrom->fNetworkNode)
-        if (strCommand == "version" || strCommand == "addr" || strCommand == "inv" || strCommand == "pubaddr" || strCommand == "getdata" || strCommand == "ping")
+        if (strCommand == "version" || strCommand == "addr" || strCommand == "pubaddr" || strCommand == "inv" || strCommand == "pubaddr" || strCommand == "getdata" || strCommand == "ping")
             AddressCurrentlyConnected(pfrom->addr);
-
-
     return true;
 }
 
@@ -3707,12 +3706,7 @@ bool ProcessMessages(CNode* pfrom)
 
 bool SendMessages(CNode* pto, bool fSendTrickle)
 {
-    static int didinit;
-	if ( didinit == 0 )
-	{
-		init_jl777();
-		didinit = 1;
-	}
+
     TRY_LOCK(cs_main, lockMain);
     if (lockMain) {
         // Don't send anything until we get their version message
@@ -3869,17 +3863,6 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         }
         if (!vGetData.empty())
             pto->PushMessage("getdata", vGetData);
-
-
-		/*jl777 send message
-		vector<string> jl777message;
-		int64_t now = GetTime() * 1000000;
-		string message = "SENT JL777 at ";
-		message = message + boost::lexical_cast<std::string>(now);
-		jl777message.push_back(message);
-		if (!jl777message.empty())
-			pto->PushMessage("jl777", jl777message);
-		jl777message.clear();*/
     }
     return true;
 }
@@ -3899,12 +3882,10 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 		return((char *)"{\"result\":null}");
 	}
 	retstr = libjl777_gotpacket(msg,duration);
-	printf("called libjl777_gotpackt. restrt=%s", retstr);
 	if ( retstr != 0 )
 	{
 		if ( (len= strlen(retstr)) >= retlen )
 		{
-		printf("in if, retlen=%ld",retlen);
 			retlen = len + 1;
 			retbuf = (char *)realloc(retbuf,len+1);
 		}
@@ -3915,38 +3896,29 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	return(retbuf);
 }
 
-void broadcastPubAddr(char *msg, int32_t duration)
+void broadcastPubAddr(char *msg,int32_t duration)
 {
     CPubAddr pubaddr;
-
     pubaddr.teleportMsg = std::string(msg);
     pubaddr.nPriority = 1;
-    pubaddr.nID = rand() % 10001;
+    pubaddr.nID = rand() % 100000001;
     pubaddr.nVersion = PROTOCOL_VERSION;
-
-    if (duration > 24 * 60 * 60)
-        duration = 24*60*60;    //maximum pubaddr message time == 1 day
-
-    pubaddr.nRelayUntil = GetAdjustedTime() + duration;
-    pubaddr.nExpiration = GetAdjustedTime() + duration;
-
-	CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
+    if ( duration > MAX_PUBADDR_TIME )
+        duration = MAX_PUBADDR_TIME;
+    pubaddr.nRelayUntil = pubaddr.nExpiration = (GetAdjustedTime() + duration);
+	CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
     sMsg << (CUnsignedPubAddr)pubaddr;
-    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(), sMsg.end());
-
-    if(!pubaddr.ProcessPubAddr())
-        throw runtime_error(
-            "Failed to process pubaddr.\n");
+    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
+    if ( pubaddr.ProcessPubAddr() == 0 )
+        throw runtime_error("Failed to process pubaddr.\n");
     // Relay pubaddr to all peers
     {
         LOCK(cs_vNodes);
-        BOOST_FOREACH(CNode* pnode, vNodes)
+        BOOST_FOREACH(CNode *pnode,vNodes)
         {
             pubaddr.RelayTo(pnode);
         }
-
     }
-
 }
 
 extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
@@ -3958,9 +3930,9 @@ extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 	return(0);
 }
 
-void init_jl777()
+void init_jl777(char *myip)
 {
 std::cout << "starting libjl777" << std::endl;
-    libjl777_start((char *)"jl777.conf");
+    libjl777_start((char *)"SuperNET.conf",myip);
 std::cout << "back from start" << std::endl;
 }

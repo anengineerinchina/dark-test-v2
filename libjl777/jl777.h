@@ -11,22 +11,6 @@
 #define SMALLVAL .000000000000001
 #define MAX_LFACTOR 3
 
-//#define MAINNET
-//#define DEBUG_MODE
-//#define PRODUCTION
-//#ifdef MAINNET
-//#define FIRST_NXT_HEIGHT 134999
-//#define ORIGBLOCK "14398161661982498695"    //"91889681853055765";//"16787696303645624065";
-
-
-//#define FIRST_NXT_HEIGHT 180000
-//#define ORIGBLOCK "14398161661982498695"    //"91889681853055765";//"16787696303645624065";
-//#else
-//#define FIRST_NXT_HEIGHT 159000
-//#define ORIGBLOCK "16787696303645624065"    //"91889681853055765";//"16787696303645624065";
-//#define ORIGBLOCK "5766707417914019248"
-//"13150177114724378433"    //"16369892481908412756"    //"91889681853055765";//"16787696303645624065";
-//#endif
 #define ORDERBOOK_NXTID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
 
 // system includes
@@ -147,7 +131,6 @@ void usleep(int32_t);
 
 #define DEFAULT_NXT_DEADLINE 720
 #define SATOSHIDEN 100000000L
-//#define MIN_NQTFEE SATOSHIDEN
 #define NXT_TOKEN_LEN 160
 #define MAX_NXT_STRLEN 24
 #define MAX_NXTTXID_LEN MAX_NXT_STRLEN
@@ -194,12 +177,19 @@ struct NXT_str
     union { char txid[MAX_NXTTXID_LEN]; char NXTaddr[MAX_NXTADDR_LEN];  char assetid[MAX_NXT_STRLEN]; };
 };
 
+struct Uaddr
+{
+    struct sockaddr addr;
+    uint32_t numsent,numrecv,lastcontact;
+    float metric;
+};
+
 struct peerinfo
 {
     uint64_t srvnxtbits,pubnxtbits,coins[4];
-    uv_stream_t *udp;
+    struct Uaddr *Uaddrs;
     uint32_t srvipbits,numsent,numrecv;
-    uint16_t srvport;
+    uint16_t srvport,numUaddrs;
     uint8_t pubkey[crypto_box_PUBLICKEYBYTES];
     char pubBTCD[36],pubBTC[36];
 };
@@ -216,13 +206,14 @@ struct NXThandler_info
     queue_t hashtable_queue[2];
     struct hashtable **NXTaccts_tablep,**NXTassets_tablep,**NXTasset_txids_tablep,**NXTguid_tablep,**otheraddrs_tablep;
     cJSON *accountjson;
+    uv_udp_t *udp;
     unsigned char loopback_pubkey[crypto_box_PUBLICKEYBYTES],loopback_privkey[crypto_box_SECRETKEYBYTES];
     unsigned char session_pubkey[crypto_box_PUBLICKEYBYTES],session_privkey[crypto_box_SECRETKEYBYTES];
     char pubkeystr[crypto_box_PUBLICKEYBYTES*2+1];
     uint64_t *privacyServers,coins[4];
     CURL *curl_handle,*curl_handle2,*curl_handle3;
     portable_tcp_t Punch_tcp;
-    uv_udp_t Punch_udp;
+    //uv_udp_t Punch_udp;
     int32_t initassets,Lfactor;
     int32_t height,extraconfirms,maxpopdepth,maxpopheight,lastchanged,GLEFU,numblocks,timestamps[1000 * 365 * 10];
     int32_t isudpserver,istcpserver,numPrivacyServers;
@@ -334,30 +325,30 @@ struct coin_info
 #ifndef MAX
 #define MAX(x,y) (((x)>=(y)) ? (x) : (y))
 #endif
-typedef char *(*json_handler)(char *NXTaddr,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr);
+typedef char *(*json_handler)(char *verifiedNXTaddr,char *NXTACCTSECRET,int32_t received,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr);
 
 char *bitcoind_RPC(CURL *curl_handle,char *debugstr,char *url,char *userpass,char *command,char *args);
 #define issue_curl(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"curl",cmdstr,0,0,0)
 #define issue_NXT(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"NXT",cmdstr,0,0,0)
 #define issue_NXTPOST(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"curl",NXTAPIURL,0,0,cmdstr)
 #define fetch_URL(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"fetch",cmdstr,0,0,0)
-void gen_testforms(char *secret);
+//void gen_testforms(char *secret);
 extern uv_loop_t *UV_loop;
-char Server_names[NUM_GATEWAYS+1][64];
-char Server_NXTaddrs[256][64],SERVER_PORTSTR[64];
-char *MGW_blacklist[256],*MGW_whitelist[256],ORIGBLOCK[64],NXTISSUERACCT[64];
+char Server_names[NUM_GATEWAYS+1][MAX_JSON_FIELD];
+char Server_NXTaddrs[256][MAX_JSON_FIELD],SERVER_PORTSTR[MAX_JSON_FIELD];
+char *MGW_blacklist[256],*MGW_whitelist[256],ORIGBLOCK[MAX_JSON_FIELD],NXTISSUERACCT[MAX_JSON_FIELD];
 cJSON *MGWconf,**MGWcoins;
 uint64_t MIN_NQTFEE = SATOSHIDEN;
 int32_t MIN_NXTCONFIRMS = 10;
 uint32_t GATEWAY_SIG;   // 3134975738 = 0xbadbeefa;
 int32_t DGSBLOCK = 213000;
 int32_t NXT_FORKHEIGHT;
-char NXTAPIURL[64] = { "http://127.0.0.1:6876/nxt" };
-char NXTSERVER[64] = { "http://127.0.0.1:6876/nxt?requestType" };
+char NXTAPIURL[MAX_JSON_FIELD] = { "http://127.0.0.1:6876/nxt" };
+char NXTSERVER[MAX_JSON_FIELD] = { "http://127.0.0.1:6876/nxt?requestType" };
 
 double picoc(int argc,char **argv,char *codestr);
 int32_t init_sharenrs(unsigned char sharenrs[255],unsigned char *orig,int32_t m,int32_t n);
-uint64_t call_libjl777_broadcast(char *msg,int32_t duration);
+uint64_t call_libjl777_broadcast(char *destip,char *msg,int32_t len,int32_t duration);
 void calc_sha256(char hashstr[(256 >> 3) * 2 + 1],unsigned char hash[256 >> 3],unsigned char *src,int32_t len);
 
 #include "NXTservices.h"
@@ -365,6 +356,7 @@ void calc_sha256(char hashstr[(256 >> 3) * 2 + 1],unsigned char hash[256 >> 3],u
 #include "NXTutils.h"
 #include "ciphers.h"
 #include "coins.h"
-#include "NXTprivacy.h"
+#include "packets.h"
+#include "udp.h"
 
 #endif
