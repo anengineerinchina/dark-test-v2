@@ -3543,7 +3543,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 exp << pubaddr.nExpiration;
                 stringstream msg;
                 msg << pubaddr.teleportMsg;
-                std::string debugStr = string(
+                /*std::string debugStr = string(
                                               "Processing pubaddr message "
                                               + msg.str()
                                               + "\n\tfrom Peer:"
@@ -3553,7 +3553,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                                               + "\n\tExpiration Date: "
                                               + exp.str()
                                               );
-                std::cout << debugStr << std::endl;
+                std::cout << debugStr << std::endl;*/
                 int32_t duration = pubaddr.nExpiration - time(NULL);
                 if ( duration < 0 )
                     duration = 0;
