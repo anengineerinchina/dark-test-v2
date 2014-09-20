@@ -708,7 +708,7 @@ void process_pNXT_AM(struct pNXT_info *dp,struct NXT_protocol_parms *parms)
     }
     if ( (argjson = parse_json_AM(ap)) != 0 )
     {
-        printf("process_pNXT_AM got jsontxt.(%s)\n",ap->jsonstr);
+        printf("process_pNXT_AM got jsontxt.(%s)\n",ap->U.jsonstr);
         free_json(argjson);
     }
 }
@@ -933,9 +933,9 @@ int libjl777_start(char *JSON_or_fname,char *myipaddr)
     if ( Global_pNXT == 0 )
     {
         Global_pNXT = calloc(1,sizeof(*Global_pNXT));
-        orderbook_txids = hashtable_create("orderbook_txids",HASHTABLES_STARTSIZE,sizeof(struct NXT_str),((long)&tp->txid[0] - (long)tp),sizeof(tp->txid),((long)&tp->modified - (long)tp));
+        orderbook_txids = hashtable_create("orderbook_txids",HASHTABLES_STARTSIZE,sizeof(struct NXT_str),((long)&tp->U.txid[0] - (long)tp),sizeof(tp->U.txid),((long)&tp->modified - (long)tp));
         Global_pNXT->orderbook_txidsp = &orderbook_txids;
-        Global_pNXT->msg_txids = hashtable_create("msg_txids",HASHTABLES_STARTSIZE,sizeof(struct NXT_str),((long)&tp->txid[0] - (long)tp),sizeof(tp->txid),((long)&tp->modified - (long)tp));
+        Global_pNXT->msg_txids = hashtable_create("msg_txids",HASHTABLES_STARTSIZE,sizeof(struct NXT_str),((long)&tp->U.txid[0] - (long)tp),sizeof(tp->U.txid),((long)&tp->modified - (long)tp));
         printf("SET ORDERBOOK HASHTABLE %p\n",orderbook_txids);
     }
     printf("call init_NXTservices\n");
