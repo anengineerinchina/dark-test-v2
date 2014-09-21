@@ -613,6 +613,12 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                     if ( coinstr[0] != 0 && (cp= init_coin_info(item,coinstr)) != 0 )
                     {
                         printf("coinstr.(%s) myip.(%s)\n",coinstr,myipaddr);
+                        Daemons = realloc(Daemons,sizeof(*Daemons) * (Numcoins+1));
+                        MGWcoins = realloc(MGWcoins,sizeof(*MGWcoins) * (Numcoins+1));
+                        MGWcoins[Numcoins] = item;
+                        Daemons[Numcoins] = cp;
+                        printf("i.%d coinid.%d %s asset.%s\n",i,Numcoins,coinstr,Daemons[Numcoins]->assetid);
+                        Numcoins++;
                         parse_ipaddr(cp->myipaddr,myipaddr);
                         if ( strcmp(coinstr,"BTCD") == 0 )
                         {
@@ -636,13 +642,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                             BTCaddr = cp->pubaddr;
                         else if ( strcmp(coinstr,"NXT") == 0 )
                             pubNXT = cp->pubaddr;
-                        Daemons = realloc(Daemons,sizeof(*Daemons) * (Numcoins+1));
-                        MGWcoins = realloc(MGWcoins,sizeof(*MGWcoins) * (Numcoins+1));
-                        MGWcoins[Numcoins] = item;
-                        Daemons[Numcoins] = cp;
-                        printf("i.%d coinid.%d %s asset.%s\n",i,Numcoins,coinstr,Daemons[Numcoins]->assetid);
-                        Numcoins++;
-                    }
+                     }
                 }
                 if ( (cp= get_coin_info("BTCD")) != 0 )
                 {

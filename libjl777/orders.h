@@ -608,7 +608,7 @@ void say_hello(struct NXT_acct *np)
     char srvNXTaddr[64],hopNXTaddr[64],*retstr;
     struct NXT_acct *hopnp;
     int32_t createflag;
-    printf("int say_hello\n");
+    printf("in say_hello.cp %p\n",cp);
     expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
     if ( (retstr= sendpeerinfo(hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
     {
