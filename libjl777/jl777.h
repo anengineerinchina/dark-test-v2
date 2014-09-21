@@ -188,13 +188,17 @@ struct Uaddr
     float metric;
 };
 
+#define PEER_HELLOSTATE 1
+#define NUM_PEER_STATES PEER_HELLOSTATE
+
 struct peerinfo
 {
     uint64_t srvnxtbits,pubnxtbits,coins[4];
     struct Uaddr *Uaddrs;
     uint32_t srvipbits,numsent,numrecv;
     uint16_t srvport,numUaddrs;
-    uint8_t pubkey[crypto_box_PUBLICKEYBYTES];
+    float startmillis[NUM_PEER_STATES + 1],elapsed[NUM_PEER_STATES + 1];
+    uint8_t pubkey[crypto_box_PUBLICKEYBYTES],states[NUM_PEER_STATES + 1];
     char pubBTCD[36],pubBTC[36];
 };
 
@@ -331,7 +335,7 @@ struct coin_info
 #ifndef MAX
 #define MAX(x,y) (((x)>=(y)) ? (x) : (y))
 #endif
-typedef char *(*json_handler)(char *verifiedNXTaddr,char *NXTACCTSECRET,int32_t received,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr);
+typedef char *(*json_handler)(char *verifiedNXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr);
 
 char *bitcoind_RPC(CURL *curl_handle,char *debugstr,char *url,char *userpass,char *command,char *args);
 #define issue_curl(curl_handle,cmdstr) bitcoind_RPC(curl_handle,"curl",cmdstr,0,0,0)

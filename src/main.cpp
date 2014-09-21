@@ -3884,7 +3884,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 		printf("no point to process null msg.%p\n",msg);
 		return((char *)"{\"result\":null}");
 	}
-	retstr = libjl777_gotpacket(msg,duration);
+	retstr = libjl777_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
 	if ( retstr != 0 )
 	{
 		if ( (len= strlen(retstr)) >= retlen )
