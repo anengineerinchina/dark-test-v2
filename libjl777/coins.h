@@ -629,6 +629,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                                 refpeer->srvipbits = calc_ipbits(cp->myipaddr);
                                 set_pubpeerinfo(cp->srvNXTADDR,cp->myipaddr,cp->srvport,&peer,cp->srvpubaddr,cp->srvcoinpubkey,cp->srvpubnxt64bits,0);
                                 update_peerinfo(&createdflag,&peer);
+                                printf("update_peerinfo loopback privacyServer (%s)\n",cp->myipaddr);
                             }
                         }
                         else if ( strcmp(coinstr,"BTC") == 0 )

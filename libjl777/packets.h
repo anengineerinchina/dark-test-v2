@@ -265,8 +265,8 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
         {
             Pservers = realloc(Pservers,sizeof(*Pservers) * (Numpservers + 1));
             Pservers[Numpservers] = peer, Numpservers++;
-            say_hello(np);
             printf("ADDED privacyServer.%d\n",Numpservers);
+            //say_hello(np);
         }
     }
     printf("isPserver.%d add_peerinfo Numpeers.%d added %llu srv.%llu\n",isPserver,Numpeers,(long long)refpeer->pubnxtbits,(long long)refpeer->srvnxtbits);
