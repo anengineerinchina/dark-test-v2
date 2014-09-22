@@ -610,8 +610,8 @@ void say_hello(struct NXT_acct *np)
     int32_t createflag;
     expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
     expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
-    //if ( strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(np->H.U.NXTaddr,NXTaddr) == 0 )
-    //    return;
+    if ( strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(np->H.U.NXTaddr,NXTaddr) == 0 )
+        return;
     hopNXTaddr[0] = 0;
     if ( (retstr= sendpeerinfo(hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
     {

@@ -19,7 +19,7 @@
 #define PEER_MASK (PEER_SENT|PEER_RECV|PEER_PENDINGRECV)
 #define PEER_TIMEOUT 0x40
 #define PEER_FINISHED 0x80
-#define PEER_EXPIRATION 60
+#define PEER_EXPIRATION (60 * 1000.)
 
 struct peer_queue_entry
 {
@@ -44,8 +44,9 @@ int32_t process_PeerQ(void **ptrp,void *arg) // added when inbound transporter s
     hop = ptr->hop;
     timediff = (double)(milliseconds() - ptr->startmilli);
     stateid = ptr->stateid;
-    if ( peer != 0 && hop != 0 && timediff >= -3 && stateid < NUM_PEER_STATES )
+    if ( peer != 0 && hop != 0 && timediff >= -3000 && stateid < NUM_PEER_STATES )
     {
+        printf("timediff.%f stateid.%d %d %d\n",timediff,stateid,peer->states[stateid],hop->states[stateid]);
         if ( timediff > PEER_EXPIRATION )
         {
             if ( (peer->states[stateid]&PEER_FINISHED) != PEER_FINISHED || (hop->states[stateid]&PEER_FINISHED) != PEER_FINISHED )
@@ -83,7 +84,7 @@ void update_peerstate(struct peerinfo *peer,struct peerinfo *hop,int32_t stateid
         ptr->state = state;
         ptr->startmilli = peer->startmillis[stateid] = milliseconds();
         hop->elapsed[stateid] = 0;
-        queue_enqueue(&PeerQ.pingpong[0],ptr);
+        //queue_enqueue(&PeerQ.pingpong[0],ptr);
     }
     else if ( state == PEER_RECV )
     {
