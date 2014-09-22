@@ -865,7 +865,7 @@ char *send_tokenized_cmd(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *
         hopNXTaddr[0] = 0;
     else if ( L != 0 )
         printf("send_tokenized_cmd L must be 0 for chanc3r boomerangs\n"), L = 0;
-    return(sendmessage(hopNXTaddr,L,NXTACCTSECRET,_tokbuf,(int32_t)n+1,destNXTaddr,_tokbuf));
+    return(sendmessage(hopNXTaddr,L,verifiedNXTaddr,_tokbuf,(int32_t)n+1,destNXTaddr,_tokbuf));
 }
 
 int32_t sendandfree_jsoncmd(int32_t L,char *sender,char *NXTACCTSECRET,cJSON *json,char *destNXTaddr)
