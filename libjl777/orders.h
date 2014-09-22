@@ -623,6 +623,7 @@ void say_hello(struct NXT_acct *np)
         }
         else printf("say_hello no hopNXTaddr?\n");
         free(retstr);
+        printf("retstr freed\n");
     } else printf("say_hello error sendpeerinfo?\n");
 }
 
@@ -694,7 +695,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
 
     verifiedNXTaddr[0] = 0;
     np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
-    if ( prevaddr != 0 )
+    if ( 0 && prevaddr != 0 )
     {
         ack_hello(np,prevaddr);
         return(0);

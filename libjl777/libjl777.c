@@ -398,6 +398,7 @@ char *publishaddrs_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
             else printf("unknown.%d coind.(%s)\n",i,coinstr);
         }
     }
+    printf("publishaddrs.(%s) %p\n",origargstr,prevaddr);
     if ( sender[0] != 0 && valid >= 0 && pubNXT[0] != 0 )
         retstr = publishaddrs(prevaddr,m!=0?coins:0,NXTACCTSECRET,pubNXT,pubkey,BTCDaddr,BTCaddr,srvNXTaddr,srvipaddr,atoi(srvport));
     else retstr = clonestr("{\"result\":\"invalid publishaddrs request\"}");
