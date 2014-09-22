@@ -327,10 +327,12 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
         {
             port = extract_nameport(previp,sizeof(previp),(struct sockaddr_in *)prevaddr);
             printf("received message.(%s) from hop.%s/%d\n",origargstr,previp,port);
+            retstr = clonestr("{\"result\":\"received message\"}");
         }
         else retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
     }
-    else retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
+    if ( retstr == 0 )
+        retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
     return(retstr);
 }
 
