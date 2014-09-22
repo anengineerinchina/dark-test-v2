@@ -313,7 +313,6 @@ int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct 
         peer->srvport = srvport;
     }
     peer->pubnxtbits = pubnxt64bits;
-    memcpy(peer->pubkey,pubkey,sizeof(peer->pubkey));
     safecopy(peer->pubBTCD,pubBTCD,sizeof(peer->pubBTCD));
     safecopy(peer->pubBTC,pubBTC,sizeof(peer->pubBTC));
     if ( decode_hex(peer->pubkey,(int32_t)strlen(pubkey)/2,pubkey) != sizeof(peer->pubkey) )
@@ -451,11 +450,11 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
                 printf("FATAL: %s %s %s is unknown account\n",peer->pubBTCD,destNXTaddr,peer->pubBTC);
                 return(-1);
             }
-            /*if ( memcmp(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey)) != 0 )
+            if ( memcmp(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey)) != 0 )
             {
                 printf("Warning: (%s %s %s) pubkey updated %llx -> %llx\n",peer->pubBTCD,destNXTaddr,peer->pubBTC,*(long long *)np->mypeerinfo.pubkey,*(long long *)peer->pubkey);
                 memcpy(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey));
-            }*/
+            }
             printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
             len = onionize(verifiedNXTaddr,dest,np->H.U.NXTaddr,src,len);
             strcpy(hopNXTaddr,np->H.U.NXTaddr);
