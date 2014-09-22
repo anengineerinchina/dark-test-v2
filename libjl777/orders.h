@@ -608,6 +608,7 @@ void say_hello(struct NXT_acct *np)
     char srvNXTaddr[64],NXTaddr[64],hopNXTaddr[64],*retstr;
     struct NXT_acct *hopnp;
     int32_t createflag;
+    return;
     expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
     expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
     if ( strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(np->H.U.NXTaddr,NXTaddr) == 0 )
