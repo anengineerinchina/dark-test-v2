@@ -3957,7 +3957,7 @@ int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr
     if ( peer == NULL )
         return(-1); // Not a known peer
     for(int32_t i=0; i<len; i++)
-        supernetmsg += std::string((char*)msg[i]);
+        supernetmsg += std::string(msg[i]);
     set_pubaddr(pubaddr,supernetmsg,60); // just one minute should be plenty of time
 
     /*pubaddr.teleportMsg = supernetmsg;
