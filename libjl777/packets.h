@@ -269,7 +269,7 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
             Pservers[Numpservers] = peer, Numpservers++;
             printf("ADDED privacyServer.%d\n",Numpservers);
             if ( np != 0 )
-                queue_enqueue(&HelloQ,np);
+                say_hello(np);//queue_enqueue(&HelloQ,np);
         }
     }
     printf("isPserver.%d add_peerinfo Numpeers.%d added %llu srv.%llu\n",isPserver,Numpeers,(long long)refpeer->pubnxtbits,(long long)refpeer->srvnxtbits);

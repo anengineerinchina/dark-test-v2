@@ -616,11 +616,11 @@ void say_hello(struct NXT_acct *np)
     hopNXTaddr[0] = 0;
     if ( (retstr= sendpeerinfo(hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
     {
-        printf("say_hello.(%s)\n",retstr);
+        printf("say_hello.(%s) hop.(%s)\n",retstr,hopNXTaddr);
         if ( hopNXTaddr[0] != 0 )
         {
             hopnp = get_NXTacct(&createflag,Global_mp,hopNXTaddr);
-            update_peerstate(&np->mypeerinfo,&hopnp->mypeerinfo,PEER_HELLOSTATE,PEER_SENT);
+            //update_peerstate(&np->mypeerinfo,&hopnp->mypeerinfo,PEER_HELLOSTATE,PEER_SENT);
         }
         else printf("say_hello no hopNXTaddr?\n");
         free(retstr);
