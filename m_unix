@@ -12,6 +12,7 @@ cp libs/*.a ../src
 cd ../src
 rm BitcoinDarkd
 make -f makefile.unix
+rm ~/.BitcoinDark/debug.log
 cp BitcoinDarkd ..
 cd ..
 ./b
