@@ -605,11 +605,13 @@ char *sendpeerinfo(char *hopNXTaddr,char *NXTaddr,char *NXTACCTSECRET,char *dest
 void say_hello(struct NXT_acct *np)
 {
     struct coin_info *cp = get_coin_info("BTCD");
-    char srvNXTaddr[64],hopNXTaddr[64],*retstr;
+    char srvNXTaddr[64],NXTaddr[64],hopNXTaddr[64],*retstr;
     struct NXT_acct *hopnp;
     int32_t createflag;
-    printf("in say_hello.cp %p\n",cp);
+    expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
     expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
+    if ( strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(np->H.U.NXTaddr,NXTaddr) == 0 )
+        return;
     if ( (retstr= sendpeerinfo(hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
     {
         printf("say_hello.(%s)\n",retstr);
@@ -625,9 +627,6 @@ void say_hello(struct NXT_acct *np)
 
 void ack_hello(struct NXT_acct *np,struct sockaddr *prevaddr)
 {
-    struct coin_info *cp = get_coin_info("BTCD");
-    char srvNXTaddr[64];
-    expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
     printf("ack_hello to %s\n",np->H.U.NXTaddr);
 }
 
@@ -695,7 +694,10 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     verifiedNXTaddr[0] = 0;
     np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
     if ( prevaddr != 0 )
+    {
         ack_hello(np,prevaddr);
+        return(0);
+    }
     else
     {
         expand_nxt64bits(mysrvNXTaddr,np->mypeerinfo.srvnxtbits);
@@ -710,8 +712,8 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
             }
             broadcast_publishpacket(coins,np,NXTACCTSECRET);
         }
+        return(getpubkey(verifiedNXTaddr,NXTACCTSECRET,pubNXT,0));
     }
-    return(getpubkey(verifiedNXTaddr,NXTACCTSECRET,pubNXT,0));
 }
 
 char *checkmessages(char *NXTaddr,char *NXTACCTSECRET,char *senderNXTaddr)
