@@ -125,6 +125,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
                 {
                     printf("sent back via UDP.(%s) got (%s) free.%p\n",retjsonstr,retstr,retstr);
                     free(retstr);
+                    printf("retstr freed\n");
                 }
             }
          }
