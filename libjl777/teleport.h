@@ -290,6 +290,7 @@ void teleport_idler(uv_idle_t *handle)
 {
     static double lastattempt;
     double millis;
+    struct NXT_addr *np;
     //printf("teleport_idler\n");
     millis = ((double)uv_hrtime() / 1000000);
     if ( millis > (lastattempt + 500) )
@@ -298,6 +299,8 @@ void teleport_idler(uv_idle_t *handle)
         process_pingpong_queue(&Transporter_sendQ,0);
         process_pingpong_queue(&Transporter_recvQ,0);
         process_pingpong_queue(&CloneQ,0);
+        if ( (np= queue_dequeue(&HelloQ)) != 0 )
+            say_hello(np);
         lastattempt = millis;
     }
 }
