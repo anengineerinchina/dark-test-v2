@@ -290,18 +290,20 @@ void teleport_idler(uv_idle_t *handle)
 {
     extern int32_t Finished_init;
     void say_hello(struct NXT_acct *np);
-    static double lastattempt;
+    static double lastattempt,firsttime;
     double millis;
     struct NXT_acct *np;
     //printf("teleport_idler\n");
     millis = ((double)uv_hrtime() / 1000000);
+    if ( firsttime == 0 )
+        firsttime = millis;
     if ( Finished_init != 0 && millis > (lastattempt + 500) )
     {
         process_pingpong_queue(&PeerQ,0);
         process_pingpong_queue(&Transporter_sendQ,0);
         process_pingpong_queue(&Transporter_recvQ,0);
         process_pingpong_queue(&CloneQ,0);
-        if ( (np= queue_dequeue(&HelloQ)) != 0 )
+        if ( millis > firsttime+60000 && (np= queue_dequeue(&HelloQ)) != 0 )
             say_hello(np);
         lastattempt = millis;
     }
