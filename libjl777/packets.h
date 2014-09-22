@@ -745,6 +745,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                 {
                     strcpy(retjsonstr,jsonstr);
                     free(jsonstr);
+                    printf("GOT.(%s)\n",retjsonstr);
                 }
                 update_routing_probs(&tokenized_np->mypeerinfo,addr);
             }

@@ -114,7 +114,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     {
         expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
         strcpy(sender,"unknown");
-        np = process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
+        np = 0;//process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
         printf("got np.%p\n",np);
         ASSERT(addr->sa_family == AF_INET);
         if ( np != 0 )
