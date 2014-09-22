@@ -29,7 +29,7 @@ struct peer_queue_entry
 };
 
 struct pingpong_queue PeerQ;
-//queue_t HelloQ;
+queue_t HelloQ;
 struct peerinfo **Peers,**Pservers;
 int32_t Numpeers,Numpservers;
 int32_t portable_udpwrite(const struct sockaddr *addr,uv_udp_t *handle,void *buf,long len,int32_t allocflag);
@@ -269,7 +269,7 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
             Pservers[Numpservers] = peer, Numpservers++;
             printf("ADDED privacyServer.%d\n",Numpservers);
             if ( np != 0 )
-                say_hello(np);//queue_enqueue(&HelloQ,np);
+                queue_enqueue(&HelloQ,np);
         }
     }
     printf("isPserver.%d add_peerinfo Numpeers.%d added %llu srv.%llu\n",isPserver,Numpeers,(long long)refpeer->pubnxtbits,(long long)refpeer->srvnxtbits);
