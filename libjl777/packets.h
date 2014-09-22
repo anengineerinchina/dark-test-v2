@@ -46,7 +46,7 @@ int32_t process_PeerQ(void **ptrp,void *arg) // added when inbound transporter s
     stateid = ptr->stateid;
     if ( peer != 0 && hop != 0 && timediff >= -3000 && stateid < NUM_PEER_STATES )
     {
-        printf("timediff.%f stateid.%d %d %d\n",timediff,stateid,peer->states[stateid],hop->states[stateid]);
+        //printf("timediff.%f stateid.%d %d %d\n",timediff,stateid,peer->states[stateid],hop->states[stateid]);
         if ( timediff > PEER_EXPIRATION )
         {
             if ( (peer->states[stateid]&PEER_FINISHED) != PEER_FINISHED || (hop->states[stateid]&PEER_FINISHED) != PEER_FINISHED )
@@ -267,7 +267,7 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
             Pservers = realloc(Pservers,sizeof(*Pservers) * (Numpservers + 1));
             Pservers[Numpservers] = peer, Numpservers++;
             printf("ADDED privacyServer.%d\n",Numpservers);
-            if ( np != 0 )
+            if ( 0 && np != 0 )
                 say_hello(np);
         }
     }
