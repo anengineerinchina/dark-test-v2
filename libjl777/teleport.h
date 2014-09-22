@@ -303,7 +303,7 @@ void teleport_idler(uv_idle_t *handle)
         process_pingpong_queue(&Transporter_sendQ,0);
         process_pingpong_queue(&Transporter_recvQ,0);
         process_pingpong_queue(&CloneQ,0);
-        if ( millis > firsttime+60000 && (np= queue_dequeue(&HelloQ)) != 0 )
+        if ( 0 && millis > firsttime+60000 && (np= queue_dequeue(&HelloQ)) != 0 )
             say_hello(np);
         lastattempt = millis;
     }
