@@ -757,6 +757,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
             if ( destbits != 0 ) // route packet
             {
                 expand_nxt64bits(hopNXTaddr,destbits);
+                printf("FORWARD PACKET from %s/%d to %s\n",sender,port,hopNXTaddr);
                 route_packet(udp,hopNXTaddr,decoded,len);
                 return(0);
             }
