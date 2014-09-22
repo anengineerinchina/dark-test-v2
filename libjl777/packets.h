@@ -785,7 +785,10 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
     np = get_NXTacct(&createdflag,Global_mp,verifiedNXTaddr);
     destnp = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
     if ( np == 0 || destnp == 0 || Global_mp->udp == 0 || destnp->mypeerinfo.srvnxtbits == 0 )
+    {
+        printf("np.%p destnp.%p udp.%p nxtbits.%llu\n",np,destnp,Global_mp->udp,(long long)destnp->mypeerinfo.srvnxtbits);
         return(clonestr("\"error\":\"no np or global udp for sendmessage || destnp->mypeerinfo.srvnxtbits == 0\"}"));
+    }
     expand_nxt64bits(srvNXTaddr,np->mypeerinfo.srvnxtbits);
     expand_nxt64bits(destsrvNXTaddr,destnp->mypeerinfo.srvnxtbits);
     memset(encodedD,0,sizeof(encodedD)); // encoded to dest

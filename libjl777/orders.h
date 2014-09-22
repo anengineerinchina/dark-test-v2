@@ -577,7 +577,7 @@ char *getpubkey(char *NXTaddr,char *NXTACCTSECRET,char *pubaddr,char *destcoin)
 {
     char buf[4096];
     struct NXT_acct *pubnp;
-    printf("in getpubkey(%s)\n",pubaddr);
+    printf("in getpubkey(%s) NXT.%s (%s)\n",pubaddr,NXTaddr,NXTACCTSECRET);
     pubnp = search_addresses(pubaddr);
     if ( pubnp != 0 )
     {
