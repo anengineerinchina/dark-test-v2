@@ -604,10 +604,13 @@ char *sendpeerinfo(char *hopNXTaddr,char *NXTaddr,char *NXTACCTSECRET,char *dest
 
 void say_hello(struct NXT_acct *np)
 {
+    extern int32_t Finished_init;
     struct coin_info *cp = get_coin_info("BTCD");
     char srvNXTaddr[64],NXTaddr[64],hopNXTaddr[64],*retstr;
     struct NXT_acct *hopnp;
     int32_t createflag;
+    while ( Finished_init == 0 )
+        sleep(1);
     expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
     expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
     if ( strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(np->H.U.NXTaddr,NXTaddr) == 0 )

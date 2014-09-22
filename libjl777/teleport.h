@@ -288,9 +288,10 @@ int32_t process_cloneQ(void **ptrp,void *arg) // added to this queue when proces
 
 void teleport_idler(uv_idle_t *handle)
 {
+    //void say_hello(struct NXT_acct *np);
     static double lastattempt;
     double millis;
-    struct NXT_addr *np;
+    //struct NXT_acct *np;
     //printf("teleport_idler\n");
     millis = ((double)uv_hrtime() / 1000000);
     if ( millis > (lastattempt + 500) )
@@ -299,8 +300,8 @@ void teleport_idler(uv_idle_t *handle)
         process_pingpong_queue(&Transporter_sendQ,0);
         process_pingpong_queue(&Transporter_recvQ,0);
         process_pingpong_queue(&CloneQ,0);
-        if ( (np= queue_dequeue(&HelloQ)) != 0 )
-            say_hello(np);
+        //if ( (np= queue_dequeue(&HelloQ)) != 0 )
+        //    say_hello(np);
         lastattempt = millis;
     }
 }
