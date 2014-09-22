@@ -635,7 +635,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                                 refpeer->srvipbits = calc_ipbits(cp->myipaddr);
                                 set_pubpeerinfo(cp->srvNXTADDR,cp->myipaddr,cp->srvport,&peer,cp->srvpubaddr,cp->srvcoinpubkey,cp->srvpubnxt64bits,0);
                                 update_peerinfo(&createdflag,&peer);
-                                printf("update_peerinfo loopback privacyServer (%s)\n",cp->myipaddr);
+                                printf("update_peerinfo loopback privacyServer (%s) [%s]\n",cp->myipaddr,cp->srvpubaddr);
                             }
                         }
                         else if ( strcmp(coinstr,"BTC") == 0 )
@@ -657,7 +657,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         init_hexbytes(pubkey,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
                         str = publishaddrs(0,Global_mp->coins,cp->srvNXTACCTSECRET,cp->srvNXTADDR,pubkey,cp->srvpubaddr,0,cp->srvNXTADDR,cp->myipaddr,cp->srvport);
                         if ( str != 0 )
-                            printf("publish loopback privacyserver.(%s)\n",str), free(str);
+                            printf("publish loopback privacyserver.(%s) [%s]\n",str,cp->srvpubaddr), free(str);
                     }
                 }
             } else printf("no coins array.%p ?\n",array);

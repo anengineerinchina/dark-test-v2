@@ -505,7 +505,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
                     return(len);
                 }
             }
-        } else printf("mismatched len expected %ld got %d\n",(payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)),len);
+        } //else printf("mismatched len expected %ld got %d\n",(payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)),len);
     }
     else
     {

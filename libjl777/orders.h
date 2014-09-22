@@ -577,8 +577,8 @@ char *getpubkey(char *NXTaddr,char *NXTACCTSECRET,char *pubaddr,char *destcoin)
 {
     char buf[4096];
     struct NXT_acct *pubnp;
-    printf("in getpubkey(%s) NXT.%s (%s)\n",pubaddr,NXTaddr,NXTACCTSECRET);
     pubnp = search_addresses(pubaddr);
+    printf("in getpubkey(%s) NXT.%s BTCD.(%s)\n",pubaddr,NXTaddr,pubnp->mypeerinfo.pubBTCD);
     if ( pubnp != 0 )
     {
         set_peer_json(buf,NXTaddr,pubnp);
@@ -676,7 +676,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     if ( refpeer != 0 && coins != 0 )
     {
         memcpy(refpeer->coins,coins,sizeof(refpeer->coins));
-        printf("set coins.%llx\n",(long long)coins[0]);
+        //printf("set coins.%llx\n",(long long)coins[0]);
     }
     np->mypeerinfo = *refpeer;
     //printf("in secret.(%s) publishaddrs.(%s) np.%p %llu\n",NXTACCTSECRET,pubNXT,np,(long long)np->H.nxt64bits);
