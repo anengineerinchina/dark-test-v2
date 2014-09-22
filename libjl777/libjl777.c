@@ -811,10 +811,10 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
     return(gp);
 }
 
-int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t len)
+int32_t got_newpeer(char *ip_port)
 {
-    printf("narrowcast %d bytes to %s not supported yet\n",len,destip);
-    return(-1);
+	printf("got_newpeer called. Now connected to.(%s)", ip_port);
+	return(0);
 }
 
 uint64_t call_libjl777_broadcast(char *destip,char *msg,int32_t len,int32_t duration)

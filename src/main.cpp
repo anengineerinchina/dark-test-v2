@@ -3698,6 +3698,7 @@ bool ProcessMessages(CNode* pfrom)
 
 bool SendMessages(CNode* pto, bool fSendTrickle)
 {
+
     //bitcoindark: start libjl777
     static int didinit;
     if ( didinit == 0 )
@@ -3709,6 +3710,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             didinit = 1;
         }
     }
+
 
     TRY_LOCK(cs_main, lockMain);
     if (lockMain) {
@@ -3899,10 +3901,23 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	return(retbuf);
 }
 
+void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
+{
+    pubaddr.teleportMsg = msg;
+    pubaddr.nPriority = 1;
+    pubaddr.nID = rand() % 100000001;
+    pubaddr.nVersion = PROTOCOL_VERSION;
+    pubaddr.nRelayUntil = pubaddr.nExpiration = (GetAdjustedTime() + duration);
+    CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
+    sMsg << (CUnsignedPubAddr)pubaddr;
+    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
+}
+    
 void broadcastPubAddr(char *msg,int32_t duration)
 {
     CPubAddr pubaddr;
-    pubaddr.teleportMsg = std::string(msg);
+    set_pubaddr(pubaddr,std::string(msg),duration);
+   /*pubaddr.teleportMsg = std::string(msg);
     pubaddr.nPriority = 1;
     pubaddr.nID = rand() % 100000001;
     pubaddr.nVersion = PROTOCOL_VERSION;
@@ -3912,8 +3927,9 @@ void broadcastPubAddr(char *msg,int32_t duration)
 	CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
     sMsg << (CUnsignedPubAddr)pubaddr;
     pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
-    if ( pubaddr.ProcessPubAddr() == 0 )
-        throw runtime_error("Failed to process pubaddr.\n");
+    */
+    //if ( pubaddr.ProcessPubAddr() == 0 )
+    //    throw runtime_error("Failed to process pubaddr.\n");
     // Relay pubaddr to all peers
     {
         LOCK(cs_vNodes);
@@ -3926,11 +3942,43 @@ void broadcastPubAddr(char *msg,int32_t duration)
 
 extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 {
-	printf("libjl777_broadcast() called:(%s) dur.%d\n",msg,duration);
+	printf("libjl777_broadcast(%s) dur.%d\n",msg,duration);
 
 	broadcastPubAddr(msg, duration);
 
 	return(0);
+}
+
+int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
+{
+    CPubAddr pubaddr;
+    std::string supernetmsg = "";
+    CNode *peer = FindNode((CNetAddr)std::string(destip));
+    if ( peer == NULL )
+        return(-1); // Not a known peer
+    for(int32_t i=0; i<len; i++)
+        supernetmsg += std::string((char*)msg[i]);
+    set_pubaddr(pubaddr,supernetmsg,60); // just one minute should be plenty of time
+
+    /*pubaddr.teleportMsg = supernetmsg;
+    pubaddr.nPriority = 1;
+    pubaddr.nID = rand() % 100000001;
+    pubaddr.nVersion = PROTOCOL_VERSION;
+    pubaddr.nRelayUntil = pubaddr.nExpiration = (GetAdjustedTime() + 60); //one minute relay time to ensure it reaches its destination
+    CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
+    sMsg << (CUnsignedPubAddr)pubaddr;
+    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
+    */
+    //if ( pubaddr.ProcessPubAddr() == 0 )
+    //    throw runtime_error("Failed to process pubaddr.\n");
+	if ( pubaddr.RelayTo(peer) == true )
+		return(0);
+	return(-2);
+}
+
+extern "C" int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t len)
+{
+	return(narrowcast(destip,msg,len));
 }
 
 void init_jl777(char *myip)
