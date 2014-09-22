@@ -695,7 +695,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
 
     verifiedNXTaddr[0] = 0;
     np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
-    if ( 0 && prevaddr != 0 )
+    if ( prevaddr != 0 )
     {
         ack_hello(np,prevaddr);
         return(0);
