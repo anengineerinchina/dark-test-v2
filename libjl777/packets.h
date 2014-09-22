@@ -420,6 +420,8 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
     struct NXT_acct *np;
     if ( numlayers > 1 )
         numlayers = ((rand() >> 8) % numlayers);
+    if ( numlayers <= 0 )
+        numlayers = 1;
     if ( numlayers > 0 )
     {
         memset(bufs,0,sizeof(bufs));
@@ -448,11 +450,11 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
                 printf("FATAL: %s %s %s is unknown account\n",peer->pubBTCD,destNXTaddr,peer->pubBTC);
                 return(-1);
             }
-            if ( memcmp(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey)) != 0 )
+            /*if ( memcmp(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey)) != 0 )
             {
                 printf("Warning: (%s %s %s) pubkey updated %llx -> %llx\n",peer->pubBTCD,destNXTaddr,peer->pubBTC,*(long long *)np->mypeerinfo.pubkey,*(long long *)peer->pubkey);
                 memcpy(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey));
-            }
+            }*/
             printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
             len = onionize(verifiedNXTaddr,dest,np->H.U.NXTaddr,src,len);
             strcpy(hopNXTaddr,np->H.U.NXTaddr);
@@ -727,6 +729,8 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         decoded[len] = 0;
         parmstxt = clonestr((char *)decoded);
         argjson = cJSON_Parse(parmstxt);
+        free(parmstxt);
+        parmstxt = 0;
         //printf("[%s] argjson.%p udp.%p\n",parmstxt,argjson,udp);
         if ( argjson != 0 ) // if it parses, we must have been the ultimate destination
         {
@@ -764,28 +768,33 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
     return(0);
 }
 
+int32_t has_privacyServer(struct NXT_acct *np)
+{
+    if ( np->mypeerinfo.srvipbits != 0 && np->mypeerinfo.pubnxtbits != np->mypeerinfo.srvnxtbits )
+        return(1);
+    else return(0);
+}
+
 char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int32_t msglen,char *destNXTaddr,char *origargstr)
 {
     uint64_t txid;
     char buf[4096],destsrvNXTaddr[64],srvNXTaddr[64];
     unsigned char encodedsrvD[4096],encodedD[4096],encodedL[4096],encodedP[4096],*outbuf;
     int32_t len,createdflag;
-    struct NXT_acct *np,*destnp;
-    //struct coin_info *cp = get_coin_info("BTCD");
-    
+    struct NXT_acct *np,*destnp;    
     np = get_NXTacct(&createdflag,Global_mp,verifiedNXTaddr);
     destnp = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
     if ( np == 0 || destnp == 0 || Global_mp->udp == 0 || destnp->mypeerinfo.srvnxtbits == 0 )
         return(clonestr("\"error\":\"no np or global udp for sendmessage || destnp->mypeerinfo.srvnxtbits == 0\"}"));
+    expand_nxt64bits(srvNXTaddr,np->mypeerinfo.srvnxtbits);
     expand_nxt64bits(destsrvNXTaddr,destnp->mypeerinfo.srvnxtbits);
     memset(encodedD,0,sizeof(encodedD)); // encoded to dest
     memset(encodedsrvD,0,sizeof(encodedsrvD)); // encoded to privacyServer of dest
     memset(encodedL,0,sizeof(encodedL)); // encoded to max L onion layers
     memset(encodedP,0,sizeof(encodedP)); // encoded to privacyserver
-    strcpy(hopNXTaddr,destNXTaddr);
     len = onionize(verifiedNXTaddr,encodedD,destNXTaddr,(unsigned char *)origargstr,(int32_t)strlen(origargstr)+1);
     printf("sendmessage (%s) len.%d to %s\n",origargstr,msglen,destNXTaddr);
-    if ( len > sizeof(encodedP)-256 )
+    if ( len > sizeof(encodedP)-1024 ) // 1024 should be plenty of room, especially since 1400 is UDP limit used
     {
         printf("sendmessage, payload too big %d\n",len);
         sprintf(buf,"{\"error\":\"%s cant sendmessage.(%s) to %s too long.%d\"}",verifiedNXTaddr,msg,destNXTaddr,len);
@@ -793,24 +802,42 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
     else if ( len > 0 )
     {
         outbuf = encodedD;
-        printf("np.%p NXT.%s | destnp.%p\n",np,np!=0?np->H.U.NXTaddr:"no np",destnp);
-        if ( destnp->mypeerinfo.srvipbits != 0 && destnp->mypeerinfo.pubnxtbits != destnp->mypeerinfo.srvnxtbits )
+        if ( strcmp(verifiedNXTaddr,destNXTaddr) == 0 ) // chanc3r's boomerang onion
         {
-            len = onionize(verifiedNXTaddr,encodedsrvD,destsrvNXTaddr,outbuf,len);
-            outbuf = encodedsrvD;
-            strcpy(hopNXTaddr,destsrvNXTaddr);
+            if ( hopNXTaddr[0] != 0 && L == 0 )
+            {
+                len = onionize(verifiedNXTaddr,encodedsrvD,srvNXTaddr,outbuf,len);
+                outbuf = encodedsrvD;
+                len = onionize(verifiedNXTaddr,encodedL,hopNXTaddr,outbuf,len);
+                outbuf = encodedL;
+                // we now have [hopNXTaddr [our privacyServer [this node]]]
+            }
+            else
+            {
+                printf("boomerang needs a hopNXTaddr! and L.%d == 0\n",L);
+                return(clonestr("\"error\":\"boomerang needs a hopNXTaddr!\"}"));
+            }
         }
-        if ( L > 0 )
+        else
         {
-            len = add_random_onionlayers(hopNXTaddr,L,verifiedNXTaddr,encodedL,outbuf,len);
-            outbuf = encodedL;
+            strcpy(hopNXTaddr,destNXTaddr);
+            if ( has_privacyServer(destnp) != 0 ) // build onion in reverse order, privacyServer for dest is 2nd
+            {
+                len = onionize(verifiedNXTaddr,encodedsrvD,destsrvNXTaddr,outbuf,len);
+                outbuf = encodedsrvD,strcpy(hopNXTaddr,destsrvNXTaddr);
+                // we now have [dest privacyServer [dest]]
+            }
+            if ( L > 0 )
+            {
+                len = add_random_onionlayers(hopNXTaddr,L,verifiedNXTaddr,encodedL,outbuf,len);
+                outbuf = encodedL;
+                // we now have [L onion layers [dest privacyServer [dest]]]
+            }
         }
-        if ( np->mypeerinfo.srvipbits != 0 && np->mypeerinfo.pubnxtbits != np->mypeerinfo.srvnxtbits )
+        if ( has_privacyServer(np) != 0 ) // send via privacy server to protect our IP
         {
-            expand_nxt64bits(srvNXTaddr,np->mypeerinfo.srvnxtbits);
             len = onionize(verifiedNXTaddr,encodedP,srvNXTaddr,outbuf,len);
-            outbuf = encodedP;
-            strcpy(hopNXTaddr,srvNXTaddr);
+            outbuf = encodedP,strcpy(hopNXTaddr,srvNXTaddr);
         }
         sprintf(buf,"{\"status\":\"%s sends via %s encrypted sendmessage to %s pending\"}",verifiedNXTaddr,srvNXTaddr,destNXTaddr);
         txid = route_packet(Global_mp->udp,hopNXTaddr,outbuf,len);
@@ -831,6 +858,10 @@ char *send_tokenized_cmd(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *
 {
     char _tokbuf[4096];
     int n = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
+    if ( strcmp(verifiedNXTaddr,destNXTaddr) != 0 )
+        hopNXTaddr[0] = 0;
+    else if ( L != 0 )
+        printf("send_tokenized_cmd L must be 0 for chanc3r boomerangs\n"), L = 0;
     return(sendmessage(hopNXTaddr,L,NXTACCTSECRET,_tokbuf,(int32_t)n+1,destNXTaddr,_tokbuf));
 }
 
@@ -843,7 +874,7 @@ int32_t sendandfree_jsoncmd(int32_t L,char *sender,char *NXTACCTSECRET,cJSON *js
     verifiedNXTaddr[0] = 0;
     np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
     msg = cJSON_Print(json);
-    stripwhite_ns(msg,strlen(msg));
+    stripwhite(msg,strlen(msg));
     retstr = send_tokenized_cmd(hopNXTaddr,L,verifiedNXTaddr,NXTACCTSECRET,msg,destNXTaddr);
     if ( retstr != 0 )
     {
