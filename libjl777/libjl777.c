@@ -89,11 +89,11 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
     init_hexbytes(Global_mp->pubkeystr,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
     if ( portable_thread_create((void *)process_hashtablequeues,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
+    mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
     init_MGWconf(JSON_or_fname,myipaddr);
     printf("start getNXTblocks.(%s)\n",myipaddr);
     if ( 1 && portable_thread_create((void *)getNXTblocks,mp) == 0 )
         printf("ERROR start_Histloop\n");
-    mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
 
     printf("run_NXTservices >>>>>>>>>>>>>>> %p %s: %s %s\n",mp,mp->dispname,PC_USERNAME,mp->ipaddr);
     void run_NXTservices(void *arg);
@@ -813,7 +813,7 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
 
 int32_t got_newpeer(char *ip_port)
 {
-	printf("got_newpeer called. Now connected to.(%s)", ip_port);
+	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
 	return(0);
 }
 
