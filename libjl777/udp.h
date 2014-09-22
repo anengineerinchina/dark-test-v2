@@ -119,7 +119,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
         ASSERT(addr->sa_family == AF_INET);
         if ( np != 0 )
         {
-            if ( retjsonstr[0] != 0 )
+            if ( 0 && retjsonstr[0] != 0 )
             {
                 printf("%s send tokenized.(%s) to %s\n",NXTaddr,retjsonstr,np->H.U.NXTaddr);
                 if ( (retstr= send_tokenized_cmd(hopNXTaddr,Global_mp->Lfactor,NXTaddr,cp->NXTACCTSECRET,retjsonstr,np->H.U.NXTaddr)) != 0 )
