@@ -832,7 +832,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
                 outbuf = encodedsrvD,strcpy(hopNXTaddr,destsrvNXTaddr);
                 // we now have [dest privacyServer [dest]]
             }
-            if ( L > 0 )
+            if ( 0 && L > 0 )
             {
                 len = add_random_onionlayers(hopNXTaddr,L,verifiedNXTaddr,encodedL,outbuf,len);
                 outbuf = encodedL;
