@@ -10,7 +10,6 @@
 #include "strlcpy.h"
 #include "addrman.h"
 #include "ui_interface.h"
-#include "libjl777.h"
 
 #ifdef WIN32
 #include <string.h>
@@ -513,8 +512,6 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
         {
             LOCK(cs_vNodes);
             vNodes.push_back(pnode);
-			//bitcoindark:
-			pszDest ? got_newpeer(pszDest) : got_newpeer(addrConnect.ToString().c_str());
         }
 
         pnode->nTimeConnected = GetTime();
@@ -1235,7 +1232,9 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
-
+    //{"rat4.BitcoinDark.co", "seed.BitcoinDark.co"},
+    //{"maarx.BitcoinDark.co", "seed2.BitcoinDark.co"},
+    //{"archon.darkfox.id.au", "foxy.seeds.darkfox.id.au"},
 };
 
 void ThreadDNSAddressSeed(void* parg)
