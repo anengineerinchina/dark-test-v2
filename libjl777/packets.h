@@ -860,8 +860,14 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
 
 char *send_tokenized_cmd(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *NXTACCTSECRET,char *cmdstr,char *destNXTaddr)
 {
+    int n;
     char _tokbuf[4096];
-    int n = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
+    if ( strcmp("{\"result\":null}",cmdstr) == 0 )
+    {
+        printf("no need to send null JSON to %s\n",destNXTaddr);
+        return(0);
+    }
+    n = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
     if ( strcmp(verifiedNXTaddr,destNXTaddr) != 0 )
         hopNXTaddr[0] = 0;
     else if ( L != 0 )

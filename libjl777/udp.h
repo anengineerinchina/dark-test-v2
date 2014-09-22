@@ -86,21 +86,18 @@ void after_write(uv_write_t *req,int status)
 // UDP funcs
 int32_t portable_udpwrite(const struct sockaddr *addr,uv_udp_t *handle,void *buf,long len,int32_t allocflag)
 {
-    //struct coin_info *cp = get_coin_info("BTCD");
     int32_t r;
     struct write_req_t *wr;
-    char destip[64]; int32_t port;
-    port = extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)addr);
-    printf("portable_udpwrite %ld bytes to %s/%d\n",len,destip,port);
-    //if ( strcmp(cp->privacyserver,destip) != 0 || cp->srvport != port )
-    if ( strcmp("{\"result\":null}",buf) != 0 )
+    wr = alloc_wr(buf,len,allocflag);
+    ASSERT(wr != NULL);
     {
-        wr = alloc_wr(buf,len,allocflag);
-        ASSERT(wr != NULL);
-        r = uv_udp_send(&wr->U.ureq,handle,&wr->buf,1,addr,(uv_udp_send_cb)after_write);
-        if ( r != 0 )
-            printf("uv_udp_send error.%d %s wr.%p wreq.%p %p len.%ld\n",r,uv_err_name(r),wr,&wr->U.ureq,buf,len);
-    } else printf("no need to send null result\n");
+        char destip[64]; int32_t port;
+        port = extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)addr);
+        printf("portable_udpwrite %ld bytes to %s/%d\n",len,destip,port);
+    }
+    r = uv_udp_send(&wr->U.ureq,handle,&wr->buf,1,addr,(uv_udp_send_cb)after_write);
+    if ( r != 0 )
+        printf("uv_udp_send error.%d %s wr.%p wreq.%p %p len.%ld\n",r,uv_err_name(r),wr,&wr->U.ureq,buf,len);
     return(r);
 }
 
