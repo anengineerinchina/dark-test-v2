@@ -610,8 +610,9 @@ void say_hello(struct NXT_acct *np)
     int32_t createflag;
     expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
     expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
-    if ( strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(np->H.U.NXTaddr,NXTaddr) == 0 )
-        return;
+    //if ( strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(np->H.U.NXTaddr,NXTaddr) == 0 )
+    //    return;
+    hopNXTaddr[0] = 0;
     if ( (retstr= sendpeerinfo(hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
     {
         printf("say_hello.(%s)\n",retstr);
@@ -709,8 +710,8 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
                 if ( (cp= get_coin_info("BTCD")) != 0 )
                     strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
                 np = get_NXTacct(&createdflag,Global_mp,srvNXTaddr);
+                broadcast_publishpacket(coins,np,NXTACCTSECRET);
             }
-            broadcast_publishpacket(coins,np,NXTACCTSECRET);
         }
         return(getpubkey(verifiedNXTaddr,NXTACCTSECRET,pubNXT,0));
     }
