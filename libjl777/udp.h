@@ -114,12 +114,12 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     {
         expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
         strcpy(sender,"unknown");
-        np = 0;//process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
+        np = process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
         printf("got np.%p\n",np);
         ASSERT(addr->sa_family == AF_INET);
         if ( np != 0 )
         {
-            if ( 0 && retjsonstr[0] != 0 )
+            if ( retjsonstr[0] != 0 )
             {
                 printf("%s send tokenized.(%s) to %s\n",NXTaddr,retjsonstr,np->H.U.NXTaddr);
                 if ( (retstr= send_tokenized_cmd(hopNXTaddr,Global_mp->Lfactor,NXTaddr,cp->NXTACCTSECRET,retjsonstr,np->H.U.NXTaddr)) != 0 )

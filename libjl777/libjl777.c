@@ -754,16 +754,17 @@ char *libjl777_JSON(char *JSONstr)
             issue_generateToken(0,encoded,cmdstr,cp->NXTACCTSECRET);
             encoded[NXT_TOKEN_LEN] = 0;
             sprintf(_tokbuf,"[%s,{\"token\":\"%s\"}]",cmdstr,encoded);
+            free(cmdstr);
             array = cJSON_Parse(_tokbuf);
             if ( array != 0 )
             {
                 cmdstr = verify_tokenized_json(NXTaddr,&valid,array);
-                retstr = pNXT_json_commands(Global_mp,0,array,NXTaddr,valid,_tokbuf);
                 if ( cmdstr != 0 )
                 {
-                    printf("parms.(%s) valid.%d\n",cmdstr,valid);
+                    printf("RPC parms.(%s) valid.%d\n",cmdstr,valid);
                     free(cmdstr);
                 }
+                retstr = pNXT_json_commands(Global_mp,0,array,NXTaddr,valid,_tokbuf);
                 free_json(array);
             }
         }

@@ -730,15 +730,16 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         decoded[len] = 0;
         parmstxt = clonestr((char *)decoded);
         argjson = cJSON_Parse(parmstxt);
+    printf("[%s] argjson.%p udp.%p\n",parmstxt,argjson,udp);
         free(parmstxt);
         parmstxt = 0;
-        //printf("[%s] argjson.%p udp.%p\n",parmstxt,argjson,udp);
         if ( argjson != 0 ) // if it parses, we must have been the ultimate destination
         {
             parmstxt = verify_tokenized_json(senderNXTaddr,&valid,argjson);
             if ( valid != 0 && parmstxt != 0 && parmstxt[0] != 0 )
             {
                 tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
+                update_routing_probs(&tokenized_np->mypeerinfo,addr);
                 char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *argjson,char *sender,int32_t valid,char *origargstr);
                 jsonstr = pNXT_json_commands(Global_mp,addr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
                 if ( jsonstr != 0 )
@@ -746,8 +747,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                     strcpy(retjsonstr,jsonstr);
                     free(jsonstr);
                     printf("GOT.(%s)\n",retjsonstr);
-                }
-                update_routing_probs(&tokenized_np->mypeerinfo,addr);
+                } else printf("GOT null returned\n");
             }
             else printf("valid.%d unexpected non-tokenized message.(%s)\n",valid,decoded);
             free_json(argjson);
@@ -808,7 +808,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
     else if ( len > 0 )
     {
         outbuf = encodedD;
-        if ( 1 && strcmp(verifiedNXTaddr,destNXTaddr) == 0 ) // chanc3r's boomerang onion
+        if ( strcmp(verifiedNXTaddr,destNXTaddr) == 0 ) // chanc3r's boomerang onion
         {
             if ( hopNXTaddr[0] != 0 && L == 0 )
             {
@@ -833,7 +833,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
                 outbuf = encodedsrvD,strcpy(hopNXTaddr,destsrvNXTaddr);
                 // we now have [dest privacyServer [dest]]
             }
-            if ( 0 && L > 0 )
+            if ( L > 0 )
             {
                 len = add_random_onionlayers(hopNXTaddr,L,verifiedNXTaddr,encodedL,outbuf,len);
                 outbuf = encodedL;
@@ -853,7 +853,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
         }
         else
         {
-            sprintf(buf,"{\"status\":\"%s sends via p2p encrypted sendmessage to %s pending\"}",verifiedNXTaddr,destNXTaddr);
+            sprintf(buf,"{\"status\":\"%s sends via %s(?) encrypted sendmessage to %s pending\"}",verifiedNXTaddr,hopNXTaddr,destNXTaddr);
         }
     }
     else sprintf(buf,"{\"error\":\"%s cant sendmessage.(%s) to %s illegal len\"}",verifiedNXTaddr,msg,destNXTaddr);
