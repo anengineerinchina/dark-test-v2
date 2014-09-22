@@ -84,7 +84,7 @@ void update_peerstate(struct peerinfo *peer,struct peerinfo *hop,int32_t stateid
         ptr->state = state;
         ptr->startmilli = peer->startmillis[stateid] = milliseconds();
         hop->elapsed[stateid] = 0;
-        //queue_enqueue(&PeerQ.pingpong[0],ptr);
+        queue_enqueue(&PeerQ.pingpong[0],ptr);
     }
     else if ( state == PEER_RECV )
     {
@@ -607,7 +607,7 @@ int32_t sort_topaddrs(struct Uaddr **Uaddrs,int32_t max,struct peerinfo *peer)
     void **ptrs;
     uint32_t now = (uint32_t)time(NULL);
     n = (peer->numUaddrs > max) ? max : peer->numUaddrs;
-    if ( peer->numUaddrs == 0 )
+    if ( peer->numUaddrs == 0 || peer->Uaddrs == 0 )
         return(0);
     else if ( peer->numUaddrs > 1 )
     {
