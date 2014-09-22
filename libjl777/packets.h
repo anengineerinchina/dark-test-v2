@@ -807,7 +807,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
     else if ( len > 0 )
     {
         outbuf = encodedD;
-        if ( strcmp(verifiedNXTaddr,destNXTaddr) == 0 ) // chanc3r's boomerang onion
+        if ( 0 && strcmp(verifiedNXTaddr,destNXTaddr) == 0 ) // chanc3r's boomerang onion
         {
             if ( hopNXTaddr[0] != 0 && L == 0 )
             {
