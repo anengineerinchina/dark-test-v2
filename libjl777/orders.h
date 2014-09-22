@@ -633,7 +633,7 @@ void ack_hello(struct NXT_acct *np,struct sockaddr *prevaddr)
 }
 
 uint64_t broadcast_publishpacket(uint64_t coins[4],struct NXT_acct *np,char *NXTACCTSECRET)
-{
+{ 
     char cmd[MAX_JSON_FIELD*4],packet[MAX_JSON_FIELD*4];
     int32_t len;
     set_peer_json(cmd,np->H.U.NXTaddr,np);
