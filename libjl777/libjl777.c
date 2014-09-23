@@ -676,7 +676,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
         if ( NXTACCTSECRET[0] == 0 && (cp= get_coin_info("BTCD")) != 0 )
         {
             safecopy(NXTACCTSECRET,cp->NXTACCTSECRET,sizeof(NXTACCTSECRET));
-            expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
+            expand_nxt64bits(NXTaddr,cp->pubnxtbits);
         }
         //printf("(%s) command.(%s) NXT.(%s)\n",cJSON_Print(argjson),command,NXTaddr);
     }
@@ -738,7 +738,7 @@ char *libjl777_JSON(char *JSONstr)
     //printf("got JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
-        expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
+        expand_nxt64bits(NXTaddr,cp->pubnxtbits);
         cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
         cmdstr = cJSON_Print(json);
         if ( cmdstr != 0 )

@@ -320,7 +320,7 @@ struct coin_info
     
     char name[64],backupdir[512],privacyserver[32],myipaddr[64];
     char *userpass,*serverport,assetid[64],*marker,*tradebotfname,*pending_ptr;
-    uint64_t srvpubnxt64bits,pubnxt64bits,dust,NXTfee_equiv,txfee,markeramount,lastheighttime,height,blockheight,RTblockheight;
+    uint64_t srvpubnxtbits,pubnxtbits,dust,NXTfee_equiv,txfee,markeramount,lastheighttime,height,blockheight,RTblockheight;
     int32_t coinid,maxevolveiters,initdone,nohexout,use_addmultisig,min_confirms,minconfirms,estblocktime,forkheight,backupcount,enabled,savedtelepods,M,N,numlogs,clonesmear,pending_ptrmaxlen,srvport;
 };
 

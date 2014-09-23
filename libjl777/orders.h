@@ -609,7 +609,7 @@ void say_hello(struct NXT_acct *np)
     struct NXT_acct *hopnp;
     int32_t createflag;
     //printf("in say_hello.cp %p\n",cp);
-    expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
+    expand_nxt64bits(srvNXTaddr,cp->srvpubnxtbits);
     if ( (retstr= sendpeerinfo(hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
     {
         printf("say_hello.(%s)\n",retstr);
@@ -627,7 +627,7 @@ void ack_hello(struct NXT_acct *np,struct sockaddr *prevaddr)
 {
     struct coin_info *cp = get_coin_info("BTCD");
     char srvNXTaddr[64];
-    expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
+    expand_nxt64bits(srvNXTaddr,cp->srvpubnxtbits);
     printf("ack_hello to %s\n",np->H.U.NXTaddr);
 }
 
@@ -648,13 +648,13 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     struct other_addr *op;
     struct peerinfo *refpeer,peer;
     char verifiedNXTaddr[64],myNXTaddr[64],mysrvNXTaddr[64];
-    uint64_t pubnxt64bits;
+    uint64_t pubnxtbits;
     cp = get_coin_info("BTCD");
     np = get_NXTacct(&createdflag,Global_mp,pubNXT);
-    pubnxt64bits = calc_nxt64bits(np->H.U.NXTaddr);
+    pubnxtbits = calc_nxt64bits(np->H.U.NXTaddr);
     if ( pubkey != 0 && pubkey[0] != 0 )
         decode_hex(np->mypeerinfo.pubkey,(int32_t)sizeof(np->mypeerinfo.pubkey),pubkey);
-    if ( (refpeer= find_peerinfo(pubnxt64bits,BTCDaddr,BTCaddr)) != 0 )
+    if ( (refpeer= find_peerinfo(pubnxtbits,BTCDaddr,BTCaddr)) != 0 )
     {
         safecopy(refpeer->pubBTCD,BTCDaddr,sizeof(refpeer->pubBTCD));
         safecopy(refpeer->pubBTC,BTCaddr,sizeof(refpeer->pubBTC));
@@ -670,7 +670,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     }
     else
     {
-        set_pubpeerinfo(srvNXTaddr,srvipaddr,srvport,&peer,BTCDaddr,pubkey,pubnxt64bits,BTCaddr);
+        set_pubpeerinfo(srvNXTaddr,srvipaddr,srvport,&peer,BTCDaddr,pubkey,pubnxtbits,BTCaddr);
         refpeer = update_peerinfo(&createdflag,&peer);
         printf("created path for (%s) | coins.%p\n",pubNXT,coins);
     }
@@ -678,7 +678,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     {
         if ( coins != 0 )
             memcpy(refpeer->coins,coins,sizeof(refpeer->coins));
-        else if ( cp != 0 && cp->pubnxt64bits == refpeer->pubnxt64bits )
+        else if ( cp != 0 && cp->pubnxtbits == refpeer->pubnxtbits )
             memcpy(refpeer->coins,Global_mp->coins,sizeof(refpeer->coins));
         printf("set coins.%llx\n",(long long)coins[0]);
     }

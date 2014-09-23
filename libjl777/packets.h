@@ -299,7 +299,7 @@ struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer)
     return(peer);
 }
 
-int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxt64bits,char *pubBTC)
+int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxtbits,char *pubBTC)
 {
     memset(peer,0,sizeof(*peer));
     if ( srvNXTaddr != 0 )
@@ -311,12 +311,12 @@ int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct 
         peer->srvipbits = calc_ipbits(srvipaddr);
         peer->srvport = srvport;
     }
-    peer->pubnxtbits = pubnxt64bits;
+    peer->pubnxtbits = pubnxtbits;
     safecopy(peer->pubBTCD,pubBTCD,sizeof(peer->pubBTCD));
     safecopy(peer->pubBTC,pubBTC,sizeof(peer->pubBTC));
     if ( decode_hex(peer->pubkey,(int32_t)strlen(pubkey)/2,pubkey) != sizeof(peer->pubkey) )
     {
-        printf("WARNING: (%s %llu %s) illegal pubkey.(%s)\n",pubBTCD,(long long)pubnxt64bits,pubBTC,pubkey);
+        printf("WARNING: (%s %llu %s) illegal pubkey.(%s)\n",pubBTCD,(long long)pubnxtbits,pubBTC,pubkey);
         return(-1);
     }
     return(0);

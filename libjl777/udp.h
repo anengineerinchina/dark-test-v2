@@ -111,7 +111,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     printf("UDP RECEIVED\n");
     if ( cp != 0 && nread > 0 )
     {
-        expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
+        expand_nxt64bits(NXTaddr,cp->pubnxtbits);
         strcpy(sender,"unknown");
         port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
         np = process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
