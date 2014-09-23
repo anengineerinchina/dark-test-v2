@@ -603,7 +603,7 @@ int32_t teleport_telepod(char *mypubaddr,char *NXTaddr,char *NXTACCTSECRET,char 
     cJSON_AddItemToObject(json,"M",cJSON_CreateNumber(M));
     cJSON_AddItemToObject(json,"N",cJSON_CreateNumber(N));
     cJSON_AddItemToObject(json,"D",cJSON_CreateString(mypubaddr));
-    return(sendandfree_jsoncmd(Global_mp->Lfactor,NXTaddr,NXTACCTSECRET,json,destNXTaddr));
+    return(sendandfree_jsoncmd(0,Global_mp->Lfactor,NXTaddr,NXTACCTSECRET,json,destNXTaddr));
 }
 
 #endif

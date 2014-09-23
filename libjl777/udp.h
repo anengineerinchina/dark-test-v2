@@ -121,7 +121,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
             if ( retjsonstr[0] != 0 )
             {
                 printf("%s send tokenized.(%s) to %s\n",NXTaddr,retjsonstr,np->H.U.NXTaddr);
-                if ( (retstr= send_tokenized_cmd(hopNXTaddr,Global_mp->Lfactor,NXTaddr,cp->NXTACCTSECRET,retjsonstr,np->H.U.NXTaddr)) != 0 )
+                if ( (retstr= send_tokenized_cmd((struct sockaddr *)addr,hopNXTaddr,Global_mp->Lfactor,NXTaddr,cp->NXTACCTSECRET,retjsonstr,np->H.U.NXTaddr)) != 0 )
                 {
                     printf("sent back via UDP.(%s) got (%s) free.%p\n",retjsonstr,retstr,retstr);
                     free(retstr);
@@ -133,7 +133,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     if ( rcvbuf->base != 0 )
     {
         printf("free rcvbuf->base %p\n",rcvbuf->base);
-        //free(rcvbuf->base);
+        free(rcvbuf->base);
     }
 }
 
@@ -157,12 +157,12 @@ uv_udp_t *open_udp(struct sockaddr *addr)
             return(0);
         }
     }
-    /*r = uv_udp_set_broadcast(udp,1);
+    r = uv_udp_set_broadcast(udp,1);
     if ( r != 0 )
     {
         fprintf(stderr,"uv_udp_set_broadcast: %d %s\n",r,uv_err_name(r));
         return(0);
-    }*/
+    }
     r = uv_udp_recv_start(udp,portable_alloc,on_udprecv);
     if ( r != 0 )
     {
@@ -194,7 +194,6 @@ void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void *handler)
         printf("UDP.%p server started on port %d\n",srv,port);
     else printf("couldnt open_udp on port.%d\n",port);
     Servers_started |= 1;
-    init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
 
     return(srv);
 }

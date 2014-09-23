@@ -89,7 +89,9 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
     init_hexbytes(Global_mp->pubkeystr,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
     if ( portable_thread_create((void *)process_hashtablequeues,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
-    mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
+    mp->udps[0] = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
+    mp->udps[1] = start_libuv_udpserver(4,0,(void *)on_udprecv);
+    init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
     init_MGWconf(JSON_or_fname,myipaddr);
     printf("start getNXTblocks.(%s)\n",myipaddr);
     if ( 1 && portable_thread_create((void *)getNXTblocks,mp) == 0 )
@@ -329,7 +331,7 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
             printf("received message.(%s) from hop.%s/%d\n",origargstr,previp,port);
             retstr = clonestr("{\"result\":\"received message\"}");
         }
-        else retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
+        else retstr = sendmessage(prevaddr,nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
     }
     if ( retstr == 0 )
         retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
@@ -370,7 +372,7 @@ char *sendpeerinfo_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
     if ( valid < 0 )
         return(0);
     if ( sender[0] != 0 && valid >= 0 && addr[0] != 0 )
-        retstr = sendpeerinfo(hopNXTaddr,sender,NXTACCTSECRET,addr,destcoin);
+        retstr = sendpeerinfo(prevaddr,hopNXTaddr,sender,NXTACCTSECRET,addr,destcoin);
     else retstr = clonestr("{\"result\":\"invalid getpubkey request\"}");
     return(retstr);
 }
@@ -701,7 +703,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
             retstr = (*(json_handler)cmdinfo[0])(NXTaddr,NXTACCTSECRET,prevaddr,sender,valid,objs,j-3,origargstr);
             if ( retstr == 0 )
                 retstr = clonestr("{\"result\":null}");
-            if ( 0 && retstr != 0 )
+            if ( 1 && retstr != 0 )
                 printf("json_handler returns.(%s)\n",retstr);
             return(retstr);
         }

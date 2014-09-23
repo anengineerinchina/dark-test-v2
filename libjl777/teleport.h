@@ -289,7 +289,7 @@ int32_t process_cloneQ(void **ptrp,void *arg) // added to this queue when proces
 void teleport_idler(uv_idle_t *handle)
 {
     extern int32_t Finished_init;
-    void say_hello(struct NXT_acct *np);
+    void say_hello(struct sockaddr *prevaddr,struct NXT_acct *np);
     static double lastattempt,firsttime;
     double millis;
     struct NXT_acct *np;
@@ -304,7 +304,7 @@ void teleport_idler(uv_idle_t *handle)
         process_pingpong_queue(&Transporter_recvQ,0);
         process_pingpong_queue(&CloneQ,0);
         if ( 0 && millis > firsttime+60000 && (np= queue_dequeue(&HelloQ)) != 0 )
-            say_hello(np);
+            say_hello(0,np);
         lastattempt = millis;
     }
 }
@@ -374,7 +374,7 @@ void complete_transporter_reception(struct coin_info *cp,struct transporter_log 
     save_transporter_log(log);
     if ( retstr != 0 )
     {
-        send_tokenized_cmd(hopNXTaddr,Global_mp->Lfactor,verifiedNXTaddr,NXTACCTSECRET,retstr,destnp->H.U.NXTaddr);
+        send_tokenized_cmd(0,hopNXTaddr,Global_mp->Lfactor,verifiedNXTaddr,NXTACCTSECRET,retstr,destnp->H.U.NXTaddr);
         free(retstr);
     }
     for (i=0; i<log->numpods; i++)
