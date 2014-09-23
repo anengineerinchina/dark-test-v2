@@ -661,7 +661,7 @@ uint64_t route_packet(uv_udp_t *udp,char *hopNXTaddr,unsigned char *outbuf,int32
         if ( len < 1400 )
         {
             uv_ip4_addr(destip,np->mypeerinfo.srvport,&addr);
-            portable_udpwrite((struct sockaddr *)&addr,udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+            //portable_udpwrite((struct sockaddr *)&addr,udp,finalbuf,len,ALLOCWR_ALLOCFREE);
         }
         else call_libjl777_broadcast(destip,(char *)finalbuf,len,0);
     }
