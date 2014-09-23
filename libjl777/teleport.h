@@ -293,7 +293,14 @@ void teleport_idler(uv_idle_t *handle)
     static double lastattempt,firsttime;
     double millis;
     struct NXT_acct *np;
+    struct udpQ_entry *ptr;
     //printf("teleport_idler\n");
+    if ( Global_mp->udp != 0 && (ptr= queue_dequeue(&udpQ)) != 0 )
+    {
+        printf("dequeue buf.%p len.%d\n",ptr->buf,ptr->len);
+        portable_udpwrite(&ptr->addr,Global_mp->udp,ptr->buf,ptr->len,ALLOCWR_ALLOCFREE);
+        free(ptr);
+    }
     millis = ((double)uv_hrtime() / 1000000);
     if ( firsttime == 0 )
         firsttime = millis;
