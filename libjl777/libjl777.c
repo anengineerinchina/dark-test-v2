@@ -314,11 +314,12 @@ char *teleport_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 
 char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char previp[64],nexthopNXTaddr[MAX_JSON_FIELD],destNXTaddr[MAX_JSON_FIELD],msg[MAX_JSON_FIELD],*retstr = 0;
+    char previp[64],nexthopNXTaddr[64],destNXTaddr[64],msg[MAX_JSON_FIELD],*retstr = 0;
     int32_t L,port;
     copy_cJSON(destNXTaddr,objs[0]);
     copy_cJSON(msg,objs[1]);
     L = (int32_t)get_API_int(objs[2],1);
+    nexthopNXTaddr[0] = 0;
     printf("sendmsg_func sender.(%s) valid.%d dest.(%s) (%s)\n",sender,valid,destNXTaddr,origargstr);
     if ( sender[0] != 0 && valid > 0 && destNXTaddr[0] != 0 )
     {
@@ -741,6 +742,7 @@ char *libjl777_JSON(char *JSONstr)
             issue_generateToken(0,encoded,cmdstr,cp->NXTACCTSECRET);
             encoded[NXT_TOKEN_LEN] = 0;
             sprintf(_tokbuf,"[%s,{\"token\":\"%s\"}]",cmdstr,encoded);
+            free(cmdstr);
             array = cJSON_Parse(_tokbuf);
             if ( array != 0 )
             {
@@ -927,6 +929,12 @@ char *libjl777_gotpacket(char *msg,int32_t duration,char *ip_port)
         } printf("cJSON_Parse error.(%s)\n",msg);
     }
     return(clonestr(retjsonstr));
+}
+
+int32_t got_newpeer(char *ip_port)
+{
+	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
+	return(0);
 }
 
 int libjl777_start(char *JSON_or_fname,char *myipaddr)

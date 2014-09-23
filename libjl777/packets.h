@@ -19,7 +19,7 @@
 #define PEER_MASK (PEER_SENT|PEER_RECV|PEER_PENDINGRECV)
 #define PEER_TIMEOUT 0x40
 #define PEER_FINISHED 0x80
-#define PEER_EXPIRATION 60
+#define PEER_EXPIRATION (60 * 1000.)
 
 struct peer_queue_entry
 {
