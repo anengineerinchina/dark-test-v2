@@ -451,18 +451,21 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
                 printf("FATAL: %s %s %s is unknown account\n",peer->pubBTCD,destNXTaddr,peer->pubBTC);
                 return(-1);
             }
-            if ( memcmp(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey)) != 0 )
+            /*if ( memcmp(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey)) != 0 )
             {
                 printf("Warning: (%s %s %s) pubkey updated %llx -> %llx\n",peer->pubBTCD,destNXTaddr,peer->pubBTC,*(long long *)np->mypeerinfo.pubkey,*(long long *)peer->pubkey);
                 memcpy(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey));
-            }
-            printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
-            len = onionize(verifiedNXTaddr,dest,np->H.U.NXTaddr,src,len);
-            strcpy(hopNXTaddr,np->H.U.NXTaddr);
-            if ( len > 4096 )
+            }*/
+            if ( strcmp(hopNXTaddr,np->H.U.NXTaddr) != 0 )
             {
-                printf("FATAL: onion layers too big.%d\n",len);
-                return(-1);
+                printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
+                len = onionize(verifiedNXTaddr,dest,np->H.U.NXTaddr,src,len);
+                strcpy(hopNXTaddr,np->H.U.NXTaddr);
+                if ( len > 4096 )
+                {
+                    printf("FATAL: onion layers too big.%d\n",len);
+                    return(-1);
+                }
             }
             numlayers--;
         }
@@ -872,7 +875,10 @@ char *send_tokenized_cmd(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *
     if ( strcmp(verifiedNXTaddr,destNXTaddr) != 0 )
         hopNXTaddr[0] = 0;
     else if ( L != 0 )
+    {
         printf("send_tokenized_cmd L must be 0 for chanc3r boomerangs\n"), L = 0;
+        strcpy(hopNXTaddr,destNXTaddr);
+    }
     return(sendmessage(hopNXTaddr,L,verifiedNXTaddr,_tokbuf,(int32_t)n+1,destNXTaddr,_tokbuf));
 }
 
