@@ -593,12 +593,15 @@ char *sendpeerinfo(char *hopNXTaddr,char *NXTaddr,char *NXTACCTSECRET,char *dest
     printf("in sendpeerinfo(%s)\n",destaddr);
     pubnp = search_addresses(NXTaddr);
     destnp = search_addresses(destaddr);
-    hopNXTaddr[0] = 0;
     if ( pubnp != 0 && destnp != 0 )
     {
         set_peer_json(buf,NXTaddr,pubnp);
-        printf("SENDPEERINFO >>>>>>>>>> (%s)\n",buf);
-        return(send_tokenized_cmd(hopNXTaddr,0,NXTaddr,NXTACCTSECRET,buf,destnp->H.U.NXTaddr));
+        if ( hopNXTaddr != 0 )
+        {
+            printf("SENDPEERINFO >>>>>>>>>> (%s)\n",buf);
+            hopNXTaddr[0] = 0;
+            return(send_tokenized_cmd(hopNXTaddr,0,NXTaddr,NXTACCTSECRET,buf,destnp->H.U.NXTaddr));
+        } else return(0);
     } else return(clonestr("{\"error\":\"sendpeerinfo cant find pubaddr\"}"));
 }
 
