@@ -178,7 +178,7 @@ void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void *handler)
     if ( ip4_or_ip6 == 4 )
     {
         ASSERT(0 == uv_ip4_addr("0.0.0.0",port,&addr));
-        ptr = 0;//(const struct sockaddr *)&addr;
+        ptr = (const struct sockaddr *)&addr;
     }
     else if ( ip4_or_ip6 == 6 )
     {
