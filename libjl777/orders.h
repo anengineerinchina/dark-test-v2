@@ -695,21 +695,26 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     verifiedNXTaddr[0] = 0;
     np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
     if ( prevaddr != 0 )
-        ack_hello(np,prevaddr);
-
-    expand_nxt64bits(mysrvNXTaddr,np->mypeerinfo.srvnxtbits);
-    if ( strcmp(np->H.U.NXTaddr,pubNXT) == 0 || strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(srvNXTaddr,mysrvNXTaddr) == 0 ) // this is this node
     {
-        if ( strcmp(srvNXTaddr,pubNXT) == 0 )
-        {
-            strcpy(verifiedNXTaddr,srvNXTaddr);
-            if ( (cp= get_coin_info("BTCD")) != 0 )
-                strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
-            np = get_NXTacct(&createdflag,Global_mp,srvNXTaddr);
-        }
-        broadcast_publishpacket(coins,np,NXTACCTSECRET);
+        ack_hello(np,prevaddr);
+        return(0);
     }
-    return(getpubkey(verifiedNXTaddr,NXTACCTSECRET,pubNXT,0));
+    else
+    {
+        expand_nxt64bits(mysrvNXTaddr,np->mypeerinfo.srvnxtbits);
+        //if ( strcmp(np->H.U.NXTaddr,pubNXT) == 0 || strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(srvNXTaddr,mysrvNXTaddr) == 0 ) // this is this node
+        {
+            if ( strcmp(srvNXTaddr,pubNXT) == 0 )
+            {
+                strcpy(verifiedNXTaddr,srvNXTaddr);
+                if ( (cp= get_coin_info("BTCD")) != 0 )
+                    strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
+                np = get_NXTacct(&createdflag,Global_mp,srvNXTaddr);
+                broadcast_publishpacket(coins,np,NXTACCTSECRET);
+            }
+        }
+        return(getpubkey(verifiedNXTaddr,NXTACCTSECRET,pubNXT,0));
+    }
 }
 
 char *checkmessages(char *NXTaddr,char *NXTACCTSECRET,char *senderNXTaddr)
