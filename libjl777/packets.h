@@ -28,11 +28,27 @@ struct peer_queue_entry
     uint8_t stateid,state;
 };
 
+struct udpQ_entry
+{
+    struct sockaddr addr;
+    int32_t len;
+    uint8_t buf[];
+};
+
 struct pingpong_queue PeerQ;
-queue_t HelloQ;
+queue_t HelloQ,udpQ;
 struct peerinfo **Peers,**Pservers;
 int32_t Numpeers,Numpservers;
 int32_t portable_udpwrite(const struct sockaddr *addr,uv_udp_t *handle,void *buf,long len,int32_t allocflag);
+
+void queue_udpwrite(struct sockaddr *addr,uint8_t *buf,int32_t len)
+{
+    struct udpQ_entry *ptr = calloc(1,sizeof(*ptr)+len+1);
+    ptr->addr = *addr;
+    ptr->len = len;
+    memcpy(ptr->buf,buf,len);
+    queue_enqueue(&udpQ,ptr);
+}
 
 // single threaded peer functions
 int32_t process_PeerQ(void **ptrp,void *arg) // added when inbound transporter sequence is started
@@ -661,8 +677,8 @@ uint64_t route_packet(int32_t selector,char *hopNXTaddr,unsigned char *outbuf,in
         if ( len < 1400 )
         {
             uv_ip4_addr(destip,np->mypeerinfo.srvport,&addr);
-            if ( selector == 0 )
-                portable_udpwrite((struct sockaddr *)&addr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+            queue_udpwrite((struct sockaddr *)&addr,finalbuf,len);
+            //portable_udpwrite((struct sockaddr *)&addr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
         }
         else call_libjl777_broadcast(destip,(char *)finalbuf,len,0);
     }
@@ -679,8 +695,8 @@ uint64_t route_packet(int32_t selector,char *hopNXTaddr,unsigned char *outbuf,in
                 Uaddrs[i]->numsent++;
                 if ( len < 1400 )
                 {
-                    if ( selector == 0 )
-                        portable_udpwrite((struct sockaddr *)&Uaddrs[i]->addr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+                    queue_udpwrite((struct sockaddr *)&Uaddrs[i]->addr,finalbuf,len);
+                    //portable_udpwrite((struct sockaddr *)&Uaddrs[i]->addr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
                 }
                 else
                 {
