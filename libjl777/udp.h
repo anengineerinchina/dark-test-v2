@@ -110,7 +110,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     retjsonstr[0] = 0;
     port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
     printf("UDP RECEIVED %d bytes from %s/%d\n",(int)nread,sender,port);
-    if ( cp != 0 && nread > 0 )
+    if ( 0 && cp != 0 && nread > 0 )
     {
         expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
         strcpy(sender,"unknown");
