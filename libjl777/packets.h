@@ -661,7 +661,7 @@ uint64_t route_packet(uv_udp_t *udp,char *hopNXTaddr,unsigned char *outbuf,int32
         if ( len < 1400 )
         {
             uv_ip4_addr(destip,np->mypeerinfo.srvport,&addr);
-            //portable_udpwrite((struct sockaddr *)&addr,udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+            portable_udpwrite((struct sockaddr *)&addr,udp,finalbuf,len,ALLOCWR_ALLOCFREE);
         }
         else call_libjl777_broadcast(destip,(char *)finalbuf,len,0);
     }
@@ -744,7 +744,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                 tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
                 update_routing_probs(&tokenized_np->mypeerinfo,addr);
                 char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *argjson,char *sender,int32_t valid,char *origargstr);
-                jsonstr = pNXT_json_commands(Global_mp,addr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
+                jsonstr = 0;//pNXT_json_commands(Global_mp,addr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
                 if ( jsonstr != 0 )
                 {
                     strcpy(retjsonstr,jsonstr);

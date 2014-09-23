@@ -115,7 +115,6 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
         expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
         strcpy(sender,"unknown");
         np = process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
-        printf("got np.%p\n",np);
         ASSERT(addr->sa_family == AF_INET);
         if ( np != 0 )
         {
@@ -126,18 +125,13 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
                 {
                     printf("sent back via UDP.(%s) got (%s) free.%p\n",retjsonstr,retstr,retstr);
                     free(retstr);
-                    printf("retstr freed\n");
                 }
             }
          }
          server_xferred += nread;
     }
     if ( rcvbuf->base != 0 )
-    {
-        printf("on_duprecv free.%p\n",rcvbuf->base);
         free(rcvbuf->base);
-    }
-    printf("done UDP recv\n");
 }
 
 uv_udp_t *open_udp(struct sockaddr *addr)

@@ -514,7 +514,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
             LOCK(cs_vNodes);
             vNodes.push_back(pnode);
 			//bitcoindark:
-			pszDest ? got_newpeer(pszDest) : got_newpeer(addrConnect.ToString().c_str());
+			//pszDest ? got_newpeer(pszDest) : got_newpeer(addrConnect.ToString().c_str());
         }
 
         pnode->nTimeConnected = GetTime();
