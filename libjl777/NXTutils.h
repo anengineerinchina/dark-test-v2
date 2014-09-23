@@ -1653,7 +1653,7 @@ int32_t validate_token(CURL *curl_handle,char *pubkey,char *NXTaddr,char *tokeni
             }
             if ( retcode != -5 )
             {
-                firstjsontxt = cJSON_Print(firstitem), stripwhite_ns(firstjsontxt,strlen(firstjsontxt));
+                firstjsontxt = cJSON_Print(firstitem), stripwhite(firstjsontxt,strlen(firstjsontxt));
                 tokenobj = cJSON_GetArrayItem(array,1);
                 obj = cJSON_GetObjectItem(tokenobj,"token");
                 copy_cJSON((char *)encoded,obj);
