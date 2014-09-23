@@ -841,7 +841,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
 char *send_tokenized_cmd(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *NXTACCTSECRET,char *cmdstr,char *destNXTaddr)
 {
     char _tokbuf[4096];
-    int n = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
+    int n = construct_tokenized_req(_tokbuf,cmdstr,verifiedNXTaddr);
     return(sendmessage(hopNXTaddr,L,NXTACCTSECRET,_tokbuf,(int32_t)n+1,destNXTaddr,_tokbuf));
 }
 
