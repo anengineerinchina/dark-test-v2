@@ -314,7 +314,7 @@ char *teleport_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 
 char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char previp[64],nexthopNXTaddr[MAX_JSON_FIELD],destNXTaddr[MAX_JSON_FIELD],msg[MAX_JSON_FIELD],*retstr = 0;
+    char previp[64],nexthopNXTaddr[64],destNXTaddr[64],msg[MAX_JSON_FIELD],*retstr = 0;
     int32_t L,port;
     copy_cJSON(destNXTaddr,objs[0]);
     copy_cJSON(msg,objs[1]);
