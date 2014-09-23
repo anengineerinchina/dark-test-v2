@@ -15,12 +15,14 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include<boost/lexical_cast.hpp>
+#include <boost/lexical_cast.hpp>
 
 
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include "libjl777.h"
+
 using namespace std;
 using namespace boost;
 
@@ -51,7 +53,7 @@ unsigned int nTargetSpacing = 1 * 60; // BitcoinDark - 1 minute
 static const int64_t nDiffChangeTarget = 1;
 
 unsigned int nStakeMinAge = 8 * 60 * 60; // BitcoinDark - 8 hours
-unsigned int nStakeMaxAge = 72 * 60 * 60; // thanks to jimmy2011 for suggesting the improvement of 72 hours nStakeMaxAge
+unsigned int nStakeMaxAge = -1;
 unsigned int nModifierInterval = 10 * 60; // BitcoinDark - time to elapse before new modifier is computed
 
 int nCoinbaseMaturity = 100;
@@ -85,6 +87,7 @@ int64_t nReserveBalance = 0;
 int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
+
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2754,8 +2757,8 @@ bool LoadExternalBlockFile(FILE* fileIn)
 //CPubAddr
 //
 
-extern map<uint256, CPubAddr> mapPubAddrs;
-extern CCriticalSection cs_mapPubAddrs;
+//extern map<uint256, CPubAddr> mapPubAddrs;
+//extern CCriticalSection cs_mapPubAddrs;
 
 
 
@@ -2863,7 +2866,6 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 unsigned char pchMessageStart[4] = { 0xe4, 0xc2, 0xd8, 0xe6 };
 
 //bitcoindark:
-char *process_jl777_msg(CNode* from,char *msg,int32_t duration);
 
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
@@ -2914,6 +2916,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             pfrom->addrLocal = addrMe;
             SeenLocal(addrMe);
         }
+
 
         // Disconnect if we connected to ourself
         if (nNonce == nLocalHostNonce && nNonce > 1)
@@ -3517,76 +3520,65 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 	//BitcoinDark Custom Message Implementation
 	else if(strCommand == "pubaddr")
 	{
-            std::cout << "pubaddr called by peer " << pfrom->addr.ToString() << std::endl;
-
-            CPubAddr pubaddr;
-            vRecv >> pubaddr;
-
-            uint256 pubaddrHash = pubaddr.GetHash();
-            if (pfrom->setKnown.count(pubaddrHash) == 0)
+        std::cout << "pubaddr called by peer " << pfrom->addr.ToString() << std::endl;
+        CPubAddr pubaddr;
+        vRecv >> pubaddr;
+        //uint256 pubaddrHash = pubaddr.GetHash();
+        //if ( pfrom->setKnown.count(pubaddrHash) == 0 )
+        {
+            //if ( pubaddr.ProcessPubAddr() != 0 )
             {
-                if (pubaddr.ProcessPubAddr())
+                // Relay
+                /*pfrom->setPubAddrKnown.insert(pubaddrHash);
                 {
-                    // Relay
-                    pfrom->setPubAddrKnown.insert(pubaddrHash);
-                    {
-                        LOCK(cs_vNodes);
-                        BOOST_FOREACH(CNode* pnode, vNodes)
-                            pubaddr.RelayTo(pnode);
-                    }
-
-
-                    //Process
-
-                    stringstream id;
-                    id << pubaddr.nID;
-
-                    stringstream exp;
-                    exp << pubaddr.nExpiration;
-
-                    stringstream msg;
-                    msg << pubaddr.teleportMsg;
-
-                        std::string debugStr = string(
-                            "Processing pubaddr message "
-                            + msg.str()
-                            + "\n\tfrom Peer:"
-                            + pfrom->addr.ToString()
-                            + "\n\tnId: "
-                            + id.str()
-                            + "\n\tExpiration Date: "
-                            + exp.str()
-                                                    );
-                        std::cout << debugStr << std::endl;
-			int32_t duration = pubaddr.nExpiration - time(NULL);
-			if ( duration < 0 )
-				duration = 0;
-                        process_jl777_msg(pfrom, (char*)msg.str().c_str(), duration);
-                }
-
-                else {
-                    // Small DoS penalty so peers that send us lots of
-                    // duplicate/expired/invalid-signature/whatever pubaddrs
-                    // eventually get banned.
-                    // This isn't a Misbehaving(100) (immediate ban) because the
-                    // peer might be an older or different implementation
-                    printf("%s sent duplicate pubaddr. Misbehaving += 3.", pfrom->addr.ToString().c_str());
-                    pfrom->Misbehaving(3);
-                }
+                    LOCK(cs_vNodes);
+                    BOOST_FOREACH(CNode* pnode, vNodes)
+                    pubaddr.RelayTo(pnode);
+                }*/
+                pubaddr.CheckSignature();
+                //Process
+                stringstream id;
+                id << pubaddr.nID;
+                stringstream exp;
+                exp << pubaddr.nExpiration;
+                stringstream msg;
+                msg << pubaddr.teleportMsg;
+                /*std::string debugStr = string(
+                                              "Processing pubaddr message "
+                                              + msg.str()
+                                              + "\n\tfrom Peer:"
+                                              + pfrom->addr.ToString()
+                                              + "\n\tnId: "
+                                              + id.str()
+                                              + "\n\tExpiration Date: "
+                                              + exp.str()
+                                              );
+                std::cout << debugStr << std::endl;*/
+                int32_t duration = pubaddr.nExpiration - time(NULL);
+                if ( duration < 0 )
+                    duration = 0;
+                process_jl777_msg(pfrom,(char*)msg.str().c_str(),duration);
+            }
+            /*else
+            {
+                // Small DoS penalty so peers that send us lots of
+                // duplicate/expired/invalid-signature/whatever pubaddrs
+                // eventually get banned.
+                // This isn't a Misbehaving(100) (immediate ban) because the
+                // peer might be an older or different implementation
+                printf("%s sent duplicate pubaddr. Misbehaving += 3.", pfrom->addr.ToString().c_str());
+                pfrom->Misbehaving(3);
+            }*/
         }
     }
     else
     {
         // Ignore unknown commands for extensibility
     }
-
-
     // Update the last seen time for this node's address
     if (pfrom->fNetworkNode)
-        if (strCommand == "version" || strCommand == "addr" || strCommand == "inv" || strCommand == "pubaddr" || strCommand == "getdata" || strCommand == "ping")
+        if (strCommand == "version" || strCommand == "addr" || strCommand == "pubaddr" || strCommand == "inv" || strCommand == "pubaddr" || strCommand == "getdata" || strCommand == "ping")
             AddressCurrentlyConnected(pfrom->addr);
-
-
     return true;
 }
 
@@ -3706,13 +3698,19 @@ bool ProcessMessages(CNode* pfrom)
 
 bool SendMessages(CNode* pto, bool fSendTrickle)
 {
-	//void init_jl777();
-    //static int didinit;
-	//if ( didinit == 0 )
-	//{
-	//	init_jl777();
-	//	didinit = 1;
-	//}
+    //bitcoindark: start libjl777
+    static int didinit;
+    if ( didinit == 0 )
+    {
+        char *ipaddr = (char *)addrSeenByPeer.ToString().c_str();
+        if ( strcmp("[::]:0",ipaddr) != 0 && strcmp("0.0.0.0:0",ipaddr) != 0 )
+        {
+            init_jl777(ipaddr);
+            didinit = 1;
+        }
+    }
+
+
     TRY_LOCK(cs_main, lockMain);
     if (lockMain) {
         // Don't send anything until we get their version message
@@ -3869,28 +3867,11 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         }
         if (!vGetData.empty())
             pto->PushMessage("getdata", vGetData);
-
-
-		/*jl777 send message
-		vector<string> jl777message;
-		int64_t now = GetTime() * 1000000;
-		string message = "SENT JL777 at ";
-		message = message + boost::lexical_cast<std::string>(now);
-		jl777message.push_back(message);
-		if (!jl777message.empty())
-			pto->PushMessage("jl777", jl777message);
-		jl777message.clear();*/
     }
     return true;
 }
 
 //bitcoindark:
-extern "C" int libjl777_start(char *JSON_or_fname);
-extern "C" char *libjl777_JSON(char *JSONstr);
-extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration);
-extern "C" char *libjl777_gotpacket(char *msg,int32_t duration);
-
-
 
 char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 {
@@ -3904,66 +3885,100 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 		printf("no point to process null msg.%p\n",msg);
 		return((char *)"{\"result\":null}");
 	}
-	retstr = libjl777_gotpacket(msg,duration);
-	printf("called libjl777_gotpackt. restrt=%s", retstr);
-	if ( (len= strlen(retstr)) >= retlen )
-    {
-        printf("in if, retlen=%ld",retlen);
-		retlen = len + 1;
-		retbuf = (char *)realloc(retbuf,len+1);
+	retstr = libjl777_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
+	if ( retstr != 0 )
+	{
+		if ( (len= strlen(retstr)) >= retlen )
+		{
+			retlen = len + 1;
+			retbuf = (char *)realloc(retbuf,len+1);
+		}
+		strcpy(retbuf,retstr);
+		printf("\n\treceived message. msg: %s from %s retstr.(%s)\n", msg, from->addr.ToString().c_str(),retbuf);
+		free(retstr);
 	}
-	strcpy(retbuf,retstr);
-	free(retstr);
-	printf("\n\treceived message. msg: %s from %s retstr.(%s)\n", msg, from->addr.ToString().c_str(),retstr);
 	return(retbuf);
 }
 
-void broadcastPubAddr(char *msg, int32_t duration)
+void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
+{
+    pubaddr.teleportMsg = msg;
+    pubaddr.nPriority = 1;
+    pubaddr.nID = rand() % 100000001;
+    pubaddr.nVersion = PROTOCOL_VERSION;
+    pubaddr.nRelayUntil = pubaddr.nExpiration = (GetAdjustedTime() + duration);
+    CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
+    sMsg << (CUnsignedPubAddr)pubaddr;
+    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
+    if ( pubaddr.ProcessPubAddr() == 0 )
+        throw runtime_error("set_pubaddr: Failed to process pubaddr.\n");
+}
+    
+void broadcastPubAddr(char *msg,int32_t duration)
 {
     CPubAddr pubaddr;
-
-    pubaddr.teleportMsg = std::string(msg);
+    set_pubaddr(pubaddr,std::string(msg),duration);
+    /*pubaddr.teleportMsg = std::string(msg);
     pubaddr.nPriority = 1;
-    pubaddr.nID = rand() % 10001;
+    pubaddr.nID = rand() % 100000001;
     pubaddr.nVersion = PROTOCOL_VERSION;
-
-    if (duration > 24 * 60 * 60)
-        duration = 24*60*60;    //maximum pubaddr message time == 1 day
-
-    pubaddr.nRelayUntil = GetAdjustedTime() + duration;
-    pubaddr.nExpiration = GetAdjustedTime() + duration;
-
-	CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
+    if ( duration > MAX_PUBADDR_TIME )
+        duration = MAX_PUBADDR_TIME;
+    pubaddr.nRelayUntil = pubaddr.nExpiration = (GetAdjustedTime() + duration);
+	CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
     sMsg << (CUnsignedPubAddr)pubaddr;
-    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(), sMsg.end());
-
-    if(!pubaddr.ProcessPubAddr())
-        throw runtime_error(
-            "Failed to process pubaddr.\n");
+    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
+    
+    if ( pubaddr.ProcessPubAddr() == 0 )
+        throw runtime_error("Failed to process pubaddr.\n");*/
     // Relay pubaddr to all peers
     {
         LOCK(cs_vNodes);
-        BOOST_FOREACH(CNode* pnode, vNodes)
+        BOOST_FOREACH(CNode *pnode,vNodes)
         {
             pubaddr.RelayTo(pnode);
         }
-
     }
-
 }
 
 extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 {
-	printf("libjl777_broadcast() called:(%s) dur.%d\n",msg,duration);
-
+	printf("libjl777_broadcast(%s) dur.%d\n",msg,duration);
 	broadcastPubAddr(msg, duration);
-
 	return(0);
 }
 
-void init_jl777()
+int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
+{
+    CPubAddr pubaddr;
+    std::string supernetmsg = "";
+    CNode *peer = FindNode((CNetAddr)std::string(destip));
+    if ( peer == NULL )
+        return(-1); // Not a known peer
+    for(int32_t i=0; i<len; i++)
+        supernetmsg += msg[i];//std::string(msg[i]);
+    set_pubaddr(pubaddr,supernetmsg,60); // just one minute should be plenty of time
+
+    /*pubaddr.teleportMsg = supernetmsg;
+    pubaddr.nPriority = 1;
+    pubaddr.nID = rand() % 100000001;
+    pubaddr.nVersion = PROTOCOL_VERSION;
+    pubaddr.nRelayUntil = pubaddr.nExpiration = (GetAdjustedTime() + 60); //one minute relay time to ensure it reaches its destination
+    CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
+    sMsg << (CUnsignedPubAddr)pubaddr;
+    pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
+    */
+    //if ( pubaddr.ProcessPubAddr() == 0 )
+    //    throw runtime_error("Failed to process pubaddr.\n");
+	if ( pubaddr.RelayTo(peer) == true )
+		return(0);
+	return(-2);
+}
+
+
+void init_jl777(char *myip)
 {
 std::cout << "starting libjl777" << std::endl;
-    libjl777_start((char *)"jl777.conf");
+    libjl777_start((char *)"SuperNET.conf",myip);
 std::cout << "back from start" << std::endl;
 }

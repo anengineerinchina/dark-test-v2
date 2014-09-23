@@ -1,0 +1,19 @@
+git pull
+./BitcoinDarkd stop
+cd libjl777
+./clean
+./m
+cp libjl777.a libs
+cd libuv
+make
+cp .libs/libuv.a ../libs
+cd ..
+cp libs/*.a ../src
+cd ../src
+rm BitcoinDarkd
+make -f makefile.unix
+rm ~/.BitcoinDark/debug.log
+cp BitcoinDarkd ..
+cd ..
+./b
+
