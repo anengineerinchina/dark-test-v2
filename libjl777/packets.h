@@ -656,7 +656,7 @@ uint64_t route_packet(int32_t selector,char *hopNXTaddr,unsigned char *outbuf,in
     }
     if ( is_privacyServer(&np->mypeerinfo) != 0 )
     {
-        printf("DIRECT udpsend to %s/%d finalbuf.%d\n",destip,np->mypeerinfo.srvport,len);
+        printf("DIRECT udpsend.%d to %s/%d finalbuf.%d\n",selector,destip,np->mypeerinfo.srvport,len);
         np->mypeerinfo.numsent++;
         if ( len < 1400 )
         {
@@ -744,7 +744,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                 tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
                 update_routing_probs(&tokenized_np->mypeerinfo,addr);
                 char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *argjson,char *sender,int32_t valid,char *origargstr);
-                jsonstr = 0;//pNXT_json_commands(Global_mp,addr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
+                jsonstr = pNXT_json_commands(Global_mp,addr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
                 if ( jsonstr != 0 )
                 {
                     strcpy(retjsonstr,jsonstr);
