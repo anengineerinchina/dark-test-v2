@@ -691,11 +691,12 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
         //safecopy(np->BTCaddr,BTCaddr,sizeof(np->BTCaddr));
         op = MTadd_hashtable(&createdflag,Global_mp->otheraddrs_tablep,BTCaddr),op->nxt64bits = np->H.nxt64bits;
     }
-    if ( prevaddr != 0 )
-        ack_hello(np,prevaddr);
 
     verifiedNXTaddr[0] = 0;
     np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
+    if ( prevaddr != 0 )
+        ack_hello(np,prevaddr);
+
     expand_nxt64bits(mysrvNXTaddr,np->mypeerinfo.srvnxtbits);
     if ( strcmp(np->H.U.NXTaddr,pubNXT) == 0 || strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(srvNXTaddr,mysrvNXTaddr) == 0 ) // this is this node
     {
@@ -874,6 +875,7 @@ char *makeoffer(char *verifiedNXTaddr,char *NXTACCTSECRET,char *otherNXTaddr,uin
     long i,n;
     int32_t createdflag;
     uint64_t nxt64bits,other64bits,assetoshisA,assetoshisB;
+    hopNXTaddr[0] = 0;
     find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
     nxt64bits = calc_nxt64bits(verifiedNXTaddr);
     other64bits = calc_nxt64bits(otherNXTaddr);

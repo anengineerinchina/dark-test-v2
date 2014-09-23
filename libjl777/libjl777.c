@@ -328,10 +328,12 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
         {
             port = extract_nameport(previp,sizeof(previp),(struct sockaddr_in *)prevaddr);
             printf("received message.(%s) from hop.%s/%d\n",origargstr,previp,port);
+            retstr = clonestr("{\"result\":\"received message\"}");
         }
         else retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
     }
-    else retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
+    if ( retstr == 0 )
+        retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
     return(retstr);
 }
 
@@ -690,6 +692,8 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
             for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
                 objs[j-3] = cJSON_GetObjectItem(argjson,cmdinfo[j]);
             retstr = (*(json_handler)cmdinfo[0])(NXTaddr,NXTACCTSECRET,prevaddr,sender,valid,objs,j-3,origargstr);
+            if ( retstr == 0 )
+                retstr = clonestr("{\"result\":null}");
             if ( 0 && retstr != 0 )
                 printf("json_handler returns.(%s)\n",retstr);
             return(retstr);
