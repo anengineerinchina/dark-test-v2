@@ -608,7 +608,7 @@ void say_hello(struct NXT_acct *np)
     char srvNXTaddr[64],hopNXTaddr[64],*retstr;
     struct NXT_acct *hopnp;
     int32_t createflag;
-    printf("in say_hello.cp %p\n",cp);
+    //printf("in say_hello.cp %p\n",cp);
     expand_nxt64bits(srvNXTaddr,cp->srvpubnxt64bits);
     if ( (retstr= sendpeerinfo(hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
     {
@@ -647,8 +647,9 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     struct coin_info *cp;
     struct other_addr *op;
     struct peerinfo *refpeer,peer;
-    char verifiedNXTaddr[64],mysrvNXTaddr[64];
+    char verifiedNXTaddr[64],myNXTaddr[64],mysrvNXTaddr[64];
     uint64_t pubnxt64bits;
+    cp = get_coin_info("BTCD");
     np = get_NXTacct(&createdflag,Global_mp,pubNXT);
     pubnxt64bits = calc_nxt64bits(np->H.U.NXTaddr);
     if ( pubkey != 0 && pubkey[0] != 0 )
@@ -673,9 +674,12 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
         refpeer = update_peerinfo(&createdflag,&peer);
         printf("created path for (%s) | coins.%p\n",pubNXT,coins);
     }
-    if ( refpeer != 0 && coins != 0 )
+    if ( refpeer != 0 )
     {
-        memcpy(refpeer->coins,coins,sizeof(refpeer->coins));
+        if ( coins != 0 )
+            memcpy(refpeer->coins,coins,sizeof(refpeer->coins));
+        else if ( cp != 0 && cp->pubnxtbits == refpeer->pubnxt64bits )
+            memcpy(refpeer->coins,Global_mp->coins,sizeof(refpeer->coins));
         printf("set coins.%llx\n",(long long)coins[0]);
     }
     np->mypeerinfo = *refpeer;
@@ -707,7 +711,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
             if ( strcmp(srvNXTaddr,pubNXT) == 0 )
             {
                 strcpy(verifiedNXTaddr,srvNXTaddr);
-                if ( (cp= get_coin_info("BTCD")) != 0 )
+                if ( cp != 0 )
                     strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
                 np = get_NXTacct(&createdflag,Global_mp,srvNXTaddr);
                 broadcast_publishpacket(coins,np,NXTACCTSECRET);
