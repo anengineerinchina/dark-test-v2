@@ -3976,10 +3976,6 @@ int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr
 	return(-2);
 }
 
-extern "C" int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t len)
-{
-	return(narrowcast(destip,msg,len));
-}
 
 void init_jl777(char *myip)
 {
