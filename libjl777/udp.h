@@ -41,7 +41,7 @@ int Servers_started;
 void portable_alloc(uv_handle_t *handle,size_t suggested_size,uv_buf_t *buf)
 {
     buf->base = malloc(suggested_size);
-    printf("portable_alloc %p\n",buf->base);
+    //printf("portable_alloc %p\n",buf->base);
     buf->len = suggested_size;
 }
 
@@ -56,9 +56,9 @@ struct write_req_t *alloc_wr(void *buf,long len,int32_t allocflag)
     wr->allocflag = allocflag;
     if ( allocflag == ALLOCWR_ALLOCFREE )
     {
-        ptr = calloc(1,len+1);
+        ptr = malloc(len);
         memcpy(ptr,buf,len);
-        printf("alloc_wr.%p\n",ptr);
+        //printf("alloc_wr.%p\n",ptr);
     } else ptr = buf;
     wr->buf = uv_buf_init(ptr,(int32_t)len);
     return(wr);
@@ -73,10 +73,10 @@ void after_write(uv_write_t *req,int status)
     wr = (struct write_req_t *)req;
     if ( wr->allocflag != ALLOCWR_DONTFREE )
     {
-        printf("after write buf.base %p\n",wr->buf.base);
+        //printf("after write buf.base %p\n",wr->buf.base);
         free(wr->buf.base);
     }
-    printf("after write %p\n",wr);
+    //printf("after write %p\n",wr);
     free(wr);
     if ( status == 0 )
         return;
@@ -108,12 +108,12 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     struct coin_info *cp = get_coin_info("BTCD");
     char sender[256],retjsonstr[4096],NXTaddr[64],hopNXTaddr[64],*retstr;
     retjsonstr[0] = 0;
-    port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
-    printf("UDP RECEIVED %d bytes from %s/%d\n",(int)nread,sender,port);
-    if ( 0 && cp != 0 && nread > 0 )
+    printf("UDP RECEIVED\n");
+    if ( cp != 0 && nread > 0 )
     {
         expand_nxt64bits(NXTaddr,cp->pubnxt64bits);
         strcpy(sender,"unknown");
+        port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
         np = process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
         ASSERT(addr->sa_family == AF_INET);
         if ( np != 0 )
@@ -121,7 +121,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
             if ( retjsonstr[0] != 0 )
             {
                 printf("%s send tokenized.(%s) to %s\n",NXTaddr,retjsonstr,np->H.U.NXTaddr);
-                if ( (retstr= send_tokenized_cmd((struct sockaddr *)addr,hopNXTaddr,Global_mp->Lfactor,NXTaddr,cp->NXTACCTSECRET,retjsonstr,np->H.U.NXTaddr)) != 0 )
+                if ( (retstr= send_tokenized_cmd(hopNXTaddr,Global_mp->Lfactor,NXTaddr,cp->NXTACCTSECRET,retjsonstr,np->H.U.NXTaddr)) != 0 )
                 {
                     printf("sent back via UDP.(%s) got (%s) free.%p\n",retjsonstr,retstr,retstr);
                     free(retstr);
@@ -132,7 +132,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     }
     if ( rcvbuf->base != 0 )
     {
-        printf("free rcvbuf->base %p\n",rcvbuf->base);
+        //printf("on_duprecv free.%p\n",rcvbuf->base);
         free(rcvbuf->base);
     }
 }
@@ -172,17 +172,15 @@ uv_udp_t *open_udp(struct sockaddr *addr)
     return(udp);
 }
 
-void *start_libuv_udpserver(int32_t ip4_or_ip6,char *ip_port,uint16_t port,void *handler)
+void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void *handler)
 {
     void *srv;
-    char ipaddr[64];
     const struct sockaddr *ptr;
     struct sockaddr_in addr;
     struct sockaddr_in6 addr6;
     if ( ip4_or_ip6 == 4 )
     {
-        parse_ipaddr(ipaddr,ip_port);
-        ASSERT(0 == uv_ip4_addr(ipaddr,port,&addr));
+        ASSERT(0 == uv_ip4_addr("0.0.0.0",port,&addr));
         ptr = (const struct sockaddr *)&addr;
     }
     else if ( ip4_or_ip6 == 6 )
@@ -193,9 +191,10 @@ void *start_libuv_udpserver(int32_t ip4_or_ip6,char *ip_port,uint16_t port,void 
     else { printf("illegal ip4_or_ip6 %d\n",ip4_or_ip6); return(0); }
     srv = open_udp((port > 0) ? (struct sockaddr *)ptr : 0);
     if ( srv != 0 )
-        printf("UDP.%p server started on %s port %d\n",srv,ipaddr,port);
+        printf("UDP.%p server started on port %d\n",srv,port);
     else printf("couldnt open_udp on port.%d\n",port);
     Servers_started |= 1;
+    init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
 
     return(srv);
 }

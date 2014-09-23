@@ -89,12 +89,11 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
     init_hexbytes(Global_mp->pubkeystr,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
     if ( portable_thread_create((void *)process_hashtablequeues,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
-    mp->udp = start_libuv_udpserver(4,myipaddr,NXT_PUNCH_PORT,(void *)on_udprecv);
-    init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
     init_MGWconf(JSON_or_fname,myipaddr);
     printf("start getNXTblocks.(%s)\n",myipaddr);
     if ( 1 && portable_thread_create((void *)getNXTblocks,mp) == 0 )
         printf("ERROR start_Histloop\n");
+    mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
 
     printf("run_NXTservices >>>>>>>>>>>>>>> %p %s: %s %s\n",mp,mp->dispname,PC_USERNAME,mp->ipaddr);
     void run_NXTservices(void *arg);
@@ -315,12 +314,11 @@ char *teleport_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 
 char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char previp[64],nexthopNXTaddr[64],destNXTaddr[64],msg[MAX_JSON_FIELD],*retstr = 0;
+    char previp[64],nexthopNXTaddr[MAX_JSON_FIELD],destNXTaddr[MAX_JSON_FIELD],msg[MAX_JSON_FIELD],*retstr = 0;
     int32_t L,port;
     copy_cJSON(destNXTaddr,objs[0]);
     copy_cJSON(msg,objs[1]);
     L = (int32_t)get_API_int(objs[2],1);
-    nexthopNXTaddr[0] = 0;
     printf("sendmsg_func sender.(%s) valid.%d dest.(%s) (%s)\n",sender,valid,destNXTaddr,origargstr);
     if ( sender[0] != 0 && valid > 0 && destNXTaddr[0] != 0 )
     {
@@ -328,12 +326,10 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
         {
             port = extract_nameport(previp,sizeof(previp),(struct sockaddr_in *)prevaddr);
             printf("received message.(%s) from hop.%s/%d\n",origargstr,previp,port);
-            retstr = clonestr("{\"result\":\"received message\"}");
         }
-        else retstr = sendmessage(prevaddr,nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
+        else retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
     }
-    if ( retstr == 0 )
-        retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
+    else retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
     return(retstr);
 }
 
@@ -371,7 +367,7 @@ char *sendpeerinfo_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
     if ( valid < 0 )
         return(0);
     if ( sender[0] != 0 && valid >= 0 && addr[0] != 0 )
-        retstr = sendpeerinfo(prevaddr,hopNXTaddr,sender,NXTACCTSECRET,addr,destcoin);
+        retstr = sendpeerinfo(hopNXTaddr,sender,NXTACCTSECRET,addr,destcoin);
     else retstr = clonestr("{\"result\":\"invalid getpubkey request\"}");
     return(retstr);
 }
@@ -401,7 +397,6 @@ char *publishaddrs_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
             else printf("unknown.%d coind.(%s)\n",i,coinstr);
         }
     }
-    printf("publishaddrs.(%s) %p\n",origargstr,prevaddr);
     if ( sender[0] != 0 && valid >= 0 && pubNXT[0] != 0 )
         retstr = publishaddrs(prevaddr,m!=0?coins:0,NXTACCTSECRET,pubNXT,pubkey,BTCDaddr,BTCaddr,srvNXTaddr,srvipaddr,atoi(srvport));
     else retstr = clonestr("{\"result\":\"invalid publishaddrs request\"}");
@@ -633,12 +628,6 @@ char *getpeers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     return(jsonstr);
 }
 
-char *chanc3r_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    printf("chanc3r GOTACK.(%s)\n",origargstr);
-    return(clonestr("{\"result\":\"gotack\"}"));
-}
-
 char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
     static char *getpeers[] = { (char *)getpeers_func, "getpeers", "V",  "only_privacyServer", 0 };
@@ -651,7 +640,6 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "signedtx", 0 };
     static char *processutx[] = { (char *)processutx_func, "processutx", "V", "utx", "sig", "full", 0 };
     static char *publishaddrs[] = { (char *)publishaddrs_func, "publishaddrs", "V", "pubNXT", "pubkey", "BTCD", "BTC", "srvNXTaddr", "srvipaddr", "srvport", "coins", 0 };
-    static char *chanc3r[] = { (char *)chanc3r_func, "chanc3r", "V", 0 };
     static char *getpubkey[] = { (char *)getpubkey_func, "getpubkey", "V", "addr", "destcoin", 0 };
     static char *sendpeerinfo[] = { (char *)sendpeerinfo_func, "sendpeerinfo", "V", "addr", "destcoin", 0 };
     static char *sendmsg[] = { (char *)sendmsg_func, "sendmessage", "V", "dest", "msg", "L", 0 };
@@ -661,7 +649,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     static char *placebid[] = { (char *)placebid_func, "placebid", "V", "obookid", "polarity", "volume", "price", "assetA", "assetB", 0 };
     static char *placeask[] = { (char *)placeask_func, "placeask", "V", "obookid", "polarity", "volume", "price", "assetA", "assetB", 0 };
     static char *makeoffer[] = { (char *)makeoffer_func, "makeoffer", "V", "other", "assetA", "qtyA", "assetB", "qtyB", "type", 0 };
-    static char **commands[] = { chanc3r, sendpeerinfo, getpubkey, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, publishaddrs, checkmsg, placebid, placeask, makeoffer, sendmsg, orderbook, getorderbooks, teleport  };
+    static char **commands[] = { sendpeerinfo, getpubkey, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, publishaddrs, checkmsg, placebid, placeask, makeoffer, sendmsg, orderbook, getorderbooks, teleport  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
@@ -688,7 +676,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
         }
         //printf("(%s) command.(%s) NXT.(%s)\n",cJSON_Print(argjson),command,NXTaddr);
     }
-    //printf("pNXT_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
+    printf("pNXT_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
     for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
     {
         cmdinfo = commands[i];
@@ -700,9 +688,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
             for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
                 objs[j-3] = cJSON_GetObjectItem(argjson,cmdinfo[j]);
             retstr = (*(json_handler)cmdinfo[0])(NXTaddr,NXTACCTSECRET,prevaddr,sender,valid,objs,j-3,origargstr);
-            if ( retstr == 0 )
-                retstr = clonestr("{\"result\":null}");
-            if ( 1 && retstr != 0 )
+            if ( 0 && retstr != 0 )
                 printf("json_handler returns.(%s)\n",retstr);
             return(retstr);
         }
@@ -755,17 +741,16 @@ char *libjl777_JSON(char *JSONstr)
             issue_generateToken(0,encoded,cmdstr,cp->NXTACCTSECRET);
             encoded[NXT_TOKEN_LEN] = 0;
             sprintf(_tokbuf,"[%s,{\"token\":\"%s\"}]",cmdstr,encoded);
-            free(cmdstr);
             array = cJSON_Parse(_tokbuf);
             if ( array != 0 )
             {
                 cmdstr = verify_tokenized_json(NXTaddr,&valid,array);
+                retstr = pNXT_json_commands(Global_mp,0,array,NXTaddr,valid,_tokbuf);
                 if ( cmdstr != 0 )
                 {
-                    printf("RPC parms.(%s) valid.%d\n",cmdstr,valid);
+                    printf("parms.(%s) valid.%d\n",cmdstr,valid);
                     free(cmdstr);
                 }
-                retstr = pNXT_json_commands(Global_mp,0,array,NXTaddr,valid,_tokbuf);
                 free_json(array);
             }
         }
@@ -818,10 +803,10 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
     return(gp);
 }
 
-int32_t got_newpeer(char *ip_port)
+int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t len)
 {
-	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
-	return(0);
+    printf("narrowcast %d bytes to %s not supported yet\n",len,destip);
+    return(-1);
 }
 
 uint64_t call_libjl777_broadcast(char *destip,char *msg,int32_t len,int32_t duration)

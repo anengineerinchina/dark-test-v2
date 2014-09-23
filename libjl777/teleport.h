@@ -288,30 +288,16 @@ int32_t process_cloneQ(void **ptrp,void *arg) // added to this queue when proces
 
 void teleport_idler(uv_idle_t *handle)
 {
-    extern int32_t Finished_init;
-    void say_hello(struct sockaddr *prevaddr,struct NXT_acct *np);
-    static double lastattempt,firsttime;
+    static double lastattempt;
     double millis;
-    struct NXT_acct *np;
-    struct udpQ_entry *ptr;
     //printf("teleport_idler\n");
-    if ( Global_mp->udp != 0 && (ptr= queue_dequeue(&udpQ)) != 0 )
-    {
-        printf("dequeue buf.%p len.%d\n",ptr->buf,ptr->len);
-        portable_udpwrite(&ptr->addr,Global_mp->udp,ptr->buf,ptr->len,ALLOCWR_ALLOCFREE);
-        free(ptr);
-    }
     millis = ((double)uv_hrtime() / 1000000);
-    if ( firsttime == 0 )
-        firsttime = millis;
-    if ( Finished_init != 0 && millis > (lastattempt + 500) )
+    if ( millis > (lastattempt + 500) )
     {
         process_pingpong_queue(&PeerQ,0);
         process_pingpong_queue(&Transporter_sendQ,0);
         process_pingpong_queue(&Transporter_recvQ,0);
         process_pingpong_queue(&CloneQ,0);
-        if ( 0 && millis > firsttime+60000 && (np= queue_dequeue(&HelloQ)) != 0 )
-            say_hello(0,np);
         lastattempt = millis;
     }
 }
@@ -364,7 +350,7 @@ char *calc_teleport_summary(struct coin_info *cp,struct NXT_acct *sendernp,struc
         update_teleport_summary(array,cp,i,log->numpods,sendernp,log->pods[i]->satoshis,log->crcs[i]);
     cJSON_AddItemToObject(json,"telepods",array);
     retstr = cJSON_Print(json);
-    stripwhite(retstr,strlen(retstr));
+    stripwhite_ns(retstr,strlen(retstr));
     return(retstr);
 }
 
@@ -381,7 +367,7 @@ void complete_transporter_reception(struct coin_info *cp,struct transporter_log 
     save_transporter_log(log);
     if ( retstr != 0 )
     {
-        send_tokenized_cmd(0,hopNXTaddr,Global_mp->Lfactor,verifiedNXTaddr,NXTACCTSECRET,retstr,destnp->H.U.NXTaddr);
+        send_tokenized_cmd(hopNXTaddr,Global_mp->Lfactor,verifiedNXTaddr,NXTACCTSECRET,retstr,destnp->H.U.NXTaddr);
         free(retstr);
     }
     for (i=0; i<log->numpods; i++)
