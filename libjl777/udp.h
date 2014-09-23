@@ -41,7 +41,7 @@ int Servers_started;
 void portable_alloc(uv_handle_t *handle,size_t suggested_size,uv_buf_t *buf)
 {
     buf->base = malloc(suggested_size);
-    //printf("portable_alloc %p\n",buf->base);
+    printf("portable_alloc %p\n",buf->base);
     buf->len = suggested_size;
 }
 
@@ -56,9 +56,9 @@ struct write_req_t *alloc_wr(void *buf,long len,int32_t allocflag)
     wr->allocflag = allocflag;
     if ( allocflag == ALLOCWR_ALLOCFREE )
     {
-        ptr = malloc(len);
+        ptr = calloc(1,len+1);
         memcpy(ptr,buf,len);
-        //printf("alloc_wr.%p\n",ptr);
+        printf("alloc_wr.%p\n",ptr);
     } else ptr = buf;
     wr->buf = uv_buf_init(ptr,(int32_t)len);
     return(wr);
@@ -73,10 +73,10 @@ void after_write(uv_write_t *req,int status)
     wr = (struct write_req_t *)req;
     if ( wr->allocflag != ALLOCWR_DONTFREE )
     {
-        //printf("after write buf.base %p\n",wr->buf.base);
+        printf("after write buf.base %p\n",wr->buf.base);
         free(wr->buf.base);
     }
-    //printf("after write %p\n",wr);
+    printf("after write %p\n",wr);
     free(wr);
     if ( status == 0 )
         return;
@@ -131,7 +131,10 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
          server_xferred += nread;
     }
     if ( rcvbuf->base != 0 )
-        free(rcvbuf->base);
+    {
+        printf("free rcvbuf->base %p\n",rcvbuf->base);
+        //free(rcvbuf->base);
+    }
 }
 
 uv_udp_t *open_udp(struct sockaddr *addr)
