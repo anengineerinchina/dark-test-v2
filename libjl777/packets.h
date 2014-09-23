@@ -826,13 +826,12 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
         }
         else
         {
-            strcpy(hopNXTaddr,destNXTaddr);
-            if ( has_privacyServer(destnp) != 0 ) // build onion in reverse order, privacyServer for dest is 2nd
+            if ( strcmp(destsrvNXTaddr,destNXTaddr) != 0 && has_privacyServer(destnp) != 0 ) // build onion in reverse order, privacyServer for dest is 2nd
             {
                 len = onionize(verifiedNXTaddr,encodedsrvD,destsrvNXTaddr,outbuf,len);
                 outbuf = encodedsrvD,strcpy(hopNXTaddr,destsrvNXTaddr);
                 // we now have [dest privacyServer [dest]]
-            }
+            } else strcpy(hopNXTaddr,destNXTaddr);
             if ( L > 0 )
             {
                 len = add_random_onionlayers(hopNXTaddr,L,verifiedNXTaddr,encodedL,outbuf,len);
@@ -840,7 +839,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
                 // we now have [L onion layers [dest privacyServer [dest]]]
             }
         }
-        if ( has_privacyServer(np) != 0 ) // send via privacy server to protect our IP
+        if ( strcmp(srvNXTaddr,hopNXTaddr) != 0 && has_privacyServer(np) != 0 ) // send via privacy server to protect our IP
         {
             len = onionize(verifiedNXTaddr,encodedP,srvNXTaddr,outbuf,len);
             outbuf = encodedP,strcpy(hopNXTaddr,srvNXTaddr);
