@@ -3948,11 +3948,13 @@ extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 	return(0);
 }
 
+
+
 int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
 {
     CPubAddr pubaddr;
     std::string supernetmsg = "";
-    CNode *peer = FindNode((CNetAddr)std::string(destip));
+    CNode *peer = FindNode((CService)destip);
     if ( peer == NULL )
         return(-1); // Not a known peer
     for(int32_t i=0; i<len; i++)
@@ -3973,6 +3975,11 @@ int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr
 	if ( pubaddr.RelayTo(peer) == true )
 		return(0);
 	return(-2);
+}
+
+extern "C" int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t len)
+{
+	return (narrowcast(destip, msg, len));
 }
 
 
