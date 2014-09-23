@@ -661,7 +661,8 @@ uint64_t route_packet(int32_t selector,char *hopNXTaddr,unsigned char *outbuf,in
         if ( len < 1400 )
         {
             uv_ip4_addr(destip,np->mypeerinfo.srvport,&addr);
-            portable_udpwrite((struct sockaddr *)&addr,Global_mp->udps[!selector],finalbuf,len,ALLOCWR_ALLOCFREE);
+            if ( selector == 0 )
+                portable_udpwrite((struct sockaddr *)&addr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
         }
         else call_libjl777_broadcast(destip,(char *)finalbuf,len,0);
     }
@@ -677,7 +678,10 @@ uint64_t route_packet(int32_t selector,char *hopNXTaddr,unsigned char *outbuf,in
                 np->mypeerinfo.numsent++;
                 Uaddrs[i]->numsent++;
                 if ( len < 1400 )
-                    portable_udpwrite((struct sockaddr *)&Uaddrs[i]->addr,Global_mp->udps[selector],finalbuf,len,ALLOCWR_ALLOCFREE);
+                {
+                    if ( selector == 0 )
+                        portable_udpwrite((struct sockaddr *)&Uaddrs[i]->addr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+                }
                 else
                 {
                     extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)&Uaddrs[i]->addr);
@@ -790,9 +794,9 @@ char *sendmessage(struct sockaddr *prevaddr,char *hopNXTaddr,int32_t L,char *ver
     struct NXT_acct *np,*destnp;    
     np = get_NXTacct(&createdflag,Global_mp,verifiedNXTaddr);
     destnp = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
-    if ( np == 0 || destnp == 0 || Global_mp->udps[prevaddr!=0] == 0 || destnp->mypeerinfo.srvnxtbits == 0 )
+    if ( np == 0 || destnp == 0 || Global_mp->udp == 0 || destnp->mypeerinfo.srvnxtbits == 0 )
     {
-        printf("np.%p destnp.%p prvaddr.%p udp.%p %p nxtbits.%llu\n",np,destnp,prevaddr,Global_mp->udps[0],Global_mp->udps[1],(long long)destnp->mypeerinfo.srvnxtbits);
+        printf("np.%p destnp.%p prvaddr.%p udp.%p nxtbits.%llu\n",np,destnp,prevaddr,Global_mp->udp,(long long)destnp->mypeerinfo.srvnxtbits);
         return(clonestr("\"error\":\"no np or global udp for sendmessage || destnp->mypeerinfo.srvnxtbits == 0\"}"));
     }
     expand_nxt64bits(srvNXTaddr,np->mypeerinfo.srvnxtbits);

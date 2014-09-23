@@ -89,8 +89,7 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
     init_hexbytes(Global_mp->pubkeystr,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
     if ( portable_thread_create((void *)process_hashtablequeues,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
-    mp->udps[0] = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
-    mp->udps[1] = start_libuv_udpserver(4,0,(void *)on_udprecv);
+    mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
     init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
     init_MGWconf(JSON_or_fname,myipaddr);
     printf("start getNXTblocks.(%s)\n",myipaddr);
