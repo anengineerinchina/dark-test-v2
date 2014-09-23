@@ -172,7 +172,7 @@ uv_udp_t *open_udp(struct sockaddr *addr)
     return(udp);
 }
 
-void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void *handler)
+void *start_libuv_udpserver(int32_t ip4_or_ip6,char *ipaddr,uint16_t port,void *handler)
 {
     void *srv;
     const struct sockaddr *ptr;
@@ -180,7 +180,7 @@ void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void *handler)
     struct sockaddr_in6 addr6;
     if ( ip4_or_ip6 == 4 )
     {
-        ASSERT(0 == uv_ip4_addr("0.0.0.0",port,&addr));
+        ASSERT(0 == uv_ip4_addr(ipaddr,port,&addr));
         ptr = (const struct sockaddr *)&addr;
     }
     else if ( ip4_or_ip6 == 6 )
@@ -191,7 +191,7 @@ void *start_libuv_udpserver(int32_t ip4_or_ip6,uint16_t port,void *handler)
     else { printf("illegal ip4_or_ip6 %d\n",ip4_or_ip6); return(0); }
     srv = open_udp((port > 0) ? (struct sockaddr *)ptr : 0);
     if ( srv != 0 )
-        printf("UDP.%p server started on port %d\n",srv,port);
+        printf("UDP.%p server started on %s port %d\n",srv,ipaddr,port);
     else printf("couldnt open_udp on port.%d\n",port);
     Servers_started |= 1;
 
