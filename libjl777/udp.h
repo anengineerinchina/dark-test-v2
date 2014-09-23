@@ -172,14 +172,16 @@ uv_udp_t *open_udp(struct sockaddr *addr)
     return(udp);
 }
 
-void *start_libuv_udpserver(int32_t ip4_or_ip6,char *ipaddr,uint16_t port,void *handler)
+void *start_libuv_udpserver(int32_t ip4_or_ip6,char *ip_port,uint16_t port,void *handler)
 {
     void *srv;
+    char ipaddr[64];
     const struct sockaddr *ptr;
     struct sockaddr_in addr;
     struct sockaddr_in6 addr6;
     if ( ip4_or_ip6 == 4 )
     {
+        parse_ipaddr(ipaddr,ip_port);
         ASSERT(0 == uv_ip4_addr(ipaddr,port,&addr));
         ptr = (const struct sockaddr *)&addr;
     }
