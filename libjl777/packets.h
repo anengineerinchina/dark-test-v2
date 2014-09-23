@@ -842,8 +842,8 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
 char *send_tokenized_cmd(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *NXTACCTSECRET,char *cmdstr,char *destNXTaddr)
 {
     char _tokbuf[4096];
-    int n = construct_tokenized_req(_tokbuf,cmdstr,verifiedNXTaddr);
-    return(sendmessage(hopNXTaddr,L,NXTACCTSECRET,_tokbuf,(int32_t)n+1,destNXTaddr,_tokbuf));
+    int n = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
+    return(sendmessage(hopNXTaddr,L,verifiedNXTaddr,_tokbuf,(int32_t)n+1,destNXTaddr,_tokbuf));
 }
 
 int32_t sendandfree_jsoncmd(int32_t L,char *sender,char *NXTACCTSECRET,cJSON *json,char *destNXTaddr)
