@@ -678,7 +678,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     {
         if ( coins != 0 )
             memcpy(refpeer->coins,coins,sizeof(refpeer->coins));
-        else if ( cp != 0 && cp->pubnxtbits == refpeer->pubnxt64bits )
+        else if ( cp != 0 && cp->pubnxt64bits == refpeer->pubnxt64bits )
             memcpy(refpeer->coins,Global_mp->coins,sizeof(refpeer->coins));
         printf("set coins.%llx\n",(long long)coins[0]);
     }
