@@ -1708,7 +1708,7 @@ char *verify_tokenized_json(char *sender,int32_t *validp,cJSON *json)
         if ( strlen((char *)encoded) == NXT_TOKEN_LEN )
             issue_decodeToken(Global_mp->curl_handle2,sender,validp,parmstxt,encoded);
         printf("sender.(%s) vs (%s) valid.%d website.(%s) encoded.(%s) len.%ld\n",sender,NXTaddr,*validp,parmstxt,encoded,strlen((char *)encoded));
-        if ( strcmp(sender,NXTaddr) != 0 )
+        if ( sender[0] != 0 && strcmp(sender,NXTaddr) != 0 )
             *validp = -1;
         return(parmstxt);
     } else printf("verify_tokenized_json not array of 2\n");

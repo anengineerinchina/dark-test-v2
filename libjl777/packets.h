@@ -735,6 +735,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         free(parmstxt), parmstxt = 0;
         if ( argjson != 0 ) // if it parses, we must have been the ultimate destination
         {
+            senderNXTaddr[0] = 0;
             parmstxt = verify_tokenized_json(senderNXTaddr,&valid,argjson);
             if ( valid != 0 && parmstxt != 0 && parmstxt[0] != 0 )
             {
