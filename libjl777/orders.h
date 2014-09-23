@@ -647,7 +647,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     struct coin_info *cp;
     struct other_addr *op;
     struct peerinfo *refpeer,peer;
-    char verifiedNXTaddr[64],myNXTaddr[64],mysrvNXTaddr[64];
+    char verifiedNXTaddr[64],mysrvNXTaddr[64];
     uint64_t pubnxtbits;
     cp = get_coin_info("BTCD");
     np = get_NXTacct(&createdflag,Global_mp,pubNXT);

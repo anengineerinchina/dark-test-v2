@@ -610,7 +610,7 @@ int32_t sort_topaddrs(struct Uaddr **Uaddrs,int32_t max,struct peerinfo *peer)
     if ( peer->numUaddrs == 0 || peer->Uaddrs == 0 )
         return(0);
     n = (peer->numUaddrs > max) ? max : peer->numUaddrs;
-    else if ( peer->numUaddrs > 1 )
+    if ( peer->numUaddrs > 1 )
     {
         ptrs = malloc(sizeof(*Uaddrs) * peer->numUaddrs);
         for (i=0; i<peer->numUaddrs; i++)
