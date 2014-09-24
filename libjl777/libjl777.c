@@ -850,6 +850,16 @@ uint64_t call_libjl777_broadcast(char *destip,char *msg,int32_t len,int32_t dura
     return(0);
 }
 
+int32_t got_newpeer(char *ip_port)
+{
+	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
+    if ( strncmp("209.126.70",ip_port,strlen("209.126.70")) == 0 )
+    {
+        return(broadcast_publishpacket(ip_port) != 0 ? 0 : -1);
+    }
+	return(0);
+}
+
 char *libjl777_gotpacket(char *msg,int32_t duration,char *ip_port)
 {
     static int flood,duplicates;
@@ -934,12 +944,6 @@ char *libjl777_gotpacket(char *msg,int32_t duration,char *ip_port)
         } printf("cJSON_Parse error.(%s)\n",msg);
     }
     return(clonestr(retjsonstr));
-}
-
-int32_t got_newpeer(char *ip_port)
-{
-	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
-	return(0);
 }
 
 int libjl777_start(char *JSON_or_fname,char *myipaddr)

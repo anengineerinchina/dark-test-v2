@@ -634,13 +634,20 @@ void ack_hello(struct NXT_acct *np,struct sockaddr *prevaddr)
     printf("ack_hello to %s\n",np->H.U.NXTaddr);
 }
 
-uint64_t broadcast_publishpacket(uint64_t coins[4],struct NXT_acct *np,char *NXTACCTSECRET)
+uint64_t broadcast_publishpacket(char *ip_port)
 {
     char cmd[MAX_JSON_FIELD*4],packet[MAX_JSON_FIELD*4];
-    int32_t len;
-    set_peer_json(cmd,np->H.U.NXTaddr,np);
-    len = construct_tokenized_req(packet,cmd,NXTACCTSECRET);
-    return(call_libjl777_broadcast(0,packet,len+1,PUBADDRS_MSGDURATION));
+    int32_t len,createdflag;
+    struct NXT_acct *np;
+    struct coin_info *cp = get_coin_info("BTCD");
+    if ( cp != 0 )
+    {
+        np = get_NXTacct(&createdflag,Global_mp,cp->srvpubaddr);
+        set_peer_json(cmd,np->H.U.NXTaddr,np);
+        len = construct_tokenized_req(packet,cmd,cp->srvNXTACCTSECRET);
+        return(call_libjl777_broadcast(ip_port,packet,len+1,PUBADDRS_MSGDURATION));
+    }
+    else return(0);
 }
 
 char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkey,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport)
@@ -716,8 +723,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
                 strcpy(verifiedNXTaddr,srvNXTaddr);
                 if ( cp != 0 )
                     strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
-                np = get_NXTacct(&createdflag,Global_mp,srvNXTaddr);
-                broadcast_publishpacket(coins,np,NXTACCTSECRET);
+                broadcast_publishpacket(0);
             }
         }
         return(getpubkey(verifiedNXTaddr,NXTACCTSECRET,pubNXT,0));
