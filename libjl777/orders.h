@@ -662,14 +662,12 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     cp = get_coin_info("BTCD");
     np = get_NXTacct(&createdflag,Global_mp,pubNXT);
     pubnxtbits = calc_nxt64bits(np->H.U.NXTaddr);
-    if ( pubkey != 0 && pubkey[0] != 0 )
-        decode_hex(np->mypeerinfo.pubkey,(int32_t)sizeof(np->mypeerinfo.pubkey),pubkey);
     if ( (refpeer= find_peerinfo(pubnxtbits,BTCDaddr,BTCaddr)) != 0 )
     {
         safecopy(refpeer->pubBTCD,BTCDaddr,sizeof(refpeer->pubBTCD));
         safecopy(refpeer->pubBTC,BTCaddr,sizeof(refpeer->pubBTC));
         if ( pubkey != 0 && pubkey[0] != 0 )
-            memcpy(refpeer->pubkey,np->mypeerinfo.pubkey,sizeof(refpeer->pubkey));
+            decode_hex(refpeer->pubkey,(int32_t)sizeof(refpeer->pubkey),pubkey);
         if ( srvport != 0 )
             refpeer->srvport = srvport;
         if ( srvipaddr != 0 && strcmp(srvipaddr,"127.0.0.1") != 0 )

@@ -403,7 +403,11 @@ int32_t onionize(char *verifiedNXTaddr,unsigned char *encoded,char *destNXTaddr,
     encoded += sizeof(onetime_pubkey);
     payload_lenp = (uint16_t *)encoded;
     encoded += sizeof(*payload_lenp);
-    printf("ONIONIZE: np.%p NXT.%s %s pubkey.%llx encode len.%d -> ",np,np->H.U.NXTaddr,destNXTaddr,*(long long *)np->mypeerinfo.pubkey,len);
+    {
+        char hexstr[1024];
+        init_hexbytes(hexstr,np->mypeerinfo.pubkey,sizeof(np->mypeerinfo.pubkey));
+        printf("ONIONIZE: np.%p NXT.%s %s pubkey.%s encode len.%d -> ",np,np->H.U.NXTaddr,destNXTaddr,hexstr,len);
+    }
     len = _encode_str(encoded,(char *)payload,len,np->mypeerinfo.pubkey,onetime_privkey);
     slen = len;
     memcpy(payload_lenp,&slen,sizeof(*payload_lenp));
