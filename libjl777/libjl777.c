@@ -315,6 +315,7 @@ char *teleport_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 
 char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
+    static int counter;
     char previp[64],nexthopNXTaddr[64],destNXTaddr[64],msg[MAX_JSON_FIELD],*retstr = 0;
     int32_t L,port;
     copy_cJSON(destNXTaddr,objs[0]);
@@ -327,7 +328,8 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
         if ( prevaddr != 0 )
         {
             port = extract_nameport(previp,sizeof(previp),(struct sockaddr_in *)prevaddr);
-            printf(">>>>>>>>>>>>> received message.(%s) NXT.%s from hop.%s/%d\n",msg,sender,previp,port);
+            fprintf(stderr,"%d >>>>>>>>>>>>> received message.(%s) NXT.%s from hop.%s/%d\n",counter,msg,sender,previp,port);
+            counter++;
             //retstr = clonestr("{\"result\":\"received message\"}");
         }
         else retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
@@ -860,7 +862,7 @@ uint64_t call_libjl777_broadcast(char *destip,char *msg,int32_t len,int32_t dura
 
 int32_t got_newpeer(char *ip_port)
 {
-	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
+	//printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
     if ( strncmp("209.126.70",ip_port,strlen("209.126.70")) == 0 )
     {
         return(broadcast_publishpacket(ip_port) != 0 ? 0 : -1);
