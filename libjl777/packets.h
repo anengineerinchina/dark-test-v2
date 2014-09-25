@@ -463,8 +463,7 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
             if ( strcmp(hopNXTaddr,np->H.U.NXTaddr) != 0 )
             {
                 printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
-                len = onionize(verifiedNXTaddr,dest,np->H.U.NXTaddr,src,len);
-                strcpy(hopNXTaddr,np->H.U.NXTaddr);
+                len = onionize(hopNXTaddr,verifiedNXTaddr,dest,np->H.U.NXTaddr,&src,len);
                 memcpy(final,src,len);
                 *srcp = final;
                 if ( len > 4096 )
