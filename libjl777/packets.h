@@ -190,14 +190,14 @@ cJSON *gen_peers_json(int32_t only_privacyServers)
     }
     if ( peers != 0 && n > 0 )
     {
-        cJSON_AddItemToObject(json,"only_privacyServers",cJSON_CreateNumber(only_privacyServers));
-        cJSON_AddItemToObject(json,"num",cJSON_CreateNumber(n));
         for (i=0; i<n; i++)
         {
             if ( peers[i] != 0 )
                 cJSON_AddItemToArray(array,gen_peerinfo_json(peers[i]));
         }
         cJSON_AddItemToObject(json,"peers",array);
+        cJSON_AddItemToObject(json,"only_privacyServers",cJSON_CreateNumber(only_privacyServers));
+        cJSON_AddItemToObject(json,"num",cJSON_CreateNumber(n));
     }
     return(json);
 }
@@ -462,7 +462,7 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
             }*/
             if ( strcmp(hopNXTaddr,np->H.U.NXTaddr) != 0 )
             {
-                printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
+                //printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
                 len = onionize(hopNXTaddr,verifiedNXTaddr,dest,np->H.U.NXTaddr,&src,len);
                 memcpy(final,src,len);
                 *srcp = final;
@@ -485,7 +485,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
     int32_t err;
     struct coin_info *cp;
     uint16_t payload_len;
-    //if ( mynxtbits == 0 || memcmp(&mynxtbits,encoded,sizeof(mynxtbits)) == 0 )
+    if ( mynxtbits == 0 || memcmp(&mynxtbits,encoded,sizeof(mynxtbits)) == 0 )
     {
         encoded += sizeof(mynxtbits);
         memcpy(pubkey,encoded,crypto_box_PUBLICKEYBYTES);
@@ -515,12 +515,12 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
             }
         } //else printf("mismatched len expected %ld got %d\n",(payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)),len);
     }
-    /*else
+    else
     {
         uint64_t destbits;
         memcpy(&destbits,encoded,sizeof(destbits));
         printf("deonionize onion for NXT.%llu not this address.(%llu)\n",(long long)destbits,(long long)mynxtbits);
-    }*/
+    }
     return(0);
 }
 
@@ -737,7 +737,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         decoded[len] = 0;
         parmstxt = clonestr((char *)decoded);
         argjson = cJSON_Parse(parmstxt);
-        printf("[%s] argjson.%p udp.%p\n",parmstxt,argjson,udp);
+        //printf("[%s] argjson.%p udp.%p\n",parmstxt,argjson,udp);
         free(parmstxt), parmstxt = 0;
         if ( argjson != 0 ) // if it parses, we must have been the ultimate destination
         {
@@ -765,7 +765,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
             if ( destbits != 0 ) // route packet
             {
                 expand_nxt64bits(hopNXTaddr,destbits);
-                printf("Route to {%s}\n",hopNXTaddr);
+                //printf("Route to {%s}\n",hopNXTaddr);
                 route_packet(udp,hopNXTaddr,decoded,len);
                 return(0);
             }
