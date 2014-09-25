@@ -3953,7 +3953,8 @@ extern "C" int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t l
 {
     CPubAddr pubaddr;
     std::string supernetmsg = "";
-    CNode *peer = FindNode((CNetAddr)std::string(destip));
+    //CNode *peer = FindNode((CNetAddr)std::string(destip));
+    CNode *peer = FindNode((CService)destip);
     if ( peer == NULL )
         return(-1); // Not a known peer
     for(int32_t i=0; i<len; i++)
@@ -3971,8 +3972,10 @@ extern "C" int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t l
     */
     //if ( pubaddr.ProcessPubAddr() == 0 )
     //    throw runtime_error("Failed to process pubaddr.\n");
+	printf("libjl777_narrowcast(%s) len.%d to (%s)\n",msg,len,destip);
 	if ( pubaddr.RelayTo(peer) == true )
 		return(0);
+    printf("libjl777_narrowcast  relay error\n");
 	return(-2);
 }
 
