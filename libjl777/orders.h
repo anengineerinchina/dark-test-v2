@@ -652,7 +652,7 @@ uint64_t broadcast_publishpacket(char *ip_port)
 
 char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkey,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport)
 {
-    int32_t createdflag;
+    int32_t createdflag,updatedflag = 0;
     struct NXT_acct *np;
     struct coin_info *cp;
     struct other_addr *op;
@@ -674,6 +674,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
             refpeer->srvipbits = calc_ipbits(srvipaddr);
         if ( srvNXTaddr != 0 && srvNXTaddr[0] != 0 )
             refpeer->srvnxtbits = calc_nxt64bits(srvNXTaddr);
+        updatedflag = 1;
         printf("found and updated.(%s) %s | coins.%p\n",pubNXT,np->H.U.NXTaddr,coins);
     }
     else
@@ -703,29 +704,26 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
         //safecopy(np->BTCaddr,BTCaddr,sizeof(np->BTCaddr));
         op = MTadd_hashtable(&createdflag,Global_mp->otheraddrs_tablep,BTCaddr),op->nxt64bits = np->H.nxt64bits;
     }
-
-    verifiedNXTaddr[0] = 0;
-    np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
     if ( prevaddr != 0 )
     {
-        ack_hello(np,prevaddr);
+        if ( updatedflag != 0 )
+            say_hello(np);
         return(0);
     }
-    else
+    verifiedNXTaddr[0] = 0;
+    np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
+    expand_nxt64bits(mysrvNXTaddr,np->mypeerinfo.srvnxtbits);
+    //if ( strcmp(np->H.U.NXTaddr,pubNXT) == 0 || strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(srvNXTaddr,mysrvNXTaddr) == 0 ) // this is this node
     {
-        expand_nxt64bits(mysrvNXTaddr,np->mypeerinfo.srvnxtbits);
-        //if ( strcmp(np->H.U.NXTaddr,pubNXT) == 0 || strcmp(np->H.U.NXTaddr,srvNXTaddr) == 0 || strcmp(srvNXTaddr,mysrvNXTaddr) == 0 ) // this is this node
+        if ( strcmp(srvNXTaddr,pubNXT) == 0 )
         {
-            if ( strcmp(srvNXTaddr,pubNXT) == 0 )
-            {
-                strcpy(verifiedNXTaddr,srvNXTaddr);
-                if ( cp != 0 )
-                    strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
-                broadcast_publishpacket(0);
-            }
+            strcpy(verifiedNXTaddr,srvNXTaddr);
+            if ( cp != 0 )
+                strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
+            broadcast_publishpacket(0);
         }
-        return(getpubkey(verifiedNXTaddr,NXTACCTSECRET,pubNXT,0));
     }
+    return(getpubkey(verifiedNXTaddr,NXTACCTSECRET,pubNXT,0));
 }
 
 char *checkmessages(char *NXTaddr,char *NXTACCTSECRET,char *senderNXTaddr)
