@@ -407,8 +407,9 @@ int32_t onionize(char *hopNXTaddr,char *verifiedNXTaddr,unsigned char *encoded,c
     encoded += sizeof(*payload_lenp);
     {
         char hexstr[1024];
-        init_hexbytes(hexstr,onetime_pubkey,sizeof(onetime_pubkey));
-        printf("ONIONIZE: np.%p NXT.%s %s pubkey.%s encode len.%d -> ",np,np->H.U.NXTaddr,destNXTaddr,hexstr,len);
+        init_hexbytes(hexstr,np->mypeerinfo.pubkey,sizeof(np->mypeerinfo.pubkey));
+        hexstr[16] = 0;
+        printf("ONIONIZE: NXT.%s (%s) pubkey.%s encode len.%d -> ",np->H.U.NXTaddr,np->privacyserver,hexstr,len);
     }
     len = _encode_str(encoded,(char *)payload,len,np->mypeerinfo.pubkey,onetime_privkey);
     slen = len;
@@ -491,14 +492,6 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
         encoded += sizeof(payload_len);
         if ( (payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)) == len )
         {
-            len = payload_len;
-            err = _decode_cipher((char *)decoded,encoded,&len,pubkey,Global_mp->session_privkey);
-            if ( err == 0 )
-            {
-                //printf("payload_len.%d err.%d new len.%d\n",payload_len,err,len);
-                //if ( *(long long *)decoded != 0 )
-                    return(len);
-            }
             cp = get_coin_info("BTCD");
             if ( cp != 0 && strcmp(cp->privacyserver,"127.0.0.1") == 0 ) // might have been encrypted to the loopback
             {
@@ -508,8 +501,16 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
                 {
                     //printf("2nd payload_len.%d err.%d new len.%d\n",payload_len,err,len);
                     //if ( *(long long *)decoded != 0 )
-                        return(len);
+                    return(len);
                 }
+            }
+            len = payload_len;
+            err = _decode_cipher((char *)decoded,encoded,&len,pubkey,Global_mp->session_privkey);
+            if ( err == 0 )
+            {
+                //printf("payload_len.%d err.%d new len.%d\n",payload_len,err,len);
+                //if ( *(long long *)decoded != 0 )
+                    return(len);
             }
         } //else printf("mismatched len expected %ld got %d\n",(payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)),len);
     }
