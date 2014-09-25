@@ -405,7 +405,7 @@ int32_t onionize(char *verifiedNXTaddr,unsigned char *encoded,char *destNXTaddr,
     encoded += sizeof(*payload_lenp);
     {
         char hexstr[1024];
-        init_hexbytes(hexstr,np->mypeerinfo.pubkey,sizeof(np->mypeerinfo.pubkey));
+        init_hexbytes(hexstr,onetime_pubkey,sizeof(onetime_pubkey));
         printf("ONIONIZE: np.%p NXT.%s %s pubkey.%s encode len.%d -> ",np,np->H.U.NXTaddr,destNXTaddr,hexstr,len);
     }
     len = _encode_str(encoded,(char *)payload,len,np->mypeerinfo.pubkey,onetime_privkey);
@@ -802,6 +802,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
     memset(encodedP,0,sizeof(encodedP)); // encoded to privacyserver
     strcpy(hopNXTaddr,destNXTaddr);
     len = onionize(verifiedNXTaddr,encodedD,destNXTaddr,(unsigned char *)origargstr,(int32_t)strlen(origargstr)+1);
+    outbuf = encodedD;
     printf("sendmessage (%s) len.%d to %s\n",origargstr,msglen,destNXTaddr);
     if ( len > sizeof(encodedP)-1024 )
     {
@@ -810,8 +811,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
     }
     else if ( len > 0 )
     {
-        outbuf = encodedD;
-        printf("np.%p NXT.%s | destnp.%p\n",np,np!=0?np->H.U.NXTaddr:"no np",destnp);
+        //printf("np.%p NXT.%s | destnp.%p\n",np,np!=0?np->H.U.NXTaddr:"no np",destnp);
         if ( strcmp(destsrvNXTaddr,destNXTaddr) != 0 && has_privacyServer(destnp) != 0 ) // build onion in reverse order, privacyServer for dest is 2nd
         {
             len = onionize(verifiedNXTaddr,encodedsrvD,destsrvNXTaddr,outbuf,len);

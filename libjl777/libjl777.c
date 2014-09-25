@@ -755,7 +755,7 @@ char *libjl777_JSON(char *JSONstr)
                 retstr = pNXT_json_commands(Global_mp,0,array,NXTaddr,valid,_tokbuf);
                 if ( cmdstr != 0 )
                 {
-                    printf("parms.(%s) valid.%d\n",cmdstr,valid);
+                    //printf("parms.(%s) valid.%d\n",cmdstr,valid);
                     free(cmdstr);
                 }
                 free_json(array);
@@ -948,7 +948,9 @@ char *libjl777_gotpacket(char *msg,int32_t duration,char *ip_port)
 
 int libjl777_start(char *JSON_or_fname,char *myipaddr)
 {
+    void sodium_init();
     struct NXT_str *tp = 0;
+    sodium_init();
     myipaddr = clonestr(myipaddr);
     Global_mp = calloc(1,sizeof(*Global_mp));
     printf("libjl777_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
