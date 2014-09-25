@@ -32,7 +32,7 @@ struct pNXT_info
 };
 struct pNXT_info *Global_pNXT;
 #include "packets.h"
-uint64_t broadcast_publishpacket(uint64_t corecoins[4],struct NXT_acct *np,char *NXTACCTSECRET,char *srvNXTaddr,char *srvipaddr,uint16_t srvport);
+//uint64_t broadcast_publishpacket(uint64_t corecoins[4],struct NXT_acct *np,char *NXTACCTSECRET,char *srvNXTaddr,char *srvipaddr,uint16_t srvport);
 
 typedef struct {
     union { uv_udp_send_t ureq; uv_write_t req; };

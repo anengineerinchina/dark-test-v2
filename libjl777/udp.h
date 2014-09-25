@@ -93,7 +93,9 @@ int32_t portable_udpwrite(const struct sockaddr *addr,uv_udp_t *handle,void *buf
     {
         char destip[64]; int32_t port;
         port = extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)addr);
-        printf("portable_udpwrite %ld bytes to %s/%d\n",len,destip,port);
+        //for (i=0; i<16; i++)
+        //    printf("%02x ",((unsigned char *)buf)[i]);
+        printf("portable_udpwrite %ld bytes to %s/%d crx.%x\n",len,destip,port,_crc32(0,buf,len));
     }
     r = uv_udp_send(&wr->U.ureq,handle,&wr->buf,1,addr,(uv_udp_send_cb)after_write);
     if ( r != 0 )
@@ -108,12 +110,17 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     struct coin_info *cp = get_coin_info("BTCD");
     char sender[256],retjsonstr[4096],NXTaddr[64],hopNXTaddr[64],*retstr;
     retjsonstr[0] = 0;
-    printf("UDP RECEIVED\n");
     if ( cp != 0 && nread > 0 )
     {
+        port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
+        {
+            //int i;
+            //for (i=0; i<16; i++)
+            //    printf("%02x ",((unsigned char *)rcvbuf->base)[i]);
+            printf("UDP RECEIVED %ld from %s/%d crc.%x\n",nread,sender,port,_crc32(0,rcvbuf->base,nread));
+        }
         expand_nxt64bits(NXTaddr,cp->pubnxtbits);
         strcpy(sender,"unknown");
-        port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
         np = process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
         ASSERT(addr->sa_family == AF_INET);
         if ( np != 0 )
