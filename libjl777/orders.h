@@ -657,7 +657,8 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     struct coin_info *cp;
     struct other_addr *op;
     struct peerinfo *refpeer,peer;
-    char verifiedNXTaddr[64],mysrvNXTaddr[64],pubkey[crypto_box_PUBLICKEYBYTES];
+    char verifiedNXTaddr[64],mysrvNXTaddr[64];
+    unsigned char pubkey[crypto_box_PUBLICKEYBYTES];
     uint64_t pubnxtbits;
     cp = get_coin_info("BTCD");
     np = get_NXTacct(&createdflag,Global_mp,pubNXT);
@@ -668,6 +669,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
         safecopy(refpeer->pubBTC,BTCaddr,sizeof(refpeer->pubBTC));
         if ( pubkeystr != 0 && pubkeystr[0] != 0 )
         {
+            memset(pubkey,0,sizeof(pubkey));
             decode_hex(pubkey,(int32_t)sizeof(pubkey),pubkeystr);
             if ( memcmp(refpeer->pubkey,pubkey,sizeof(refpeer->pubkey)) != 0 )
             {
@@ -681,7 +683,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
             refpeer->srvipbits = calc_ipbits(srvipaddr);
         if ( srvNXTaddr != 0 && srvNXTaddr[0] != 0 )
             refpeer->srvnxtbits = calc_nxt64bits(srvNXTaddr);
-        printf("found and updated.%d (%s) %s | coins.%p\n",pubNXT,updatedflag,np->H.U.NXTaddr,coins);
+        printf("found %s and updated.%d %s | coins.%p\n",pubNXT,updatedflag,np->H.U.NXTaddr,coins);
     }
     else
     {
