@@ -91,11 +91,11 @@ int32_t portable_udpwrite(const struct sockaddr *addr,uv_udp_t *handle,void *buf
     wr = alloc_wr(buf,len,allocflag);
     ASSERT(wr != NULL);
     {
-        char destip[64]; int32_t i,port;
+        char destip[64]; int32_t port;
         port = extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)addr);
-        for (i=0; i<16; i++)
-            printf("%02x ",((unsigned char *)buf)[i]);
-        printf("portable_udpwrite %ld bytes to %s/%d\n",len,destip,port);
+        //for (i=0; i<16; i++)
+        //    printf("%02x ",((unsigned char *)buf)[i]);
+        printf("portable_udpwrite %ld bytes to %s/%d crx.%x\n",len,destip,port,_crc32(0,buf,len));
     }
     r = uv_udp_send(&wr->U.ureq,handle,&wr->buf,1,addr,(uv_udp_send_cb)after_write);
     if ( r != 0 )
@@ -114,10 +114,10 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     {
         port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
         {
-            int i;
-            for (i=0; i<16; i++)
-                printf("%02x ",((unsigned char *)rcvbuf->base)[i]);
-            printf("UDP RECEIVED %ld from %s/%d\n",nread,sender,port);
+            //int i;
+            //for (i=0; i<16; i++)
+            //    printf("%02x ",((unsigned char *)rcvbuf->base)[i]);
+            printf("UDP RECEIVED %ld from %s/%d crc.%x\n",nread,sender,port,_crc32(0,rcvbuf->base,nread));
         }
         expand_nxt64bits(NXTaddr,cp->pubnxtbits);
         strcpy(sender,"unknown");

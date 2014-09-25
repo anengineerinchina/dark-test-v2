@@ -821,11 +821,19 @@ uint64_t call_libjl777_broadcast(char *destip,char *msg,int32_t len,int32_t dura
     int32_t libjl777_broadcast(char *msg,int32_t duration);
     int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t len);
     unsigned char hash[256>>3];
+    char ip_port[64];
     uint64_t txid;
+    int i;
     calc_sha256(0,hash,(uint8_t *)msg,(int32_t)strlen(msg));
     txid = calc_txid(hash,sizeof(hash));
     if ( destip != 0 )
     {
+        strcpy(ip_port,destip);
+        for (i=0; destip[i]!=0; i++)
+            if ( destip[i] == ':' )
+                break;
+        if ( destip[i] != ':' )
+            strcat(ip_port,":14631");
         printf("%s NARROWCAST.(%s) txid.%llu\n",destip,msg,(long long)txid);
         if ( libjl777_narrowcast(destip,(unsigned char *)msg,len) == 0 )
             return(txid);
