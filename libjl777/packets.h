@@ -487,7 +487,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
         memcpy(pubkey,encoded,crypto_box_PUBLICKEYBYTES);
         encoded += crypto_box_PUBLICKEYBYTES;
         memcpy(&payload_len,encoded,sizeof(payload_len));
-        //printf("deonionize >>>>> pubkey.%llx vs mypubkey.%llx (%llx) -> %d %2x\n",*(long long *)pubkey,*(long long *)Global_mp->session_pubkey,*(long long *)Global_mp->loopback_pubkey,payload_len,payload_len);
+        printf("deonionize >>>>> pubkey.%llx vs mypubkey.%llx (%llx) -> %d %2x\n",*(long long *)pubkey,*(long long *)Global_mp->session_pubkey,*(long long *)Global_mp->loopback_pubkey,payload_len,payload_len);
         encoded += sizeof(payload_len);
         if ( (payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)) == len )
         {
@@ -496,7 +496,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
             if ( err == 0 )
             {
                 //printf("payload_len.%d err.%d new len.%d\n",payload_len,err,len);
-                if ( *(long long *)decoded != 0 )
+                //if ( *(long long *)decoded != 0 )
                     return(len);
             }
             cp = get_coin_info("BTCD");
@@ -507,7 +507,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
                 if ( err == 0 )
                 {
                     //printf("2nd payload_len.%d err.%d new len.%d\n",payload_len,err,len);
-                    if ( *(long long *)decoded != 0 )
+                    //if ( *(long long *)decoded != 0 )
                         return(len);
                 }
             }
