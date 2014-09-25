@@ -319,7 +319,7 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     int32_t L,port;
     copy_cJSON(destNXTaddr,objs[0]);
     copy_cJSON(msg,objs[1]);
-    L = (int32_t)get_API_int(objs[2],1);
+    L = (int32_t)get_API_int(objs[2],Global_mp->Lfactor);
     nexthopNXTaddr[0] = 0;
     //printf("sendmsg_func sender.(%s) valid.%d dest.(%s) (%s)\n",sender,valid,destNXTaddr,origargstr);
     if ( sender[0] != 0 && valid > 0 && destNXTaddr[0] != 0 )

@@ -429,6 +429,7 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
         numlayers = 1;
     if ( numlayers > 0 )
     {
+        printf("add_random_onionlayers %d of %d\n",numlayers,Global_mp->Lfactor);
         memset(bufs,0,sizeof(bufs));
         dest = bufs[numlayers & 1];
         memcpy(dest,src,len);
@@ -455,11 +456,6 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
                 printf("FATAL: %s %s %s is unknown account\n",peer->pubBTCD,destNXTaddr,peer->pubBTC);
                 return(-1);
             }
-            /*if ( memcmp(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey)) != 0 )
-            {
-                printf("Warning: (%s %s %s) pubkey updated %llx -> %llx\n",peer->pubBTCD,destNXTaddr,peer->pubBTC,*(long long *)np->mypeerinfo.pubkey,*(long long *)peer->pubkey);
-                memcpy(np->mypeerinfo.pubkey,peer->pubkey,sizeof(np->mypeerinfo.pubkey));
-            }*/
             if ( strcmp(hopNXTaddr,np->H.U.NXTaddr) != 0 )
             {
                 //printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
