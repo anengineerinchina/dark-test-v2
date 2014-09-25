@@ -477,13 +477,16 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
     return(len);
 }
 
-int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *encoded,int32_t len,uint64_t mynxtbits)
+int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *encoded,int32_t len)
 {
     //void *origencoded = encoded;
     int32_t err;
+    uint64_t packetdest;
     struct coin_info *cp;
     uint16_t payload_len;
-    if ( mynxtbits == 0 || memcmp(&mynxtbits,encoded,sizeof(mynxtbits)) == 0 )
+    cp = get_coin_info("BTCD");
+    memcmp(&packetdest,encoded,sizeof(packetdest));
+    if ( packetdest != 0 && ((packetdest == cp->srvpubnxtbits && strcmp(cp->privacyserver,"127.0.0.1") == 0) || packetdest == cp->pubnxtbits) )
     {
         encoded += sizeof(mynxtbits);
         memcpy(pubkey,encoded,crypto_box_PUBLICKEYBYTES);
@@ -493,10 +496,9 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
         encoded += sizeof(payload_len);
         if ( (payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)) == len )
         {
-            cp = get_coin_info("BTCD");
-            if ( cp != 0 && strcmp(cp->privacyserver,"127.0.0.1") == 0 ) // might have been encrypted to the loopback
+            len = payload_len;
+            if ( packetdest == cp->srvpubnxtbits  )
             {
-                len = payload_len;
                 err = _decode_cipher((char *)decoded,encoded,&len,pubkey,Global_mp->loopback_privkey);
                 if ( err == 0 )
                 {
@@ -505,13 +507,15 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
                     return(len);
                 }
             }
-            len = payload_len;
-            err = _decode_cipher((char *)decoded,encoded,&len,pubkey,Global_mp->session_privkey);
-            if ( err == 0 )
+            else
             {
-                //printf("payload_len.%d err.%d new len.%d\n",payload_len,err,len);
-                //if ( *(long long *)decoded != 0 )
+                err = _decode_cipher((char *)decoded,encoded,&len,pubkey,Global_mp->session_privkey);
+                if ( err == 0 )
+                {
+                    //printf("payload_len.%d err.%d new len.%d\n",payload_len,err,len);
+                    //if ( *(long long *)decoded != 0 )
                     return(len);
+                }
             }
         } //else printf("mismatched len expected %ld got %d\n",(payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)),len);
     }
@@ -699,7 +703,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
 {
     uint64_t destbits = 0;
     struct NXT_acct *tokenized_np = 0;
-    int32_t valid,len=0,tmp,createdflag,decrypted=0;
+    int32_t valid,len=0,tmp,createdflag;
     cJSON *argjson;
     unsigned char pubkey[crypto_box_PUBLICKEYBYTES],tmppubkey[crypto_box_PUBLICKEYBYTES],decoded[4096],tmpbuf[4096];
     char senderNXTaddr[64],hopNXTaddr[64],*parmstxt=0,*jsonstr;
@@ -711,11 +715,11 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
     {
         recvbuf += sizeof(uint32_t);
         recvlen -= sizeof(uint32_t);
-        if ( (len= deonionize(pubkey,decoded,recvbuf,recvlen,0)) > 0 )
+        if ( (len= deonionize(pubkey,decoded,recvbuf,recvlen)) > 0 )
         {
             memcpy(&destbits,decoded,sizeof(destbits));
-            decrypted++;
-            if ( (tmp= deonionize(tmppubkey,tmpbuf,decoded,len,0)) > 0 )
+            /*decrypted++;
+            if ( (tmp= deonionize(tmppubkey,tmpbuf,decoded,len)) > 0 )
             {
                 memcpy(&destbits,decoded,sizeof(destbits));
                 decrypted++;
@@ -723,7 +727,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                 memcpy(decoded,tmpbuf,len);
                 memcpy(pubkey,tmppubkey,sizeof(pubkey));
                 printf("decrypted2 len.%d dest.(%llu)\n",len,(long long)destbits);
-            } else printf("decrypted len.%d dest.(%llu)\n",len,(long long)destbits);
+            } else*/ printf("decrypted len.%d dest.(%llu)\n",len,(long long)destbits);
         }
         else return(0);
     }
