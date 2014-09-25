@@ -108,12 +108,12 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     struct coin_info *cp = get_coin_info("BTCD");
     char sender[256],retjsonstr[4096],NXTaddr[64],hopNXTaddr[64],*retstr;
     retjsonstr[0] = 0;
-    printf("UDP RECEIVED\n");
+    port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
+    printf("UDP RECEIVED %ld from %s/%d\n",nread,sender,port);
     if ( cp != 0 && nread > 0 )
     {
         expand_nxt64bits(NXTaddr,cp->pubnxtbits);
         strcpy(sender,"unknown");
-        port = extract_nameport(sender,sizeof(sender),(struct sockaddr_in *)addr);
         np = process_packet(retjsonstr,(unsigned char *)rcvbuf->base,(int32_t)nread,udp,(struct sockaddr *)addr,sender,port);
         ASSERT(addr->sa_family == AF_INET);
         if ( np != 0 )

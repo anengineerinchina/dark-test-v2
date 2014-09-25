@@ -731,7 +731,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         decoded[len] = 0;
         parmstxt = clonestr((char *)decoded);
         argjson = cJSON_Parse(parmstxt);
-        //printf("[%s] argjson.%p udp.%p\n",parmstxt,argjson,udp);
+        printf("[%s] argjson.%p udp.%p\n",parmstxt,argjson,udp);
         free(parmstxt), parmstxt = 0;
         if ( argjson != 0 ) // if it parses, we must have been the ultimate destination
         {

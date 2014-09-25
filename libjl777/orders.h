@@ -676,7 +676,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
             refpeer->srvipbits = calc_ipbits(srvipaddr);
         if ( srvNXTaddr != 0 && srvNXTaddr[0] != 0 )
             refpeer->srvnxtbits = calc_nxt64bits(srvNXTaddr);
-        printf("found and updated %s | coins.%p\n",np->H.U.NXTaddr,coins);
+        printf("found and updated.(%s) %s | coins.%p\n",pubNXT,np->H.U.NXTaddr,coins);
     }
     else
     {
