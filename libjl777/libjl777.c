@@ -327,7 +327,7 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
         if ( prevaddr != 0 )
         {
             port = extract_nameport(previp,sizeof(previp),(struct sockaddr_in *)prevaddr);
-            printf("received message.(%s) from hop.%s/%d\n",origargstr,previp,port);
+            printf(">>>>>>>>>>>>> received message.(%s) NXT.%s from hop.%s/%d\n",msg,sender,previp,port);
             //retstr = clonestr("{\"result\":\"received message\"}");
         }
         else retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
