@@ -513,12 +513,12 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
             }
         } //else printf("mismatched len expected %ld got %d\n",(payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)),len);
     }
-    else
+    /*else
     {
         uint64_t destbits;
         memcpy(&destbits,encoded,sizeof(destbits));
         printf("deonionize onion for NXT.%llu not this address.(%llu)\n",(long long)destbits,(long long)mynxtbits);
-    }
+    }*/
     return(0);
 }
 
