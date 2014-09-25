@@ -460,7 +460,7 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
             {
                 //printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
                 len = onionize(hopNXTaddr,verifiedNXTaddr,dest,np->H.U.NXTaddr,&src,len);
-                memcpy(final,src,len);
+                memcpy(final,dest,len);
                 *srcp = final;
                 if ( len > 4096 )
                 {
@@ -496,7 +496,8 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
             if ( err == 0 )
             {
                 //printf("payload_len.%d err.%d new len.%d\n",payload_len,err,len);
-                return(len);
+                if ( *(long long *)decoded != 0 )
+                    return(len);
             }
             cp = get_coin_info("BTCD");
             if ( cp != 0 && strcmp(cp->privacyserver,"127.0.0.1") == 0 ) // might have been encrypted to the loopback
@@ -506,7 +507,8 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
                 if ( err == 0 )
                 {
                     //printf("2nd payload_len.%d err.%d new len.%d\n",payload_len,err,len);
-                    return(len);
+                    if ( *(long long *)decoded != 0 )
+                        return(len);
                 }
             }
         } //else printf("mismatched len expected %ld got %d\n",(payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(mynxtbits)),len);
