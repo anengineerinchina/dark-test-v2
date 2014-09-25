@@ -406,10 +406,11 @@ int32_t onionize(char *hopNXTaddr,char *verifiedNXTaddr,unsigned char *encoded,c
     payload_lenp = (uint16_t *)encoded;
     encoded += sizeof(*payload_lenp);
     {
-        char hexstr[1024];
+        char hexstr[1024],ipstr[64];
+        expand_ipbits(ipstr,np->mypeerinfo.srvipbits);
         init_hexbytes(hexstr,np->mypeerinfo.pubkey,sizeof(np->mypeerinfo.pubkey));
         hexstr[16] = 0;
-        printf("ONIONIZE: NXT.%s (%s) pubkey.%s encode len.%d -> ",np->H.U.NXTaddr,np->privacyserver,hexstr,len);
+        printf("ONIONIZE: NXT.%s (%s) pubkey.%s encode len.%d -> ",np->H.U.NXTaddr,ipstr,hexstr,len);
     }
     len = _encode_str(encoded,(char *)payload,len,np->mypeerinfo.pubkey,onetime_privkey);
     slen = len;
