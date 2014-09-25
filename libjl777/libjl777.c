@@ -948,9 +948,7 @@ char *libjl777_gotpacket(char *msg,int32_t duration,char *ip_port)
 
 int libjl777_start(char *JSON_or_fname,char *myipaddr)
 {
-    void sodium_init();
     struct NXT_str *tp = 0;
-    sodium_init();
     myipaddr = clonestr(myipaddr);
     Global_mp = calloc(1,sizeof(*Global_mp));
     printf("libjl777_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);

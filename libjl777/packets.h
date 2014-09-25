@@ -389,6 +389,7 @@ int32_t crcize(unsigned char *final,unsigned char *encoded,int32_t len)
 
 int32_t onionize(char *verifiedNXTaddr,unsigned char *encoded,char *destNXTaddr,unsigned char *payload,int32_t len)
 {
+    static zerokey[crypto_box_PUBLICKEYBYTES];
     unsigned char onetime_pubkey[crypto_box_PUBLICKEYBYTES],onetime_privkey[crypto_box_SECRETKEYBYTES];
     uint64_t nxt64bits;
     int32_t createdflag;
@@ -397,6 +398,8 @@ int32_t onionize(char *verifiedNXTaddr,unsigned char *encoded,char *destNXTaddr,
     nxt64bits = calc_nxt64bits(destNXTaddr);
     np = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
     crypto_box_keypair(onetime_pubkey,onetime_privkey);
+    if ( memcmp(zerokey,onetime_pubkey) == 0 || memcmp(zerokey,onetime_privkey) == 0 )
+        printf("ZEROKEY for keypair?\n");
     memcpy(encoded,&nxt64bits,sizeof(nxt64bits));
     encoded += sizeof(nxt64bits);
     memcpy(encoded,onetime_pubkey,sizeof(onetime_pubkey));
