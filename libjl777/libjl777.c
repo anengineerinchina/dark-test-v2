@@ -321,19 +321,19 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     copy_cJSON(msg,objs[1]);
     L = (int32_t)get_API_int(objs[2],1);
     nexthopNXTaddr[0] = 0;
-    printf("sendmsg_func sender.(%s) valid.%d dest.(%s) (%s)\n",sender,valid,destNXTaddr,origargstr);
+    //printf("sendmsg_func sender.(%s) valid.%d dest.(%s) (%s)\n",sender,valid,destNXTaddr,origargstr);
     if ( sender[0] != 0 && valid > 0 && destNXTaddr[0] != 0 )
     {
         if ( prevaddr != 0 )
         {
             port = extract_nameport(previp,sizeof(previp),(struct sockaddr_in *)prevaddr);
             printf("received message.(%s) from hop.%s/%d\n",origargstr,previp,port);
-            retstr = clonestr("{\"result\":\"received message\"}");
+            //retstr = clonestr("{\"result\":\"received message\"}");
         }
         else retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
     }
-    if ( retstr == 0 )
-        retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
+    //if ( retstr == 0 )
+    //    retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
     return(retstr);
 }
 
@@ -680,7 +680,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
         }
         //printf("(%s) command.(%s) NXT.(%s)\n",cJSON_Print(argjson),command,NXTaddr);
     }
-    printf("pNXT_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
+    //printf("pNXT_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
     for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
     {
         cmdinfo = commands[i];
@@ -692,10 +692,10 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
             for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
                 objs[j-3] = cJSON_GetObjectItem(argjson,cmdinfo[j]);
             retstr = (*(json_handler)cmdinfo[0])(NXTaddr,NXTACCTSECRET,prevaddr,sender,valid,objs,j-3,origargstr);
-            if ( retstr == 0 )
-                retstr = clonestr("{\"result\":null}");
-            if ( 0 && retstr != 0 )
-                printf("json_handler returns.(%s)\n",retstr);
+            //if ( retstr == 0 )
+            //    retstr = clonestr("{\"result\":null}");
+            //if ( 0 && retstr != 0 )
+            //    printf("json_handler returns.(%s)\n",retstr);
             return(retstr);
         }
     }
@@ -938,9 +938,9 @@ char *libjl777_gotpacket(char *msg,int32_t duration,char *ip_port)
                 free(cmdstr);
             }
             free_json(json);
-            if ( retstr != 0 )
+            if ( retstr == 0 )
+                retstr = clonestr("{\"result\":null}");
                 return(retstr);
-            else printf("pNXT_jsonhandler returns null\n");
         } printf("cJSON_Parse error.(%s)\n",msg);
     }
     return(clonestr(retjsonstr));
