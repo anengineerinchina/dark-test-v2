@@ -3949,7 +3949,7 @@ extern "C" int32_t libjl777_broadcast(char *msg,int32_t duration)
 	return(0);
 }
 
-int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
+extern "C" int32_t libjl777_narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
 {
     CPubAddr pubaddr;
     std::string supernetmsg = "";
