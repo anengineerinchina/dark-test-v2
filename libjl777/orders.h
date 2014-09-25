@@ -666,12 +666,12 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     {
         safecopy(refpeer->pubBTCD,BTCDaddr,sizeof(refpeer->pubBTCD));
         safecopy(refpeer->pubBTC,BTCaddr,sizeof(refpeer->pubBTC));
-        if ( pubkey != 0 && pubkey[0] != 0 )
+        if ( pubkeystr != 0 && pubkeystr[0] != 0 )
         {
             decode_hex(pubkey,(int32_t)sizeof(pubkey),pubkeystr);
-            if ( memcmp(pubkey,refpeer->pubkey,sizeof(refpeer->pubkey)) != 0 )
+            if ( memcmp(refpeer->pubkey,pubkey,sizeof(refpeer->pubkey)) != 0 )
             {
-                memcpy(pubkey,refpeer->pubkey,sizeof(refpeer->pubkey));
+                memcpy(refpeer->pubkey,pubkey,sizeof(refpeer->pubkey));
                 updatedflag = 1;
             }
         }
@@ -685,7 +685,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     }
     else
     {
-        set_pubpeerinfo(srvNXTaddr,srvipaddr,srvport,&peer,BTCDaddr,pubkey,pubnxtbits,BTCaddr);
+        set_pubpeerinfo(srvNXTaddr,srvipaddr,srvport,&peer,BTCDaddr,pubkeystr,pubnxtbits,BTCaddr);
         refpeer = update_peerinfo(&createdflag,&peer);
         printf("created path for (%s) | coins.%p\n",pubNXT,coins);
     }
