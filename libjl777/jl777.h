@@ -358,7 +358,7 @@ char NXTSERVER[MAX_JSON_FIELD] = { "http://127.0.0.1:6876/nxt?requestType" };
 
 double picoc(int argc,char **argv,char *codestr);
 int32_t init_sharenrs(unsigned char sharenrs[255],unsigned char *orig,int32_t m,int32_t n);
-uint64_t call_libjl777_broadcast(char *destip,char *msg,int32_t len,int32_t duration);
+uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t duration);
 void calc_sha256(char hashstr[(256 >> 3) * 2 + 1],unsigned char hash[256 >> 3],unsigned char *src,int32_t len);
 
 #include "NXTservices.h"

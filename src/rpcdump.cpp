@@ -241,7 +241,7 @@ Value importwallet(const Array& params, bool fHelp)
 }
 
 
-extern "C" char *libjl777_JSON(char *);
+extern "C" char *SuperNET_JSON(char *);
 Value SuperNET(const Array& params, bool fHelp)
 {
     char *retstr;
@@ -249,7 +249,7 @@ Value SuperNET(const Array& params, bool fHelp)
         throw runtime_error( "SuperNET '<SuperNET API JSON>'\n");
     EnsureWalletIsUnlocked();
     string jsonstr = params[0].get_str();
-    retstr = libjl777_JSON((char *)jsonstr.c_str());
+    retstr = SuperNET_JSON((char *)jsonstr.c_str());
     if ( retstr != 0 )
     {
 	printf("%s returns (%s)\n",(char *)jsonstr.c_str(),retstr);
@@ -345,17 +345,16 @@ Value dumpwallet(const Array& params, bool fHelp)
 }
 
 //bitcoindark: teleport json
-extern "C" char *libjl777_JSON(char *JSONstr);
+extern "C" char *SuperNET_JSON(char *JSONstr);
 Value jl777_JSON(const Array& params, bool fHelp)
 {
 
     if (fHelp || params.size() != 1)
-        throw runtime_error("jl777 <JSON>\nsends <JSON> to libjl777");
+        throw runtime_error("jl777 <JSON>\nsends <JSON> to SuperNET");
 
     EnsureWalletIsUnlocked();
     string jsonstr = params[0].get_str();
-    return(libjl777_JSON((char *)jsonstr.c_str()));
-	return 1;
+    return(SuperNET_JSON((char *)jsonstr.c_str()));
 }
 
 

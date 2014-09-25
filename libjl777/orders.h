@@ -645,7 +645,7 @@ uint64_t broadcast_publishpacket(char *ip_port)
         np = get_NXTacct(&createdflag,Global_mp,cp->srvNXTADDR);
         set_peer_json(cmd,np->H.U.NXTaddr,np);
         len = construct_tokenized_req(packet,cmd,cp->srvNXTACCTSECRET);
-        return(call_libjl777_broadcast(ip_port,packet,len+1,PUBADDRS_MSGDURATION));
+        return(call_SuperNET_broadcast(ip_port,packet,len+1,PUBADDRS_MSGDURATION));
     }
     else return(0);
 }

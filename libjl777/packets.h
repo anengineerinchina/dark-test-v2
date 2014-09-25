@@ -664,7 +664,7 @@ uint64_t route_packet(uv_udp_t *udp,char *hopNXTaddr,unsigned char *outbuf,int32
             uv_ip4_addr(destip,np->mypeerinfo.srvport,&addr);
             portable_udpwrite((struct sockaddr *)&addr,udp,finalbuf,len,ALLOCWR_ALLOCFREE);
         }
-        else call_libjl777_broadcast(destip,(char *)finalbuf,len,0);
+        else call_SuperNET_broadcast(destip,(char *)finalbuf,len,0);
     }
     else
     {
@@ -682,7 +682,7 @@ uint64_t route_packet(uv_udp_t *udp,char *hopNXTaddr,unsigned char *outbuf,int32
                 else
                 {
                     extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)&Uaddrs[i]->addr);
-                    call_libjl777_broadcast(destip,(char *)finalbuf,len,0);
+                    call_SuperNET_broadcast(destip,(char *)finalbuf,len,0);
                 }
             }
         }
