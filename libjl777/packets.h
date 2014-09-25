@@ -387,7 +387,7 @@ int32_t crcize(unsigned char *final,unsigned char *encoded,int32_t len)
     return(len + sizeof(crc));
 }
 
-int32_t onionize(char *hopNXTaddr,char *verifiedNXTaddr,unsigned char *encoded,char *destNXTaddr,unsigned char **payloadp,int32_t len)
+int32_t onionize(char *hopNXTaddr,unsigned char *encoded,char *destNXTaddr,unsigned char **payloadp,int32_t len)
 {
     unsigned char onetime_pubkey[crypto_box_PUBLICKEYBYTES],onetime_privkey[crypto_box_SECRETKEYBYTES],*payload = (*payloadp);
     uint64_t nxt64bits;
@@ -419,10 +419,10 @@ int32_t onionize(char *hopNXTaddr,char *verifiedNXTaddr,unsigned char *encoded,c
     return(len + sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits));
 }
 
-int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verifiedNXTaddr,uint8_t *final,uint8_t **srcp,int32_t len)
+int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,uint8_t *final,uint8_t **srcp,int32_t len)
 {
     char destNXTaddr[64];
-    uint8_t bufs[2][4096],*dest,*src = (*srcp);
+    uint8_t dest[4096],srcbuf[4096],*src = srcbuf;
     struct peerinfo *peer;
     struct NXT_acct *np;
     if ( numlayers > 1 )
@@ -432,13 +432,10 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
     if ( numlayers > 0 )
     {
         printf("add_random_onionlayers %d of %d\n",numlayers,Global_mp->Lfactor);
-        memset(bufs,0,sizeof(bufs));
-        dest = bufs[numlayers & 1];
-        memcpy(dest,src,len);
+        memset(dest,0,sizeof(dest));
+        memcpy(srcbuf,*srcp,len);
         while ( numlayers > 0 )
         {
-            src = bufs[numlayers & 1];
-            dest = bufs[(numlayers & 1) ^ 1];
             peer = get_random_pserver();
             if ( peer == 0 )
             {
@@ -461,8 +458,9 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,char *verified
             if ( strcmp(hopNXTaddr,np->H.U.NXTaddr) != 0 )
             {
                 //printf("add layer %d: NXT.%s\n",numlayers,np->H.U.NXTaddr);
-                len = onionize(hopNXTaddr,verifiedNXTaddr,dest,np->H.U.NXTaddr,&src,len);
-                memcpy(final,dest,len);
+                len = onionize(hopNXTaddr,final,np->H.U.NXTaddr,&src,len);
+                memcpy(srcbuf,final,len);
+                src = srcbuf;
                 *srcp = final;
                 if ( len > 4096 )
                 {
@@ -698,9 +696,9 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
 {
     uint64_t destbits = 0;
     struct NXT_acct *tokenized_np = 0;
-    int32_t valid,len=0,tmp,createdflag;
+    int32_t valid,len=0,createdflag;//tmp
     cJSON *argjson;
-    unsigned char pubkey[crypto_box_PUBLICKEYBYTES],tmppubkey[crypto_box_PUBLICKEYBYTES],decoded[4096],tmpbuf[4096];
+    unsigned char pubkey[crypto_box_PUBLICKEYBYTES],decoded[4096],tmpbuf[4096]; //,tmppubkey[crypto_box_PUBLICKEYBYTES]
     char senderNXTaddr[64],hopNXTaddr[64],*parmstxt=0,*jsonstr;
     memset(decoded,0,sizeof(decoded));
     memset(tmpbuf,0,sizeof(tmpbuf));
@@ -803,7 +801,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
     memset(encodedL,0,sizeof(encodedL)); // encoded to max L onion layers
     memset(encodedP,0,sizeof(encodedP)); // encoded to privacyserver
     outbuf = (unsigned char *)origargstr;
-    len = onionize(hopNXTaddr,verifiedNXTaddr,encodedD,destNXTaddr,&outbuf,(int32_t)strlen(origargstr)+1);
+    len = onionize(hopNXTaddr,encodedD,destNXTaddr,&outbuf,(int32_t)strlen(origargstr)+1);
     printf("sendmessage (%s) len.%d to %s crc.%x\n",origargstr,msglen,destNXTaddr,_crc32(0,outbuf,len));
     if ( len > sizeof(encodedP)-1024 )
     {
@@ -814,11 +812,11 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
     {
         //printf("np.%p NXT.%s | destnp.%p\n",np,np!=0?np->H.U.NXTaddr:"no np",destnp);
         if ( strcmp(destsrvNXTaddr,destNXTaddr) != 0 && has_privacyServer(destnp) != 0 ) // build onion in reverse order, privacyServer for dest is 2nd
-            len = onionize(hopNXTaddr,verifiedNXTaddr,encodedsrvD,destsrvNXTaddr,&outbuf,len);
+            len = onionize(hopNXTaddr,encodedsrvD,destsrvNXTaddr,&outbuf,len);
         if ( L > 0 )
-            len = add_random_onionlayers(hopNXTaddr,L,verifiedNXTaddr,encodedL,&outbuf,len);
+            len = add_random_onionlayers(hopNXTaddr,L,encodedL,&outbuf,len);
         if ( strcmp(srvNXTaddr,hopNXTaddr) != 0 && has_privacyServer(np) != 0 ) // send via privacy server to protect our IP
-            len = onionize(hopNXTaddr,verifiedNXTaddr,encodedP,srvNXTaddr,&outbuf,len);
+            len = onionize(hopNXTaddr,encodedP,srvNXTaddr,&outbuf,len);
         txid = route_packet(Global_mp->udp,hopNXTaddr,outbuf,len);
         if ( txid == 0 )
         {
