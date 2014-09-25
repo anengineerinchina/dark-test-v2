@@ -650,14 +650,14 @@ uint64_t broadcast_publishpacket(char *ip_port)
     else return(0);
 }
 
-char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkey,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport)
+char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkeystr,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport)
 {
     int32_t createdflag,updatedflag = 0;
     struct NXT_acct *np;
     struct coin_info *cp;
     struct other_addr *op;
     struct peerinfo *refpeer,peer;
-    char verifiedNXTaddr[64],mysrvNXTaddr[64];
+    char verifiedNXTaddr[64],mysrvNXTaddr[64],pubkey[crypto_box_PUBLICKEYBYTES];
     uint64_t pubnxtbits;
     cp = get_coin_info("BTCD");
     np = get_NXTacct(&createdflag,Global_mp,pubNXT);
@@ -667,15 +667,21 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
         safecopy(refpeer->pubBTCD,BTCDaddr,sizeof(refpeer->pubBTCD));
         safecopy(refpeer->pubBTC,BTCaddr,sizeof(refpeer->pubBTC));
         if ( pubkey != 0 && pubkey[0] != 0 )
-            decode_hex(refpeer->pubkey,(int32_t)sizeof(refpeer->pubkey),pubkey);
+        {
+            decode_hex(pubkey,(int32_t)sizeof(pubkey),pubkeystr);
+            if ( memcmp(pubkey,refpeer->pubkey,sizeof(refpeer->pubkey)) != 0 )
+            {
+                memcpy(pubkey,refpeer->pubkey,sizeof(refpeer->pubkey));
+                updatedflag = 1;
+            }
+        }
         if ( srvport != 0 )
             refpeer->srvport = srvport;
         if ( srvipaddr != 0 && strcmp(srvipaddr,"127.0.0.1") != 0 )
             refpeer->srvipbits = calc_ipbits(srvipaddr);
         if ( srvNXTaddr != 0 && srvNXTaddr[0] != 0 )
             refpeer->srvnxtbits = calc_nxt64bits(srvNXTaddr);
-        updatedflag = 1;
-        printf("found and updated.(%s) %s | coins.%p\n",pubNXT,np->H.U.NXTaddr,coins);
+        printf("found and updated.%d (%s) %s | coins.%p\n",pubNXT,updatedflag,np->H.U.NXTaddr,coins);
     }
     else
     {
