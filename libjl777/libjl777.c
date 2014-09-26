@@ -745,7 +745,7 @@ char *SuperNET_JSON(char *JSONstr)
         cmdstr = cJSON_Print(json);
         if ( cmdstr != 0 )
         {
-            stripwhite(cmdstr,strlen(cmdstr));
+            stripwhite_ns(cmdstr,strlen(cmdstr));
             issue_generateToken(0,encoded,cmdstr,cp->NXTACCTSECRET);
             encoded[NXT_TOKEN_LEN] = 0;
             sprintf(_tokbuf,"[%s,{\"token\":\"%s\"}]",cmdstr,encoded);
