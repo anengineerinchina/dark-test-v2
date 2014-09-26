@@ -3910,6 +3910,9 @@ void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
     CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
     sMsg << (CUnsignedPubAddr)pubaddr;
     pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
+    if(!pubaddr.CheckSignature())
+        throw runtime_error("Failed to Unserialize PubAddr");
+        
     //if ( pubaddr.ProcessPubAddr() == 0 )
       //  throw runtime_error("set_pubaddr: Failed to process pubaddr.\n");
 }
