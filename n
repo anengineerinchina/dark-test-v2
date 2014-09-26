@@ -1,0 +1,2 @@
+cp ../libjl777/*.c libjl777
+cp ../libjl777/*.h libjl777
