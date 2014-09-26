@@ -866,6 +866,7 @@ int32_t got_newpeer(char *ip_port)
         strncmp("137.116.193.215",ip_port,strlen("137.116.193.215")) == 0 ||
         strncmp("80.82.64.135",ip_port,strlen("80.82.64.135")) == 0 ||
         strncmp("185.21.192.9",ip_port,strlen("185.21.192.9")) == 0 ||
+        strncmp("94.102.63.149",ip_port,strlen("94.102.63.149")) == 0 ||
         
         
         0 )
