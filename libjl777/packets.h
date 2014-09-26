@@ -659,10 +659,10 @@ uint64_t route_packet(uv_udp_t *udp,char *hopNXTaddr,unsigned char *outbuf,int32
     {
         printf("DIRECT udpsend {%s} to %s/%d finalbuf.%d\n",hopNXTaddr,destip,np->mypeerinfo.srvport,len);
         np->mypeerinfo.numsent++;
-        if ( len < 1400 )
+        if ( len < MAX_UDPLEN )
         {
             uv_ip4_addr(destip,np->mypeerinfo.srvport,&addr);
-            portable_udpwrite((struct sockaddr *)&addr,udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+            portable_udpwrite((struct sockaddr *)&addr,udp,finalbuf,MAX_UDPLEN,ALLOCWR_ALLOCFREE);
         }
         else call_SuperNET_broadcast(destip,(char *)finalbuf,len,0);
     }
@@ -677,8 +677,8 @@ uint64_t route_packet(uv_udp_t *udp,char *hopNXTaddr,unsigned char *outbuf,int32
             {
                 np->mypeerinfo.numsent++;
                 Uaddrs[i]->numsent++;
-                if ( len < 1400 )
-                    portable_udpwrite((struct sockaddr *)&Uaddrs[i]->addr,udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+                if ( len < MAX_UDPLEN )
+                    portable_udpwrite((struct sockaddr *)&Uaddrs[i]->addr,udp,finalbuf,MAX_UDPLEN,ALLOCWR_ALLOCFREE);
                 else
                 {
                     extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)&Uaddrs[i]->addr);
@@ -711,16 +711,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         if ( (len= deonionize(pubkey,decoded,recvbuf,recvlen)) > 0 )
         {
             memcpy(&destbits,decoded,sizeof(destbits));
-            /*decrypted++;
-            if ( (tmp= deonionize(tmppubkey,tmpbuf,decoded,len)) > 0 )
-            {
-                memcpy(&destbits,decoded,sizeof(destbits));
-                decrypted++;
-                len = tmp;
-                memcpy(decoded,tmpbuf,len);
-                memcpy(pubkey,tmppubkey,sizeof(pubkey));
-                printf("decrypted2 len.%d dest.(%llu)\n",len,(long long)destbits);
-            } else*/ printf("decrypted len.%d dest.(%llu)\n",len,(long long)destbits);
+            printf("decrypted len.%d dest.(%llu)\n",len,(long long)destbits);
         }
         else return(0);
     }
