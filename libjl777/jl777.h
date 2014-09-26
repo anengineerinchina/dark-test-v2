@@ -10,6 +10,7 @@
 #define NXT_GENESISTIME 1385294400
 #define SMALLVAL .000000000000001
 #define MAX_LFACTOR 10
+#define MAX_UDPLEN 1400
 
 #define ORDERBOOK_NXTID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
 
