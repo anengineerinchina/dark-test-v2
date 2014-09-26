@@ -812,12 +812,6 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
     return(gp);
 }
 
-/*int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len)
-{
-    printf("narrowcast %d bytes to %s not supported yet\n",len,destip);
-    return(-1);
-}*/
-
 uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t duration)
 {
     int32_t SuperNET_broadcast(char *msg,int32_t duration);
@@ -862,7 +856,7 @@ uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t dura
 
 int32_t got_newpeer(char *ip_port)
 {
-	//printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
+	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
     if ( strncmp("209.126.70",ip_port,strlen("209.126.70")) == 0 ||
          strncmp("104.40.137.20",ip_port,strlen("104.40.137.20")) == 0 ||
          strncmp("104.41.129.107",ip_port,strlen("104.41.129.107")) == 0 ||
