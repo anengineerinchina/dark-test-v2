@@ -862,7 +862,9 @@ int32_t got_newpeer(char *ip_port)
         strncmp("104.41.129.107",ip_port,strlen("104.41.129.107")) == 0 ||
         strncmp("162.248.163.43",ip_port,strlen("162.248.163.43")) == 0 ||
         strncmp("23.97.66.164",ip_port,strlen("23.97.66.164")) == 0 ||
-        strncmp("100.79.14.220",ip_port,strlen("100.79.14.220")) == 0 ||        
+        strncmp("100.79.14.220",ip_port,strlen("100.79.14.220")) == 0 ||
+        strncmp("137.116.193.215",ip_port,strlen("137.116.193.215")) == 0 ||
+        
         0 )
     {
         return(broadcast_publishpacket(ip_port) != 0 ? 0 : -1);
