@@ -740,7 +740,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         {
             senderNXTaddr[0] = 0;
             parmstxt = verify_tokenized_json(senderNXTaddr,&valid,argjson);
-            if ( valid != 0 && parmstxt != 0 && parmstxt[0] != 0 )
+            if ( valid > 0 && parmstxt != 0 && parmstxt[0] != 0 )
             {
                 tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
                 update_routing_probs(&tokenized_np->mypeerinfo,addr);
@@ -853,7 +853,7 @@ int32_t sendandfree_jsoncmd(int32_t L,char *sender,char *NXTACCTSECRET,cJSON *js
     verifiedNXTaddr[0] = 0;
     np = find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
     msg = cJSON_Print(json);
-    stripwhite(msg,strlen(msg));
+    stripwhite_ns(msg,strlen(msg));
     retstr = send_tokenized_cmd(hopNXTaddr,L,verifiedNXTaddr,NXTACCTSECRET,msg,destNXTaddr);
     if ( retstr != 0 )
     {

@@ -745,7 +745,7 @@ char *SuperNET_JSON(char *JSONstr)
         cmdstr = cJSON_Print(json);
         if ( cmdstr != 0 )
         {
-            stripwhite(cmdstr,strlen(cmdstr));
+            stripwhite_ns(cmdstr,strlen(cmdstr));
             issue_generateToken(0,encoded,cmdstr,cp->NXTACCTSECRET);
             encoded[NXT_TOKEN_LEN] = 0;
             sprintf(_tokbuf,"[%s,{\"token\":\"%s\"}]",cmdstr,encoded);
@@ -812,12 +812,6 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
     return(gp);
 }
 
-/*int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len)
-{
-    printf("narrowcast %d bytes to %s not supported yet\n",len,destip);
-    return(-1);
-}*/
-
 uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t duration)
 {
     int32_t SuperNET_broadcast(char *msg,int32_t duration);
@@ -862,8 +856,16 @@ uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t dura
 
 int32_t got_newpeer(char *ip_port)
 {
-	//printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
-    if ( strncmp("209.126.70",ip_port,strlen("209.126.70")) == 0 )
+	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
+    if ( strncmp("209.126.70",ip_port,strlen("209.126.70")) == 0 ||
+         strncmp("104.40.137.20",ip_port,strlen("104.40.137.20")) == 0 ||
+        strncmp("104.41.129.107",ip_port,strlen("104.41.129.107")) == 0 ||
+        strncmp("162.248.163.43",ip_port,strlen("162.248.163.43")) == 0 ||
+        strncmp("23.97.66.164",ip_port,strlen("23.97.66.164")) == 0 ||
+        strncmp("100.79.14.220",ip_port,strlen("100.79.14.220")) == 0 ||
+        strncmp("137.116.193.215",ip_port,strlen("137.116.193.215")) == 0 ||
+        
+        0 )
     {
         return(broadcast_publishpacket(ip_port) != 0 ? 0 : -1);
     }
