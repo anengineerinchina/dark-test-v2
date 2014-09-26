@@ -859,7 +859,9 @@ int32_t got_newpeer(char *ip_port)
 	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
     if ( strncmp("209.126.70",ip_port,strlen("209.126.70")) == 0 ||
          strncmp("104.40.137.20",ip_port,strlen("104.40.137.20")) == 0 ||
-         strncmp("104.41.129.107",ip_port,strlen("104.41.129.107")) == 0 ||
+        strncmp("104.41.129.107",ip_port,strlen("104.41.129.107")) == 0 ||
+        strncmp("162.248.163.43",ip_port,strlen("162.248.163.43")) == 0 ||
+        
         0 )
     {
         return(broadcast_publishpacket(ip_port) != 0 ? 0 : -1);
