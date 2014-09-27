@@ -164,7 +164,7 @@ char *_coins_jsonstr(char *coinsjson,uint64_t coins[4])
             if ( strcmp(str,ILLEGAL_COIN) != 0 )
             {
                 if ( n++ != 0 )
-                    strcat(coinsjson,",");
+                    strcat(coinsjson,", ");
                 sprintf(coinsjson+strlen(coinsjson),"\"%s\"",str);
             }
         }
