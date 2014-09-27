@@ -778,7 +778,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     {
         if ( updatedflag != 0 )
             say_hello(np);
-        if ( haspservers > Numpservers || (haspservers == Numpservers && xorsum != calc_xorsum(Pservers,Numpservers)) )
+        if ( xorsum == 0 || haspservers > Numpservers || (haspservers == Numpservers && xorsum != calc_xorsum(Pservers,Numpservers)) )
             ask_pservers(np);
         return(0);
     }
