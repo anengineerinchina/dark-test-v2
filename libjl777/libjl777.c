@@ -646,7 +646,7 @@ char *getPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
     if ( json != 0 )
     {
         jsonstr = cJSON_Print(json);
-        stripwhite(jsonstr,strlen(jsonstr));
+        stripwhite_ns(jsonstr,strlen(jsonstr));
         free_json(json);
     }
     return(jsonstr);
