@@ -89,12 +89,13 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
     init_hexbytes(Global_mp->pubkeystr,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
     if ( portable_thread_create((void *)process_hashtablequeues,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
-    mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
+    mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,(void *)on_udprecv);
     init_MGWconf(JSON_or_fname,myipaddr);
     printf("start getNXTblocks.(%s)\n",myipaddr);
     if ( 1 && portable_thread_create((void *)getNXTblocks,mp) == 0 )
         printf("ERROR start_Histloop\n");
     //mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
+    init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
 
     printf("run_NXTservices >>>>>>>>>>>>>>> %p %s: %s %s\n",mp,mp->dispname,PC_USERNAME,mp->ipaddr);
     void run_NXTservices(void *arg);
@@ -235,7 +236,7 @@ char *placequote_func(struct sockaddr *prevaddr,int32_t dir,char *sender,int32_t
     assetA = get_API_nxt64bits(objs[4]);
     assetB = get_API_nxt64bits(objs[5]);
     printf("PLACE QUOTE polarity.%d dir.%d\n",polarity,dir);
-    if ( sender[0] != 0 && find_raw_orders(obookid) != 0 && valid >= 0 )
+    if ( sender[0] != 0 && find_raw_orders(obookid) != 0 && valid > 0 )
     {
         if ( price != 0. && volume != 0. && dir != 0 )
         {
@@ -307,7 +308,7 @@ char *teleport_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
         M = N = 1;
     printf("amount.(%.8f) minage.(%s) %d | M.%d N.%d\n",amount,minage,atoi(minage),M,N);
     cp = get_coin_info(coinstr);
-    if ( cp != 0 && sender[0] != 0 && amount > 0 && valid >= 0 && destaddr[0] != 0 )
+    if ( cp != 0 && sender[0] != 0 && amount > 0 && valid > 0 && destaddr[0] != 0 )
         retstr = teleport(sender,NXTACCTSECRET,(uint64_t)(SATOSHIDEN * amount),destaddr,cp,atoi(minage),M,N);
     else retstr = clonestr("{\"error\":\"invalid teleport request\"}");
     return(retstr);
@@ -343,7 +344,7 @@ char *checkmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 {
     char senderNXTaddr[MAX_JSON_FIELD],*retstr = 0;
     copy_cJSON(senderNXTaddr,objs[0]);
-    if ( sender[0] != 0 && valid >= 0 )
+    if ( sender[0] != 0 && valid > 0 )
         retstr = checkmessages(sender,NXTACCTSECRET,senderNXTaddr);
     else retstr = clonestr("{\"result\":\"invalid checkmessages request\"}");
     return(retstr);
@@ -358,7 +359,7 @@ char *getpubkey_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr
     printf("getpubkey_func(sender.%s valid.%d addr.%s)\n",sender,valid,addr);
     if ( valid < 0 )
         return(0);
-    if ( sender[0] != 0 && valid >= 0 && addr[0] != 0 )
+    if ( sender[0] != 0 && valid > 0 && addr[0] != 0 )
         retstr = getpubkey(sender,NXTACCTSECRET,addr,destcoin);
     else retstr = clonestr("{\"result\":\"invalid getpubkey request\"}");
     return(retstr);
@@ -372,7 +373,7 @@ char *sendpeerinfo_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
     printf("sendpeerinfo_func(sender.%s valid.%d addr.%s)\n",sender,valid,addr);
     if ( valid < 0 )
         return(0);
-    if ( sender[0] != 0 && valid >= 0 && addr[0] != 0 )
+    if ( sender[0] != 0 && valid > 0 && addr[0] != 0 )
         retstr = sendpeerinfo(hopNXTaddr,sender,NXTACCTSECRET,addr,destcoin);
     else retstr = clonestr("{\"result\":\"invalid getpubkey request\"}");
     return(retstr);
@@ -381,7 +382,7 @@ char *sendpeerinfo_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
 char *publishaddrs_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char pubNXT[MAX_JSON_FIELD],pubkey[MAX_JSON_FIELD],BTCDaddr[MAX_JSON_FIELD],BTCaddr[MAX_JSON_FIELD],*retstr = 0;
-    char srvNXTaddr[MAX_JSON_FIELD],srvipaddr[MAX_JSON_FIELD],srvport[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD];
+    char srvNXTaddr[MAX_JSON_FIELD],srvipaddr[MAX_JSON_FIELD],srvport[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],haspservers[MAX_JSON_FIELD],xorsumstr[MAX_JSON_FIELD];
     uint64_t coins[4];
     int32_t i,m=0,coinid,n=0;
     copy_cJSON(pubNXT,objs[0]);
@@ -403,8 +404,10 @@ char *publishaddrs_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
             else printf("unknown.%d coind.(%s)\n",i,coinstr);
         }
     }
-    if ( sender[0] != 0 && valid >= 0 && pubNXT[0] != 0 )
-        retstr = publishaddrs(prevaddr,m!=0?coins:0,NXTACCTSECRET,pubNXT,pubkey,BTCDaddr,BTCaddr,srvNXTaddr,srvipaddr,atoi(srvport));
+    copy_cJSON(haspservers,objs[8]);
+    copy_cJSON(xorsumstr,objs[9]);
+    if ( sender[0] != 0 && valid > 0 && pubNXT[0] != 0 )
+        retstr = publishaddrs(prevaddr,m!=0?coins:0,NXTACCTSECRET,pubNXT,pubkey,BTCDaddr,BTCaddr,srvNXTaddr,srvipaddr,atoi(srvport),atoi(haspservers),(uint32_t)atol(xorsumstr));
     else retstr = clonestr("{\"result\":\"invalid publishaddrs request\"}");
     return(retstr);
 }
@@ -422,7 +425,7 @@ char *makeoffer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr
     qtyB = get_API_float(objs[4]);
     type = get_API_int(objs[5],0);
     
-    if ( sender[0] != 0 && valid >= 0 && otherNXTaddr[0] != 0 )//&& assetA != 0 && qtyA != 0. && assetB != 0. && qtyB != 0. )
+    if ( sender[0] != 0 && valid > 0 && otherNXTaddr[0] != 0 )//&& assetA != 0 && qtyA != 0. && assetB != 0. && qtyB != 0. )
         retstr = makeoffer(sender,NXTACCTSECRET,otherNXTaddr,assetA,qtyA,assetB,qtyB,type);
     else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
     return(retstr);
@@ -434,7 +437,7 @@ char *processutx_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
     copy_cJSON(utx,objs[0]);
     copy_cJSON(sig,objs[1]);
     copy_cJSON(full,objs[2]);
-    if ( sender[0] != 0 && valid >= 0 )
+    if ( sender[0] != 0 && valid > 0 )
         retstr = processutx(sender,utx,sig,full);
     else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
     return(retstr);
@@ -444,7 +447,7 @@ char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr
 {
     char signedtx[MAX_JSON_FIELD],*retstr = 0;
     copy_cJSON(signedtx,objs[0]);
-    if ( sender[0] != 0 && valid >= 0 && signedtx[0] != 0 )
+    if ( sender[0] != 0 && valid > 0 && signedtx[0] != 0 )
         retstr = respondtx(sender,signedtx);
     else retstr = clonestr("{\"result\":\"invalid makeoffer_func request\"}");
     return(retstr);
@@ -459,7 +462,7 @@ char *tradebot_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     char code[MAX_JSON_FIELD],retbuf[4096],*str,*retstr = 0;
     copy_cJSON(code,objs[0]);
     printf("tradebotfunc.(%s) sender.(%s) valid.%d code.(%s)\n",origargstr,sender,valid,code);
-    if ( sender[0] != 0 && valid >= 0 && code[0] != 0 )
+    if ( sender[0] != 0 && valid > 0 && code[0] != 0 )
     {
         len = strlen(code);
         if ( code[0] == '(' && code[len-1] == ')' )
@@ -526,7 +529,7 @@ char *telepod_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     memset(receipt,0,sizeof(receipt));
     safecopy(receipt,origargstr,sizeof(receipt)-32);
     strcpy(receipt+strlen(receipt)+1,sender);
-    if ( coinstr[0] != 0 && sender[0] != 0 && valid >= 0 )
+    if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 )
         retstr = telepod_received(sender,NXTACCTSECRET,coinstr,crc,ind,height,satoshis,coinaddr,txid,vout,pubkey,privkey,totalcrc,sharei,M,N,otherpubaddr,receipt);
     else retstr = clonestr("{\"error\":\"invalid telepod received\"}");
     return(retstr);
@@ -558,7 +561,7 @@ char *transporter_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
     else M = N = 1;
     copy_cJSON(otherpubaddr,objs[9]);
     printf("transporterstatus_func M.%d N.%d [%s] otherpubaddr.(%s)\n",M,N,sharenrsbuf,otherpubaddr);
-    if ( coinstr[0] != 0 && sender[0] != 0 && valid >= 0 && n > 0 )
+    if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 && n > 0 )
         retstr = transporter_received(sender,NXTACCTSECRET,coinstr,totalcrc,height,value,minage,crcs,n,M,N,sharenrs,otherpubaddr);
     else retstr = clonestr("{\"error\":\"invalid incoming transporter bundle\"}");
     if ( crcs != 0 )
@@ -599,7 +602,7 @@ char *transporterstatus_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *
     ind = get_API_int(objs[12],0);
     copy_cJSON(otherpubaddr,objs[13]);
     //printf("transporterstatus_func sharei.%d M.%d N.%d other.(%s)\n",sharei,M,N,otherpubaddr);
-    if ( coinstr[0] != 0 && sender[0] != 0 && valid >= 0 && num > 0 )
+    if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 && num > 0 )
         retstr = got_transporter_status(NXTACCTSECRET,sender,coinstr,status,totalcrc,value,num,crcs,ind,minage,height,sharei,M,N,sharenrs,otherpubaddr);
     else retstr = clonestr("{\"error\":\"invalid incoming transporter status\"}");
     if ( crcs != 0 )
@@ -614,7 +617,7 @@ char *maketelepods_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
     value = (SATOSHIDEN * get_API_float(objs[0]));
     copy_cJSON(coinstr,objs[1]);
     //printf("transporterstatus_func sharei.%d M.%d N.%d other.(%s)\n",sharei,M,N,otherpubaddr);
-    if ( coinstr[0] != 0 && sender[0] != 0 && valid >= 0 )
+    if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 )
         retstr = maketelepods(NXTACCTSECRET,sender,coinstr,value);
     else retstr = clonestr("{\"error\":\"invalid maketelepods_func arguments\"}");
     return(retstr);
@@ -634,9 +637,57 @@ char *getpeers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     return(jsonstr);
 }
 
+char *getPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    cJSON *json;
+    char numstr[MAX_JSON_FIELD],*jsonstr = 0;
+    copy_cJSON(numstr,objs[0]);
+    json = gen_Pservers_json(atoi(numstr));
+    if ( json != 0 )
+    {
+        jsonstr = cJSON_Print(json);
+        stripwhite_ns(jsonstr,strlen(jsonstr));
+        free_json(json);
+    }
+    return(jsonstr);
+}
+
+char *publishPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    int32_t num,firsti,i,n = 0;
+    uint32_t xorsum,*pservers = 0;
+    char ipstr[MAX_JSON_FIELD],*retstr = 0;
+    cJSON *array,*item;
+    num = get_API_int(objs[1],0);
+    firsti = get_API_int(objs[2],0);
+    xorsum = get_API_int(objs[3],0);
+    //printf("transporterstatus_func sharei.%d M.%d N.%d other.(%s)\n",sharei,M,N,otherpubaddr);
+    array = objs[0];
+    if ( is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+    {
+        pservers = calloc(n,sizeof(*pservers));
+        for (i=0; i<n; i++)
+        {
+            item = cJSON_GetArrayItem(array,i);
+            copy_cJSON(ipstr,item);
+            if ( ipstr[0] != 0 )
+                pservers[i] = calc_ipbits(ipstr);
+        }
+    }
+    if ( sender[0] != 0 && valid > 0 && pservers != 0 )
+        retstr = publishPservers(prevaddr,NXTACCTSECRET,sender,firsti,num,pservers,n,xorsum);
+    else retstr = clonestr("{\"error\":\"invalid maketelepods_func arguments\"}");
+    if ( pservers != 0 )
+        free(pservers);
+    return(retstr);
+}
+
 char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
+
     static char *getpeers[] = { (char *)getpeers_func, "getpeers", "V",  "only_privacyServer", 0 };
+    static char *getPservers[] = { (char *)getPservers_func, "getPservers", "V",  "firsti", 0 };
+    static char *publishPservers[] = { (char *)publishPservers_func, "publishPservers", "V", "Pservers", "Numpservers", "firstPserver", "xorsum", 0 };
     static char *maketelepods[] = { (char *)maketelepods_func, "maketelepods", "V", "amount", "coin", 0 };
     static char *teleport[] = { (char *)teleport_func, "teleport", "V", "amount", "dest", "coin", "minage", "M", "N", 0 };
     static char *telepod[] = { (char *)telepod_func, "telepod", "V", "crc", "i", "h", "c", "v", "a", "t", "o", "p", "k", "L", "s", "M", "N", "D", 0 };
@@ -645,7 +696,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
     static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "signedtx", 0 };
     static char *processutx[] = { (char *)processutx_func, "processutx", "V", "utx", "sig", "full", 0 };
-    static char *publishaddrs[] = { (char *)publishaddrs_func, "publishaddrs", "V", "pubNXT", "pubkey", "BTCD", "BTC", "srvNXTaddr", "srvipaddr", "srvport", "coins", 0 };
+    static char *publishaddrs[] = { (char *)publishaddrs_func, "publishaddrs", "V", "pubNXT", "pubkey", "BTCD", "BTC", "srvNXTaddr", "srvipaddr", "srvport", "coins", "Numpservers", "xorsum", 0 };
     static char *getpubkey[] = { (char *)getpubkey_func, "getpubkey", "V", "addr", "destcoin", 0 };
     static char *sendpeerinfo[] = { (char *)sendpeerinfo_func, "sendpeerinfo", "V", "addr", "destcoin", 0 };
     static char *sendmsg[] = { (char *)sendmsg_func, "sendmessage", "V", "dest", "msg", "L", 0 };
@@ -655,7 +706,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     static char *placebid[] = { (char *)placebid_func, "placebid", "V", "obookid", "polarity", "volume", "price", "assetA", "assetB", 0 };
     static char *placeask[] = { (char *)placeask_func, "placeask", "V", "obookid", "polarity", "volume", "price", "assetA", "assetB", 0 };
     static char *makeoffer[] = { (char *)makeoffer_func, "makeoffer", "V", "other", "assetA", "qtyA", "assetB", "qtyB", "type", 0 };
-    static char **commands[] = { sendpeerinfo, getpubkey, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, publishaddrs, checkmsg, placebid, placeask, makeoffer, sendmsg, orderbook, getorderbooks, teleport  };
+    static char **commands[] = { publishPservers, sendpeerinfo, getPservers, getpubkey, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, publishaddrs, checkmsg, placebid, placeask, makeoffer, sendmsg, orderbook, getorderbooks, teleport  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
@@ -677,8 +728,18 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
         copy_cJSON(NXTACCTSECRET,secretobj);
         if ( NXTACCTSECRET[0] == 0 && (cp= get_coin_info("BTCD")) != 0 )
         {
-            safecopy(NXTACCTSECRET,cp->NXTACCTSECRET,sizeof(NXTACCTSECRET));
-            expand_nxt64bits(NXTaddr,cp->pubnxtbits);
+            if ( strcmp("127.0.0.1",cp->privacyserver) == 0 )
+            {
+                safecopy(NXTACCTSECRET,cp->srvNXTACCTSECRET,sizeof(NXTACCTSECRET));
+                expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
+                //printf("use localserver NXT.%s to send command\n",NXTaddr);
+            }
+            else
+            {
+                safecopy(NXTACCTSECRET,cp->NXTACCTSECRET,sizeof(NXTACCTSECRET));
+                expand_nxt64bits(NXTaddr,cp->pubnxtbits);
+                //printf("use NXT.%s to send command\n",NXTaddr);
+            }
         }
         //printf("(%s) command.(%s) NXT.(%s)\n",cJSON_Print(argjson),command,NXTaddr);
     }
@@ -775,12 +836,12 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
     struct pNXT_info *gp = handlerdata;
     if ( parms->txid == 0 )     // indicates non-transaction event
     {
-        if ( parms->mode == NXTPROTOCOL_WEBJSON )
+        /*if ( parms->mode == NXTPROTOCOL_WEBJSON )
         {
             printf(":7777 interface deprecated\n");
             //return(pNXT_jsonhandler(&parms->argjson,parms->argstr,0));
         }
-        else if ( parms->mode == NXTPROTOCOL_NEWBLOCK )
+        else*/ if ( parms->mode == NXTPROTOCOL_NEWBLOCK )
         {
             //printf("pNXT new RTblock %d time %ld microseconds %lld\n",mp->RTflag,time(0),(long long)microseconds());
         }
@@ -830,6 +891,7 @@ uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t dura
                 break;
         if ( destip[i] != ':' )
             strcat(ip_port,":14631");
+        txid ^= calc_ipbits(destip);
         printf("%s NARROWCAST.(%s) txid.%llu\n",destip,msg,(long long)txid);
         if ( SuperNET_narrowcast(destip,(unsigned char *)msg,len) == 0 )
             return(txid);
@@ -856,25 +918,7 @@ uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t dura
 
 int32_t got_newpeer(char *ip_port)
 {
-	printf("got_newpeer called. Now connected to.(%s)\n", ip_port);
-    if ( strncmp("209.126.70",ip_port,strlen("209.126.70")) == 0 ||
-         strncmp("104.40.137.20",ip_port,strlen("104.40.137.20")) == 0 ||
-        strncmp("104.41.129.107",ip_port,strlen("104.41.129.107")) == 0 ||
-        strncmp("162.248.163.43",ip_port,strlen("162.248.163.43")) == 0 ||
-        strncmp("23.97.66.164",ip_port,strlen("23.97.66.164")) == 0 ||
-        strncmp("100.79.14.220",ip_port,strlen("100.79.14.220")) == 0 ||
-        strncmp("137.116.193.215",ip_port,strlen("137.116.193.215")) == 0 ||
-        strncmp("80.82.64.135",ip_port,strlen("80.82.64.135")) == 0 ||
-        strncmp("185.21.192.9",ip_port,strlen("185.21.192.9")) == 0 ||
-        strncmp("94.102.63.149",ip_port,strlen("94.102.63.149")) == 0 ||
-        strncmp("37.187.200.156",ip_port,strlen("37.187.200.156")) == 0 ||
-        
-        
-        
-        0 )
-    {
-        return(broadcast_publishpacket(ip_port) != 0 ? 0 : -1);
-    }
+    queue_enqueue(&P2P_Q,clonestr(ip_port));
 	return(0);
 }
 
@@ -912,9 +956,8 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
             duplicates++;
             return(clonestr("{\"error\":\"duplicate msg\"}"));
         }
-        if ( (len<<1) != 30 ) // hack against flood
-            printf("C SuperNET_gotpacket.%s size.%d txid.%llu | >> flood.%d\n",msg,len<<1,(long long)txid,flood);
-        else flood++;
+        if ( (len<<1) == 30 ) // hack against flood
+            flood++;
         printf("gotpacket.(%s) %d | Finished_loading.%d | flood.%d duplicates.%d\n",msg,duration,Finished_loading,flood,duplicates);
         if ( is_encrypted_packet(packet,len) != 0 )
             process_packet(retjsonstr,packet,len,0,0,0,0);
@@ -938,10 +981,9 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
             duplicates++;
             return(clonestr("{\"error\":\"duplicate msg\"}"));
         }
-        if ( len != 30 ) // hack against flood
-            printf("C SuperNET_gotpacket.(%s) size.%d ascii txid.%llu | flood.%d\n",msg,len,(long long)txid,flood);
-        else flood++;
-        printf("gotpacket.(%s) %d | Finished_loading.%d | flood.%d duplicates.%d\n",msg,duration,Finished_loading,flood,duplicates);
+        if ( len == 30 ) // hack against flood
+            flood++;
+        printf("C SuperNET_gotpacket.(%s) size.%d ascii txid.%llu | flood.%d\n",msg,len,(long long)txid,flood);
         if ( (json= cJSON_Parse((char *)msg)) != 0 )
         {
             int32_t valid,port;
@@ -952,7 +994,7 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
             retstr = pNXT_json_commands(Global_mp,&prevaddr,json,verifiedNXTaddr,valid,(char *)msg);
             if ( cmdstr != 0 )
             {
-                printf("got parms.(%s) valid.%d\n",(char *)msg,valid);
+                //printf("got parms.(%s) valid.%d\n",(char *)msg,valid);
                 free(cmdstr);
             }
             free_json(json);
@@ -967,9 +1009,9 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
 int SuperNET_start(char *JSON_or_fname,char *myipaddr)
 {
     struct NXT_str *tp = 0;
+    printf("SuperNET_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
     myipaddr = clonestr(myipaddr);
     Global_mp = calloc(1,sizeof(*Global_mp));
-    printf("SuperNET_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session
     if ( Global_pNXT == 0 )
     {
