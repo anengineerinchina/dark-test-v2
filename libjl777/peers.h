@@ -101,19 +101,15 @@ struct peerinfo *get_random_pserver()
     return(0);
 }
 
-void addto_hasips(char *refipaddr,uint32_t ipbits)
+void addto_hasips(struct pserver_info *pserver,uint32_t ipbits)
 {
     int32_t i;
-    struct pserver_info *pserver;
-    pserver = get_pserver(0,refipaddr,0,0);
     if ( pserver->hasips != 0 && pserver->numips > 0 )
     {
         for (i=0; i<pserver->numips; i++)
             if ( pserver->hasips[i] == ipbits )
                 return;
     }
-    char ipaddr[16]; expand_ipbits(ipaddr,ipbits);
-    printf("%d addto_hasips(%s) <- %s\n",pserver->numips,refipaddr,ipaddr);
     pserver->hasips = realloc(pserver->hasips,sizeof(*pserver->hasips) + (pserver->numips + 1));
     pserver->hasips[pserver->numips] = ipbits;
     pserver->numips++;
@@ -202,7 +198,10 @@ cJSON *gen_peerinfo_json(struct peerinfo *peer)
         cJSON_AddItemToObject(json,"sent",cJSON_CreateNumber(peer->numsent));
         cJSON_AddItemToObject(json,"recv",cJSON_CreateNumber(peer->numrecv));
         if ( peer->pserver != 0 )
-            cJSON_AddItemToObject(json,"xorsum",cJSON_CreateNumber(_calc_xorsum(peer->pserver->hasips,peer->pserver->numips)));
+        {
+            cJSON_AddItemToObject(json,"hasnum",cJSON_CreateNumber(peer->pserver->hasnum));
+            cJSON_AddItemToObject(json,"xorsum",cJSON_CreateNumber(peer->pserver->xorsum));
+        }
     }
     else cJSON_AddItemToObject(json,"pubNXT",cJSON_CreateString(pubNXT));
     init_hexbytes(hexstr,peer->pubkey,sizeof(peer->pubkey));
@@ -350,8 +349,8 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
             Pservers[Numpservers] = peer, Numpservers++;
             expand_ipbits(ipaddr,peer->srvipbits);
             peer->pserver = get_pserver(0,ipaddr,peer->srvport,peer->p2pport);
-            if ( cp != 0 )
-                addto_hasips(cp->myipaddr,peer->srvipbits);
+            if ( cp != 0 && cp->myipaddr[0] != 0 )
+                addto_hasips(get_pserver(0,cp->myipaddr,0,0),peer->srvipbits);
             printf("ADDED privacyServer.%d\n",Numpservers);
             if ( np != 0 )
                 say_hello(np);
@@ -823,13 +822,24 @@ char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender
     int32_t i,j,port,createdflag;
     char ipaddr[64],refipaddr[64];
     struct NXT_acct *np;
+    struct pserver_info *pserver,*mypserver = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     np = get_NXTacct(&createdflag,Global_mp,sender);
-    expand_ipbits(refipaddr,np->mypeerinfo.srvipbits);
     if ( cp != 0 && cp->myipaddr[0] != 0 )
+    {
         myipbits = calc_ipbits(cp->myipaddr);
+        mypserver = get_pserver(0,cp->myipaddr,0,0);
+    }
     if ( np->mypeerinfo.srvipbits != 0 )
     {
+        expand_ipbits(refipaddr,np->mypeerinfo.srvipbits);
+        pserver = get_pserver(0,refipaddr,0,0);
+        pserver->hasnum = hasnum;
+        pserver->xorsum = xorsum;
+        if ( cp != 0 )
+        {
+            
+        }
         for (i=0; i<n; i++)
         {
             if ( pservers[i] != 0 )
@@ -837,7 +847,7 @@ char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender
                 if ( myipbits != 0 && pservers[i] == myipbits )
                     myipbits = 0;
                 expand_ipbits(ipaddr,pservers[i]);
-                addto_hasips(refipaddr,pservers[i]);
+                addto_hasips(pserver,pservers[i]);
                 get_pserver(&createdflag,ipaddr,0,0);
                 //printf("%d.(%s) ",i,ipaddr);
                 for (j=0; j<Numpservers; j++)
