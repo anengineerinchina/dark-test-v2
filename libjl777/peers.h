@@ -781,6 +781,7 @@ int32_t update_pserver_xorsum(struct NXT_acct *othernp,int32_t hasnum,uint32_t x
     int32_t retflag = 0;
     struct coin_info *cp;
     struct pserver_info *mypserver = 0;
+    return(0);
     if ( mypserver == 0 )
     {
         cp = get_coin_info("BTCD");
