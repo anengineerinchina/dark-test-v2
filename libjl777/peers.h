@@ -28,7 +28,34 @@ struct peer_queue_entry
 queue_t P2P_Q;
 struct pingpong_queue PeerQ;
 struct peerinfo **Peers,**Pservers;
-int32_t Numpeers,Numpservers;
+int32_t Numpeers,Numpservers,Num_in_whitelist;
+uint32_t *SuperNET_whitelist;
+
+int32_t on_SuperNET_whitelist(char *ipaddr)
+{
+    uint32_t i,ipbits;
+    if ( Num_in_whitelist > 0 && SuperNET_whitelist != 0 )
+    {
+        ipbits = calc_ipbits(ipaddr);
+        for (i=0; i<Num_in_whitelist; i++)
+            if ( SuperNET_whitelist[i] == ipbits )
+                return(1);
+    }
+    return(0);
+}
+
+int32_t add_SuperNET_whitelist(char *ipaddr)
+{
+    if ( on_SuperNET_whitelist(ipaddr) == 0 )
+    {
+        SuperNET_whitelist = realloc(SuperNET_whitelist,sizeof(*SuperNET_whitelist) * (Num_in_whitelist + 1));
+        SuperNET_whitelist[Num_in_whitelist] = calc_ipbits(ipaddr);
+        printf(">>>>>>>>>>>>>>>>>> add to SuperNET_whitelist[%d] (%s)\n",Num_in_whitelist,ipaddr);
+        Num_in_whitelist++;
+        return(1);
+    }
+    return(0);
+}
 
 int32_t process_PeerQ(void **ptrp,void *arg) // added when inbound transporter sequence is started
 {
@@ -101,18 +128,27 @@ struct peerinfo *get_random_pserver()
     return(0);
 }
 
-void addto_hasips(struct pserver_info *pserver,uint32_t ipbits)
+uint32_t addto_hasips(int32_t recalc_flag,struct pserver_info *pserver,uint32_t ipbits)
 {
     int32_t i;
+    uint32_t xorsum = 0;
     if ( pserver->hasips != 0 && pserver->numips > 0 )
     {
         for (i=0; i<pserver->numips; i++)
             if ( pserver->hasips[i] == ipbits )
-                return;
+                return(0);
     }
     pserver->hasips = realloc(pserver->hasips,sizeof(*pserver->hasips) + (pserver->numips + 1));
     pserver->hasips[pserver->numips] = ipbits;
     pserver->numips++;
+    if ( recalc_flag != 0 )
+    {
+        for (i=0; i<pserver->numips; i++)
+            xorsum ^= pserver->hasips[i];
+        pserver->xorsum = xorsum;
+        pserver->hasnum = pserver->numips;
+    }
+    return(xorsum);
 }
 
 void peer_link_ipaddr(struct pserver_info *pp)
@@ -250,6 +286,22 @@ cJSON *gen_Pservers_json(int32_t firstPserver)
     return(json);
 }
 
+void set_pservers_json(char *buf,int32_t firstPserver)
+{
+    cJSON *json;
+    char *jsonstr;
+    if ( (json = gen_Pservers_json(firstPserver)) != 0 )
+    {
+        if ( (jsonstr = cJSON_Print(json)) != 0 )
+        {
+            stripwhite_ns(jsonstr,strlen(jsonstr));
+            strcpy(buf,jsonstr);
+            free(jsonstr);
+        }
+        free_json(json);
+    }
+}
+
 cJSON *gen_peers_json(int32_t only_privacyServers)
 {
     int32_t i,n;
@@ -317,12 +369,20 @@ struct peerinfo *find_peerinfo(uint64_t pubnxtbits,char *pubBTCD,char *pubBTC)
     return(0);
 }
 
+void copy_peerinfo(struct peerinfo *dest,struct peerinfo *src)
+{
+    struct pserver_info *pserver = dest->pserver;
+    if ( src->pserver != 0 )
+        pserver = src->pserver;
+    *dest = *src;
+}
+
 struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
 {
-    void say_hello(struct NXT_acct *np);
+    void say_hello(struct NXT_acct *np,int32_t pservers_flag);
     char NXTaddr[64],ipaddr[16];
     int32_t createdflag,isPserver;
-    struct coin_info *cp = get_coin_info("BTCD");
+    //struct coin_info *cp = get_coin_info("BTCD");
     struct NXT_acct *np = 0;
     struct peerinfo *peer = 0;
     if ( (peer= find_peerinfo(refpeer->pubnxtbits,refpeer->pubBTCD,refpeer->pubBTC)) != 0 )
@@ -339,7 +399,7 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
         printf("FATAL: add_peerinfo without nxtbits (%s %llu %s)\n",refpeer->pubBTCD,(long long)refpeer->pubnxtbits,refpeer->pubBTC);
         peer = calloc(1,sizeof(*peer));
     }
-    *peer = *refpeer;
+    copy_peerinfo(peer,refpeer);
     Peers[Numpeers] = peer, Numpeers++;
     if ( (isPserver= is_privacyServer(peer)) != 0 )
     {
@@ -349,11 +409,12 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
             Pservers[Numpservers] = peer, Numpservers++;
             expand_ipbits(ipaddr,peer->srvipbits);
             peer->pserver = get_pserver(0,ipaddr,peer->srvport,peer->p2pport);
-            if ( cp != 0 && cp->myipaddr[0] != 0 )
-                addto_hasips(get_pserver(0,cp->myipaddr,0,0),peer->srvipbits);
             printf("ADDED privacyServer.%d\n",Numpservers);
+            /*if ( cp != 0 && cp->myipaddr[0] != 0 )
+                if ( addto_hasips(1,get_pserver(0,cp->myipaddr,0,0),peer->srvipbits) != 0 )
+                    say_hello(np,1);
             if ( np != 0 )
-                say_hello(np);
+                say_hello(np,0);*/
         }
     }
     printf("isPserver.%d add_peerinfo Numpeers.%d added %llu srv.%llu\n",isPserver,Numpeers,(long long)refpeer->pubnxtbits,(long long)refpeer->srvnxtbits);
@@ -631,7 +692,7 @@ char *getpubkey(char *NXTaddr,char *NXTACCTSECRET,char *pubaddr,char *destcoin)
     } else return(clonestr("{\"error\":\"cant find pubaddr\"}"));
 }
 
-char *sendpeerinfo(char *hopNXTaddr,char *NXTaddr,char *NXTACCTSECRET,char *destaddr,char *destcoin)
+char *sendpeerinfo(int32_t pservers_flag,char *hopNXTaddr,char *NXTaddr,char *NXTACCTSECRET,char *destaddr,char *destcoin)
 {
     char buf[4096];
     struct NXT_acct *pubnp,*destnp;
@@ -640,31 +701,35 @@ char *sendpeerinfo(char *hopNXTaddr,char *NXTaddr,char *NXTACCTSECRET,char *dest
     destnp = search_addresses(destaddr);
     if ( pubnp != 0 && destnp != 0 )
     {
-        set_peer_json(buf,NXTaddr,pubnp);
+        if ( pservers_flag <= 0 )
+            set_peer_json(buf,NXTaddr,pubnp);
+        else set_pservers_json(buf,pservers_flag-1);
         if ( hopNXTaddr != 0 )
         {
-            printf("SENDPEERINFO >>>>>>>>>> (%s)\n",buf);
+            printf("SENDPEERINFO.%d >>>>>>>>>> (%s)\n",pservers_flag,buf);
             hopNXTaddr[0] = 0;
             return(send_tokenized_cmd(hopNXTaddr,0,NXTaddr,NXTACCTSECRET,buf,destnp->H.U.NXTaddr));
         } else return(0);
     } else return(clonestr("{\"error\":\"sendpeerinfo cant find pubaddr\"}"));
 }
 
-void say_hello(struct NXT_acct *np)
+void say_hello(struct NXT_acct *np,int32_t pservers_flag)
 {
     struct coin_info *cp = get_coin_info("BTCD");
     char srvNXTaddr[64],hopNXTaddr[64],*retstr;
     struct NXT_acct *hopnp;
     int32_t createflag;
+    if ( np == 0 )
+        return;
     //printf("in say_hello.cp %p\n",cp);
     expand_nxt64bits(srvNXTaddr,cp->srvpubnxtbits);
-    if ( (retstr= sendpeerinfo(hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
+    if ( (retstr= sendpeerinfo(pservers_flag,hopNXTaddr,srvNXTaddr,cp->srvNXTACCTSECRET,np->H.U.NXTaddr,0)) != 0 )
     {
         printf("say_hello.(%s)\n",retstr);
         if ( hopNXTaddr[0] != 0 )
         {
             hopnp = get_NXTacct(&createflag,Global_mp,hopNXTaddr);
-            update_peerstate(&np->mypeerinfo,&hopnp->mypeerinfo,PEER_HELLOSTATE,PEER_SENT);
+            //update_peerstate(&np->mypeerinfo,&hopnp->mypeerinfo,PEER_HELLOSTATE,PEER_SENT);
         }
         else printf("say_hello no hopNXTaddr?\n");
         free(retstr);
@@ -711,7 +776,36 @@ uint64_t broadcast_publishpacket(char *ip_port)
     return(0);
 }
 
-char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkeystr,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport,int32_t haspservers,uint32_t xorsum)
+int32_t update_pserver_xorsum(struct NXT_acct *othernp,int32_t hasnum,uint32_t xorsum)
+{
+    int32_t retflag = 0;
+    struct coin_info *cp;
+    struct pserver_info *mypserver = 0;
+    return(0);
+    if ( mypserver == 0 )
+    {
+        cp = get_coin_info("BTCD");
+        if ( cp != 0 && cp->myipaddr[0] != 0 )
+            mypserver = get_pserver(0,cp->myipaddr,0,0);
+    }
+    if ( mypserver != 0 )
+        
+    {
+        if ( othernp->pserver_pending == 0 && (xorsum == 0 || hasnum > mypserver->hasnum || (hasnum == mypserver->hasnum && xorsum != mypserver->xorsum)) )
+        {
+            othernp->pserver_pending = 1;
+            ask_pservers(othernp), retflag |= 1;
+        }
+        if (  (mypserver->hasnum > hasnum || (mypserver->hasnum == hasnum && mypserver->xorsum != xorsum)) )
+            say_hello(othernp,1), retflag |= 2;
+
+        printf("update_pserver_xorsum retflag.%d\n",retflag);
+        return(1);
+    }
+    return(retflag);
+}
+
+char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkeystr,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport,int32_t hasnum,uint32_t xorsum)
 {
     int32_t createdflag,updatedflag = 0;
     struct NXT_acct *np;
@@ -760,13 +854,18 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
             memcpy(refpeer->coins,Global_mp->coins,sizeof(refpeer->coins));
         printf("set coins.%llx\n",(long long)coins[0]);
     }
-    np->mypeerinfo = *refpeer;
+    if ( (refpeer->pserver= np->mypeerinfo.pserver) != 0 )
+    {
+        refpeer->pserver->hasnum = hasnum;
+        refpeer->pserver->xorsum = xorsum;
+    }
+    copy_peerinfo(&np->mypeerinfo,refpeer);
     //printf("in secret.(%s) publishaddrs.(%s) np.%p %llu\n",NXTACCTSECRET,pubNXT,np,(long long)np->H.nxt64bits);
     if ( BTCDaddr[0] != 0 )
     {
         //safecopy(np->BTCDaddr,BTCDaddr,sizeof(np->BTCDaddr));
         op = MTadd_hashtable(&createdflag,Global_mp->otheraddrs_tablep,BTCDaddr),op->nxt64bits = np->H.nxt64bits;
-        printf("op.%p for %s\n",op,BTCDaddr);
+        //printf("op.%p for %s\n",op,BTCDaddr);
     }
     if ( BTCaddr != 0 && BTCaddr[0] != 0 )
     {
@@ -776,9 +875,10 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     if ( prevaddr != 0 )
     {
         if ( updatedflag != 0 )
-            say_hello(np);
-        if ( xorsum == 0 || haspservers > Numpservers || (haspservers == Numpservers && xorsum != calc_xorsum(Pservers,Numpservers)) )
-            ask_pservers(np);
+        {
+            //say_hello(np,0);
+            update_pserver_xorsum(np,hasnum,xorsum);
+        }
         return(0);
     }
     verifiedNXTaddr[0] = 0;
@@ -818,38 +918,30 @@ int32_t pserver_canhop(struct pserver_info *pserver,char *hopNXTaddr)
 
 char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender,int32_t firsti,int32_t hasnum,uint32_t *pservers,int32_t n,uint32_t xorsum)
 {
-    uint32_t myipbits = 0;
     int32_t i,j,port,createdflag;
     char ipaddr[64],refipaddr[64];
     struct NXT_acct *np;
-    struct pserver_info *pserver,*mypserver = 0;
-    struct coin_info *cp = get_coin_info("BTCD");
+    struct pserver_info *pserver;
     np = get_NXTacct(&createdflag,Global_mp,sender);
-    if ( cp != 0 && cp->myipaddr[0] != 0 )
-    {
-        myipbits = calc_ipbits(cp->myipaddr);
-        mypserver = get_pserver(0,cp->myipaddr,0,0);
-    }
     if ( np->mypeerinfo.srvipbits != 0 )
     {
         expand_ipbits(refipaddr,np->mypeerinfo.srvipbits);
         pserver = get_pserver(0,refipaddr,0,0);
         pserver->hasnum = hasnum;
         pserver->xorsum = xorsum;
-        if ( cp != 0 )
+        if ( prevaddr != 0 )
         {
-            
+            update_pserver_xorsum(np,hasnum,xorsum);
+            np->pserver_pending = 0;
         }
         for (i=0; i<n; i++)
         {
             if ( pservers[i] != 0 )
             {
-                if ( myipbits != 0 && pservers[i] == myipbits )
-                    myipbits = 0;
                 expand_ipbits(ipaddr,pservers[i]);
-                addto_hasips(pserver,pservers[i]);
+                addto_hasips(0,pserver,pservers[i]);
                 get_pserver(&createdflag,ipaddr,0,0);
-                //printf("%d.(%s) ",i,ipaddr);
+                printf("%d.(%s) ",i,ipaddr);
                 for (j=0; j<Numpservers; j++)
                 {
                     if ( Pservers[j] != 0 )
@@ -859,15 +951,63 @@ char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender
                     }
                 }
                 if ( j == Numpservers )
+                {
+                    printf("Q.(%s)\n",ipaddr);
                     queue_enqueue(&P2P_Q,clonestr(ipaddr));
+                }
             }
         }
-        if ( myipbits != 0 )
-            say_hello(np);
     }
     port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)prevaddr);
     printf(">>>>>>>>>>>> publishPservers from sender.(%s) prevaddr.%s/%d first.%d hasnum.%d n.%d\n",sender,ipaddr,port,firsti,hasnum,n);
     return(0);
+}
+
+void every_minute()
+{
+    int32_t i,createdflag;
+    char ipaddr[64],ip_port[64],NXTaddr[64];
+    struct NXT_acct *np;
+    struct coin_info *cp;
+    struct peerinfo *peer;
+    struct pserver_info *pserver,*mypserver = 0;
+    cp = get_coin_info("BTCD");
+    //printf("<<<<<<<<<<<<< EVERY_MINUTE\n");
+    if ( cp != 0 && cp->myipaddr[0] != 0 )
+        mypserver = get_pserver(0,cp->myipaddr,0,0);
+    if ( Num_in_whitelist > 0 && SuperNET_whitelist != 0 )
+    {
+        for (i=0; i<Num_in_whitelist; i++)
+        {
+            expand_ipbits(ipaddr,SuperNET_whitelist[i]);
+            pserver = get_pserver(0,ipaddr,0,0);
+            //printf("(%s) numrecv.%d numsent.%d\n",ipaddr,pserver->numrecv,pserver->numsent);
+            if ( pserver->numrecv == 0 && pserver->numsent < 3 )
+            {
+                sprintf(ip_port,"%s:%d",ipaddr,pserver->p2pport!=0?pserver->p2pport:BTCD_PORT);
+                printf(">>>>>>>>>>>>>>> every_minute(%s) sent.%d recv.%d\n",ip_port,pserver->numsent,pserver->numrecv);
+                broadcast_publishpacket(ip_port);
+                pserver->numsent++;
+            }
+        }
+    }
+    if ( mypserver != 0 && Numpservers > 0 && Pservers != 0 )
+    {
+        for (i=0; i<Numpservers; i++)
+        {
+            if ( (peer= Pservers[i]) != 0 && (pserver= peer->pserver) != 0 && peer->srvnxtbits != 0 )
+            {
+                expand_nxt64bits(NXTaddr,peer->srvnxtbits);
+                np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
+                if ( pserver->hasnum > mypserver->hasnum || (pserver->hasnum == mypserver->hasnum && pserver->xorsum != mypserver->xorsum) )
+                {
+                    expand_ipbits(ipaddr,pserver->ipbits);
+                    printf(">>>>>>>>>>>>> ASK CUZ %s has more than us %d.%u vs mine %d.%u\n",ipaddr,pserver->hasnum,pserver->xorsum,mypserver->hasnum,mypserver->xorsum);
+                    ask_pservers(np); // when other node has more pservers than we do
+                }
+            }
+        }
+    }
 }
 
 #endif

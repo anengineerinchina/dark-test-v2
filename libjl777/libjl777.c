@@ -99,8 +99,9 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
 
     printf("run_NXTservices >>>>>>>>>>>>>>> %p %s: %s %s\n",mp,mp->dispname,PC_USERNAME,mp->ipaddr);
     void run_NXTservices(void *arg);
-    if ( 1 && portable_thread_create((void *)run_NXTservices,mp) == 0 )
+    if ( 0 && portable_thread_create((void *)run_NXTservices,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
+    Finished_loading = 1;
 	while ( Finished_loading == 0 )
         sleep(1);
     printf("start Coinloop\n");
@@ -367,14 +368,16 @@ char *getpubkey_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr
 
 char *sendpeerinfo_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
+    int32_t pserver_flag;
     char hopNXTaddr[64],addr[MAX_JSON_FIELD],destcoin[MAX_JSON_FIELD],*retstr = 0;
     copy_cJSON(addr,objs[0]);
     copy_cJSON(destcoin,objs[1]);
-    printf("sendpeerinfo_func(sender.%s valid.%d addr.%s)\n",sender,valid,addr);
+    pserver_flag = (int32_t)get_API_int(objs[2],0);
+    printf("sendpeerinfo_func(sender.%s valid.%d addr.%s) pserver_flag.%d\n",sender,valid,addr,pserver_flag);
     if ( valid < 0 )
         return(0);
     if ( sender[0] != 0 && valid > 0 && addr[0] != 0 )
-        retstr = sendpeerinfo(hopNXTaddr,sender,NXTACCTSECRET,addr,destcoin);
+        retstr = sendpeerinfo(pserver_flag,hopNXTaddr,sender,NXTACCTSECRET,addr,destcoin);
     else retstr = clonestr("{\"result\":\"invalid getpubkey request\"}");
     return(retstr);
 }
@@ -698,7 +701,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     static char *processutx[] = { (char *)processutx_func, "processutx", "V", "utx", "sig", "full", 0 };
     static char *publishaddrs[] = { (char *)publishaddrs_func, "publishaddrs", "V", "pubNXT", "pubkey", "BTCD", "BTC", "srvNXTaddr", "srvipaddr", "srvport", "coins", "Numpservers", "xorsum", 0 };
     static char *getpubkey[] = { (char *)getpubkey_func, "getpubkey", "V", "addr", "destcoin", 0 };
-    static char *sendpeerinfo[] = { (char *)sendpeerinfo_func, "sendpeerinfo", "V", "addr", "destcoin", 0 };
+    static char *sendpeerinfo[] = { (char *)sendpeerinfo_func, "sendpeerinfo", "V", "addr", "destcoin", "pserver_flag", 0 };
     static char *sendmsg[] = { (char *)sendmsg_func, "sendmessage", "V", "dest", "msg", "L", 0 };
     static char *checkmsg[] = { (char *)checkmsg_func, "checkmessages", "V", "sender", 0 };
     static char *orderbook[] = { (char *)orderbook_func, "orderbook", "V", "obookid", "polarity", "allfields", 0 };
