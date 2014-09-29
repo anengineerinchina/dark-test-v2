@@ -941,7 +941,7 @@ char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender
                 expand_ipbits(ipaddr,pservers[i]);
                 addto_hasips(0,pserver,pservers[i]);
                 get_pserver(&createdflag,ipaddr,0,0);
-                //printf("%d.(%s) ",i,ipaddr);
+                printf("%d.(%s) ",i,ipaddr);
                 for (j=0; j<Numpservers; j++)
                 {
                     if ( Pservers[j] != 0 )
@@ -951,7 +951,10 @@ char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender
                     }
                 }
                 if ( j == Numpservers )
+                {
+                    printf("Q.(%s)\n",ipaddr);
                     queue_enqueue(&P2P_Q,clonestr(ipaddr));
+                }
             }
         }
     }
