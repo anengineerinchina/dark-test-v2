@@ -382,7 +382,7 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
     void say_hello(struct NXT_acct *np,int32_t pservers_flag);
     char NXTaddr[64],ipaddr[16];
     int32_t createdflag,isPserver;
-    struct coin_info *cp = get_coin_info("BTCD");
+    //struct coin_info *cp = get_coin_info("BTCD");
     struct NXT_acct *np = 0;
     struct peerinfo *peer = 0;
     if ( (peer= find_peerinfo(refpeer->pubnxtbits,refpeer->pubBTCD,refpeer->pubBTC)) != 0 )
@@ -409,12 +409,12 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
             Pservers[Numpservers] = peer, Numpservers++;
             expand_ipbits(ipaddr,peer->srvipbits);
             peer->pserver = get_pserver(0,ipaddr,peer->srvport,peer->p2pport);
-            if ( cp != 0 && cp->myipaddr[0] != 0 )
+            printf("ADDED privacyServer.%d\n",Numpservers);
+            /*if ( cp != 0 && cp->myipaddr[0] != 0 )
                 if ( addto_hasips(1,get_pserver(0,cp->myipaddr,0,0),peer->srvipbits) != 0 )
                     say_hello(np,1);
-            printf("ADDED privacyServer.%d\n",Numpservers);
             if ( np != 0 )
-                say_hello(np,0);
+                say_hello(np,0);*/
         }
     }
     printf("isPserver.%d add_peerinfo Numpeers.%d added %llu srv.%llu\n",isPserver,Numpeers,(long long)refpeer->pubnxtbits,(long long)refpeer->srvnxtbits);
@@ -876,7 +876,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
     {
         if ( updatedflag != 0 )
         {
-            say_hello(np,0);
+            //say_hello(np,0);
             update_pserver_xorsum(np,hasnum,xorsum);
         }
         return(0);
