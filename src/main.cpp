@@ -3934,7 +3934,7 @@ extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 	return(0);
 }
 
-int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
+extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len)
 {
     CPubAddr pubaddr;
     std::string supernetmsg = "";
@@ -3948,8 +3948,6 @@ int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr
 		return(0);
 	return(-2);
 }
-
-
 
 void init_jl777(char *myip)
 {
