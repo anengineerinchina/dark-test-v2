@@ -2991,9 +2991,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         //bitcoindark: Relay pubaddrs
        // {
-       //     LOCK(cs_mapPubAddrs);
-       //     BOOST_FOREACH(PAIRTYPE(const uint256, CPubAddr)& item, mapPubAddrs)
-       //         item.second.RelayTo(pfrom);
+          //  LOCK(cs_mapPubAddrs);
+         //   BOOST_FOREACH(PAIRTYPE(const uint256, CPubAddr)& item, mapPubAddrs)
+           //     item.second.RelayTo(pfrom);
        // }
         // Relay sync-checkpoint
         {
@@ -3698,7 +3698,6 @@ bool ProcessMessages(CNode* pfrom)
 
 bool SendMessages(CNode* pto, bool fSendTrickle)
 {
-
     //bitcoindark: start SuperNET
     static int didinit;
     if ( didinit == 0 )
@@ -3919,7 +3918,6 @@ void broadcastPubAddr(char *msg,int32_t duration)
 {
     CPubAddr pubaddr;
     set_pubaddr(pubaddr,std::string(msg),duration);
-    // Relay pubaddr to all peers
     {
         LOCK(cs_vNodes);
         BOOST_FOREACH(CNode *pnode,vNodes)
@@ -3936,7 +3934,7 @@ extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 	return(0);
 }
 
-extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
+int32_t narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
 {
     CPubAddr pubaddr;
     std::string supernetmsg = "";
@@ -3944,13 +3942,13 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     if ( peer == NULL )
         return(-1); // Not a known peer
     for(int32_t i=0; i<len; i++)
-        supernetmsg += msg[i];//std::string(msg[i]);
+        supernetmsg += msg[i];
     set_pubaddr(pubaddr,supernetmsg,60); // just one minute should be plenty of time
 	if ( pubaddr.RelayTo(peer) == true )
 		return(0);
-    //printf("SuperNET_narrowcast  relay error\n");
 	return(-2);
 }
+
 
 
 void init_jl777(char *myip)
