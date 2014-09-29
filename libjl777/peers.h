@@ -790,8 +790,11 @@ int32_t update_pserver_xorsum(struct NXT_acct *othernp,int32_t hasnum,uint32_t x
     if ( mypserver != 0 )
         
     {
-        if ( xorsum == 0 || hasnum > mypserver->hasnum || (hasnum == mypserver->hasnum && xorsum != mypserver->xorsum) )
+        if ( othernp->pserver_pending == 0 && (xorsum == 0 || hasnum > mypserver->hasnum || (hasnum == mypserver->hasnum && xorsum != mypserver->xorsum)) )
+        {
+            othernp->pserver_pending = 1;
             ask_pservers(othernp), retflag |= 1;
+        }
         if (  (mypserver->hasnum > hasnum || (mypserver->hasnum == hasnum && mypserver->xorsum != xorsum)) )
             say_hello(othernp,1), retflag |= 2;
 
@@ -926,7 +929,10 @@ char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender
         pserver->hasnum = hasnum;
         pserver->xorsum = xorsum;
         if ( prevaddr != 0 )
+        {
             update_pserver_xorsum(np,hasnum,xorsum);
+            np->pserver_pending = 0;
+        }
         for (i=0; i<n; i++)
         {
             if ( pservers[i] != 0 )
