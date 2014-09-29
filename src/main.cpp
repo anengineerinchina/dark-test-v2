@@ -3916,15 +3916,17 @@ void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
     
 void broadcastPubAddr(char *msg,int32_t duration)
 {
-    CPubAddr pubaddr;
-    set_pubaddr(pubaddr,std::string(msg),duration);
+    CPubAddr *pubaddr = new CPubAddr;
+    set_pubaddr(*pubaddr,std::string(msg),duration);
+    // Relay pubaddr to all peers
     {
         LOCK(cs_vNodes);
         BOOST_FOREACH(CNode *pnode,vNodes)
         {
-            pubaddr.RelayTo(pnode);
+            pubaddr->RelayTo(pnode);
         }
     }
+    delete pubaddr;
 }
 
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
@@ -3934,19 +3936,22 @@ extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 	return(0);
 }
 
-extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len)
+extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
 {
-    CPubAddr pubaddr;
+    int32_t retflag = 0;
+    CPubAddr *pubaddr = new CPubAddr;
     std::string supernetmsg = "";
     CNode *peer = FindNode((CService)destip);
     if ( peer == NULL )
         return(-1); // Not a known peer
     for(int32_t i=0; i<len; i++)
-        supernetmsg += msg[i];
-    set_pubaddr(pubaddr,supernetmsg,60); // just one minute should be plenty of time
-	if ( pubaddr.RelayTo(peer) == true )
-		return(0);
-	return(-2);
+        supernetmsg += msg[i];//std::string(msg[i]);
+    set_pubaddr(*pubaddr,supernetmsg,60); // just one minute should be plenty of time
+	if ( pubaddr->RelayTo(peer) != true )
+		retflag = -2;
+    delete pubaddr;
+    //printf("SuperNET_narrowcast  relay error\n");
+	return(retflag);
 }
 
 void init_jl777(char *myip)
