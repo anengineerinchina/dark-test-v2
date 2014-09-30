@@ -15,5 +15,5 @@ make -f makefile.unix
 rm ~/.BitcoinDark/debug.log
 cp BitcoinDarkd ..
 cd ..
-./b
+./BitcoinDarkd
 

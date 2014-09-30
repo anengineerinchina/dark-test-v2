@@ -28,7 +28,6 @@
 #define TELEPORT_TRANSPORTER_TIMEOUT (10. * 1000.)
 #define TELEPORT_TELEPODS_TIMEOUT (60. * 1000.)
 #define TELEPORT_MAX_CLONETIME (3600. * 1000.)
-#define PUBADDRS_MSGDURATION 3600
 
 #define TELEPOD_CONTENTS_VOUT 0 // must be 0
 #define TELEPOD_CHANGE_VOUT 1   // vout 0 is for the pod contents and last one (1 if no change or 2) is marker
@@ -286,14 +285,38 @@ int32_t process_cloneQ(void **ptrp,void *arg) // added to this queue when proces
     return(0);
 }
 
+void add_SuperNET_peer(char *ip_port)
+{
+    struct pserver_info *pp;
+    int32_t createdflag,p2pport;
+    char ipaddr[16];
+    p2pport = parse_ipaddr(ipaddr,ip_port);
+    pp = get_pserver(&createdflag,ipaddr,0,p2pport);
+    if ( on_SuperNET_whitelist(ipaddr) != 0 )
+    {
+        printf("got_newpeer called. Now connected to.(%s) [%s/%d]\n",ip_port,ipaddr,p2pport);
+        broadcast_publishpacket(ip_port);
+    }
+}
+
 void teleport_idler(uv_idle_t *handle)
 {
+    static int counter;
     static double lastattempt;
     double millis;
+    char *ip_port;
     //printf("teleport_idler\n");
     millis = ((double)uv_hrtime() / 1000000);
-    if ( millis > (lastattempt + 500) )
+    if ( millis > (lastattempt + 1000) )
     {
+        if ( (ip_port= queue_dequeue(&P2P_Q)) != 0 )
+        {
+            add_SuperNET_peer(ip_port);
+            free(ip_port);
+        }
+        counter++;
+        if ( (counter % 60) == 0 )
+            every_minute();
         process_pingpong_queue(&PeerQ,0);
         process_pingpong_queue(&Transporter_sendQ,0);
         process_pingpong_queue(&Transporter_recvQ,0);
@@ -309,15 +332,15 @@ void init_Teleport()
     init_pingpong_queue(&Transporter_recvQ,"recvQ",process_recvQ,0,0);
 
     init_pingpong_queue(&CloneQ,"cloneQ",process_cloneQ,0,0);
-    if ( portable_thread_create((void *)teleport_idler,Global_mp) == 0 )
-        printf("ERROR teleport_idler\n");
+    //if ( portable_thread_create((void *)teleport_idler,Global_mp) == 0 )
+    //    printf("ERROR teleport_idler\n");
 }
 
 void complete_telepod_reception(struct coin_info *cp,struct telepod *pod,int32_t height)
 {
     pod->unspent = get_unspent_value(pod->script,cp,pod);
     //pod->completemilli = milliseconds();
-    pod->cloneblock = height + (rand() % cp->clonesmear) + 1;
+    pod->cloneblock = height + ((rand()>>8) % cp->clonesmear) + 1;
     if ( pod->unspent != pod->satoshis )
     {
         printf("unspent is %.8f instead of %.8f | Naughty sender detected!\n",dstr(pod->unspent),dstr(pod->satoshis));

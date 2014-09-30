@@ -17,7 +17,6 @@
 #define IS_UDP_SERVER 2
 #define DEFAULT_PRIVACY_SERVER "123456789012345678"
 #define DEFAULT_PRIVACY_SERVERIP "127.0.0.1"
-#define MAX_UDPLEN 1400
 
 //char *Server_secret,*Server_NXTaddr;
 queue_t RPC_6777_response,ALL_messages;

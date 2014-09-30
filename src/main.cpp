@@ -3941,6 +3941,7 @@ extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 
 extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) //Send a PubAddr message to a specific peer
 {
+    int32_t retflag = 0;
     CPubAddr *pubaddr = new CPubAddr;
     std::string supernetmsg = "";
     CNode *peer = FindNode((CService)destip);
@@ -3949,14 +3950,12 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     for(int32_t i=0; i<len; i++)
         supernetmsg += msg[i];//std::string(msg[i]);
     set_pubaddr(*pubaddr,supernetmsg,60); // just one minute should be plenty of time
-	if ( pubaddr->RelayTo(peer) == true )
-		return(0);
-    //printf("SuperNET_narrowcast  relay error\n");
-	return(-2);
+	if ( pubaddr->RelayTo(peer) != true )
+		retflag = -2;
     delete pubaddr;
+    //printf("SuperNET_narrowcast  relay error\n");
+	return(retflag);
 }
-
-
 
 void init_jl777(char *myip)
 {

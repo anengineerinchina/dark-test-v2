@@ -444,7 +444,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                     Global_mp->Lfactor = (int32_t)get_API_int(cJSON_GetObjectItem(json,"Lfactor"),1);
                     if ( Global_mp->Lfactor > MAX_LFACTOR )
                         Global_mp->Lfactor = MAX_LFACTOR;
-                    cp->srvport = get_API_int(cJSON_GetObjectItem(json,"srvport"),NXT_PUNCH_PORT);
+                    cp->srvport = get_API_int(cJSON_GetObjectItem(json,"srvport"),SUPERNET_PORT);
                 }
                 if ( extract_cJSON_str(tradebotfname,sizeof(tradebotfname),json,"tradebotfname") > 0 )
                     cp->tradebotfname = clonestr(tradebotfname);
@@ -535,7 +535,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
     uint64_t nxt64bits;
     struct coin_info *cp;
     cJSON *array,*item,*languagesobj = 0;
-    char coinstr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],NXTADDR[MAX_JSON_FIELD],*buf=0,*jsonstr,*str;
+    char ipaddr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],NXTADDR[MAX_JSON_FIELD],*buf=0,*jsonstr,*str;
     int32_t i,n,ismainnet,createdflag,timezone=0;
     int64_t len=0,allocsize=0;
     struct peerinfo *refpeer,peer;
@@ -598,6 +598,20 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
             for (i=0; i<3; i++)
                 printf("%s | ",Server_names[i]);
             printf("issuer.%s %08x NXTAPIURL.%s, minNXTconfirms.%d port.%s orig.%s\n",NXTISSUERACCT,GATEWAY_SIG,NXTAPIURL,MIN_NXTCONFIRMS,SERVER_PORTSTR,ORIGBLOCK);
+            array = cJSON_GetObjectItem(MGWconf,"whitelist");
+            if ( array != 0 && is_cJSON_Array(array) != 0 )
+            {
+                int32_t add_SuperNET_whitelist(char *ipaddr);
+                n = cJSON_GetArraySize(array);
+                for (i=0; i<n; i++)
+                {
+                    if ( array == 0 || n == 0 )
+                        break;
+                    item = cJSON_GetArrayItem(array,i);
+                    copy_cJSON(ipaddr,item);
+                    add_SuperNET_whitelist(ipaddr);
+                }
+            }
             array = cJSON_GetObjectItem(MGWconf,"coins");
             if ( array != 0 && is_cJSON_Array(array) != 0 )
             {
@@ -646,16 +660,16 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                 }
                 if ( (cp= get_coin_info("BTCD")) != 0 )
                 {
-                    char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkey,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport);
+                    char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkey,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport,int32_t haspservers,uint32_t xorsum);
                     init_hexbytes(pubkey,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
                     expand_nxt64bits(NXTADDR,cp->pubnxtbits);
-                    str = publishaddrs(0,Global_mp->coins,cp->NXTACCTSECRET,NXTADDR,pubkey,cp->pubaddr,BTCaddr,cp->srvNXTADDR,cp->myipaddr,cp->srvport);
+                    str = publishaddrs(0,Global_mp->coins,cp->NXTACCTSECRET,NXTADDR,pubkey,cp->pubaddr,BTCaddr,cp->srvNXTADDR,cp->myipaddr,cp->srvport,0,0);
                     if ( str != 0 )
                         printf("publish.(%s) privacyserver.(%s)\n",str,cp->privacyserver), free(str);
                     if ( strcmp(cp->privacyserver,"127.0.0.1") == 0 )
                     {
                         init_hexbytes(pubkey,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
-                        str = publishaddrs(0,Global_mp->coins,cp->srvNXTACCTSECRET,cp->srvNXTADDR,pubkey,cp->srvpubaddr,0,cp->srvNXTADDR,cp->myipaddr,cp->srvport);
+                        str = publishaddrs(0,Global_mp->coins,cp->srvNXTACCTSECRET,cp->srvNXTADDR,pubkey,cp->srvpubaddr,0,cp->srvNXTADDR,cp->myipaddr,cp->srvport,1,calc_ipbits(cp->myipaddr));
                         if ( str != 0 )
                             printf("publish loopback privacyserver.(%s)\n",str), free(str);
                     }
