@@ -3932,7 +3932,7 @@ void broadcastPubAddr(char *msg,int32_t duration)
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
 	printf("SuperNET_broadcast(%s) dur.%d\n",msg,duration);
-	broadcastPubAddr(msg, duration);
+	broadcastPubAddr(msg,duration);
 	return(0);
 }
 

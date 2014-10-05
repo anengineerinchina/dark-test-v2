@@ -65,7 +65,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
     uint16_t payload_len;
     cp = get_coin_info("BTCD");
     memcpy(&packetdest,encoded,sizeof(packetdest));
-    if ( packetdest != 0 && ((packetdest == cp->srvpubnxtbits && strcmp(cp->privacyserver,"127.0.0.1") == 0) || packetdest == cp->pubnxtbits) )
+    if ( packetdest == 0 || ((packetdest == cp->srvpubnxtbits && strcmp(cp->privacyserver,"127.0.0.1") == 0) || packetdest == cp->pubnxtbits) )
     {
         encoded += sizeof(packetdest);
         memcpy(pubkey,encoded,crypto_box_PUBLICKEYBYTES);
@@ -76,7 +76,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
         if ( (payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(packetdest)) == len )
         {
             len = payload_len;
-            if ( packetdest == cp->srvpubnxtbits  )
+            if ( packetdest == 0 || packetdest == cp->srvpubnxtbits  )
             {
                 err = _decode_cipher((char *)decoded,encoded,&len,pubkey,Global_mp->loopback_privkey);
                 if ( err == 0 )
@@ -102,18 +102,46 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
     return(0);
 }
 
-int32_t onionize(char *hopNXTaddr,unsigned char *encoded,char *destNXTaddr,unsigned char **payloadp,int32_t len)
+int32_t direct_onionize(uint64_t nxt64bits,unsigned char *destpubkey,unsigned char *encoded,unsigned char **payloadp,int32_t len)
 {
     unsigned char onetime_pubkey[crypto_box_PUBLICKEYBYTES],onetime_privkey[crypto_box_SECRETKEYBYTES],*payload = (*payloadp);
+    uint16_t *payload_lenp,slen;
+    
+    (*payloadp) = encoded;
+    crypto_box_keypair(onetime_pubkey,onetime_privkey);
+    memcpy(encoded,&nxt64bits,sizeof(nxt64bits));
+    encoded += sizeof(nxt64bits);
+    memcpy(encoded,onetime_pubkey,sizeof(onetime_pubkey));
+    encoded += sizeof(onetime_pubkey);
+    payload_lenp = (uint16_t *)encoded;
+    encoded += sizeof(*payload_lenp);
+    {
+        char hexstr[1024];
+        init_hexbytes(hexstr,destpubkey,crypto_box_PUBLICKEYBYTES);
+        hexstr[16] = 0;
+        printf("DIRECT ONIONIZE: pubkey.%s encode len.%d -> dest.%llu ",hexstr,len,(long long)nxt64bits);
+    }
+    len = _encode_str(encoded,(char *)payload,len,destpubkey,onetime_privkey);
+    slen = len;
+    memcpy(payload_lenp,&slen,sizeof(*payload_lenp));
+    printf("new len.%d + %ld = %ld\n",len,sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits),sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits)+len);
+    return(len + sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits));
+}
+
+int32_t onionize(char *hopNXTaddr,unsigned char *encoded,char *destNXTaddr,unsigned char **payloadp,int32_t len)
+{
+    //unsigned char onetime_pubkey[crypto_box_PUBLICKEYBYTES],onetime_privkey[crypto_box_SECRETKEYBYTES],*payload = (*payloadp);
     uint64_t nxt64bits;
     int32_t createdflag;
-    uint16_t *payload_lenp,slen;
+    //uint16_t *payload_lenp,slen;
     struct NXT_acct *np;
+    strcpy(hopNXTaddr,destNXTaddr);
     nxt64bits = calc_nxt64bits(destNXTaddr);
     np = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
+    return(direct_onionize(nxt64bits,np->mypeerinfo.srv.pubkey,encoded,payloadp,len));
+
+    /*(*payloadp) = encoded;
     crypto_box_keypair(onetime_pubkey,onetime_privkey);
-    (*payloadp) = encoded;
-    strcpy(hopNXTaddr,destNXTaddr);
     memcpy(encoded,&nxt64bits,sizeof(nxt64bits));
     encoded += sizeof(nxt64bits);
     memcpy(encoded,onetime_pubkey,sizeof(onetime_pubkey));
@@ -122,16 +150,38 @@ int32_t onionize(char *hopNXTaddr,unsigned char *encoded,char *destNXTaddr,unsig
     encoded += sizeof(*payload_lenp);
     {
         char hexstr[1024],ipstr[64];
-        expand_ipbits(ipstr,np->mypeerinfo.srvipbits);
-        init_hexbytes(hexstr,np->mypeerinfo.pubkey,sizeof(np->mypeerinfo.pubkey));
+        expand_ipbits(ipstr,np->mypeerinfo.srv.ipbits);
+        init_hexbytes(hexstr,np->mypeerinfo.srv.pubkey,sizeof(np->mypeerinfo.srv.pubkey));
         hexstr[16] = 0;
         printf("ONIONIZE: NXT.%s (%s) pubkey.%s encode len.%d -> ",np->H.U.NXTaddr,ipstr,hexstr,len);
     }
-    len = _encode_str(encoded,(char *)payload,len,np->mypeerinfo.pubkey,onetime_privkey);
+    len = _encode_str(encoded,(char *)payload,len,np->mypeerinfo.srv.pubkey,onetime_privkey);
     slen = len;
     memcpy(payload_lenp,&slen,sizeof(*payload_lenp));
     printf("new len.%d + %ld = %ld\n",len,sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits),sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits)+len);
-    return(len + sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits));
+    return(len + sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits));*/
+}
+
+int32_t pserver_canhop(struct pserver_info *pserver,char *hopNXTaddr)
+{
+    int32_t createdflag,i = -1;
+    uint32_t *hasips;
+    struct NXT_acct *np;
+    struct peerinfo *peer;
+    np = get_NXTacct(&createdflag,Global_mp,hopNXTaddr);
+    peer = &np->mypeerinfo;
+    if ( is_privacyServer(peer) != 0 && pserver != 0 && pserver->numips > 0 && (hasips= pserver->hasips) != 0 )
+    {
+        for (i=0; i<pserver->numips; i++)
+            if ( hasips[i] == peer->srv.ipbits )
+            {
+                char ipaddr[16];
+                expand_ipbits(ipaddr,hasips[i]);
+                printf(">>>>>>>>>>> HASIP.%s in slot %d of %d\n",ipaddr,i,pserver->numips);
+                return(i);
+            }
+    }
+    return(i);
 }
 
 int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,uint8_t *final,uint8_t **srcp,int32_t len)
@@ -156,7 +206,7 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,uint8_t *final
                 printf("FATAL: cant get random peer!\n");
                 return(-1);
             }
-            expand_ipbits(ipaddr,peer->srvipbits);
+            expand_ipbits(ipaddr,peer->srv.ipbits);
             if ( (pserver= get_pserver(0,ipaddr,0,0)) == 0 || pserver_canhop(pserver,hopNXTaddr) < 0 )
                 continue;
             np = search_addresses(peer->pubBTCD);
@@ -192,14 +242,14 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,uint8_t *final
     return(len);
 }
 
-struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t recvlen,uv_udp_t *udp,struct sockaddr *addr,char *sender,uint16_t port)
+struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t recvlen,uv_udp_t *udp,struct sockaddr *prevaddr,char *sender,uint16_t port)
 {
     uint64_t destbits = 0;
     struct NXT_acct *tokenized_np = 0;
-    int32_t valid,len=0,createdflag;//tmp
-    cJSON *argjson;
+    int32_t valid,len=0,createdflag,encrypted = 1;//tmp
+    cJSON *argjson,*tmpjson;
     unsigned char pubkey[crypto_box_PUBLICKEYBYTES],decoded[4096],tmpbuf[4096]; //,tmppubkey[crypto_box_PUBLICKEYBYTES]
-    char senderNXTaddr[64],hopNXTaddr[64],*parmstxt=0,*jsonstr;
+    char senderNXTaddr[64],hopNXTaddr[64],checkstr[MAX_JSON_FIELD],*parmstxt=0,*jsonstr;
     memset(decoded,0,sizeof(decoded));
     memset(tmpbuf,0,sizeof(tmpbuf));
     retjsonstr[0] = 0;
@@ -217,8 +267,11 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
     }
     else
     {
-        printf("process_packet got unexpected nonencrypted len.%d %s/%d\n",recvlen,sender,port);
-        return(0);
+        //printf("process_packet got nonencrypted len.%d %s/%d (%s)\n",recvlen,sender,port,recvbuf);
+        len = recvlen;
+        memcpy(decoded,recvbuf,recvlen);
+        encrypted = 0;
+        //return(0);
     }
     if ( len > 0 )
     {
@@ -230,21 +283,43 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         if ( argjson != 0 ) // if it parses, we must have been the ultimate destination
         {
             senderNXTaddr[0] = 0;
-            parmstxt = verify_tokenized_json(senderNXTaddr,&valid,argjson);
+            memset(pubkey,0,sizeof(pubkey));
+            parmstxt = verify_tokenized_json(pubkey,senderNXTaddr,&valid,argjson);
             if ( valid > 0 && parmstxt != 0 && parmstxt[0] != 0 )
             {
-                tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
-                update_routing_probs(&tokenized_np->mypeerinfo,addr);
-                char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *argjson,char *sender,int32_t valid,char *origargstr);
-                jsonstr = pNXT_json_commands(Global_mp,addr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
-                if ( jsonstr != 0 )
+                if ( encrypted == 0 )
                 {
-                    strcpy(retjsonstr,jsonstr);
-                    free(jsonstr);
+                    tmpjson = cJSON_Parse(parmstxt);
+                    if ( tmpjson != 0 )
+                    {
+                        copy_cJSON(checkstr,cJSON_GetObjectItem(tmpjson,"requestType"));
+                        free_json(tmpjson);
+                    }
                 }
+                else strcpy(checkstr,"ping");
+                if ( strcmp(checkstr,"ping") == 0 )
+                {
+                    char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *argjson,char *sender,int32_t valid,char *origargstr);
+                    tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
+                    update_routing_probs(tokenized_np->H.U.NXTaddr,1,udp == 0,&tokenized_np->mypeerinfo,sender,port,pubkey);
+                    jsonstr = pNXT_json_commands(Global_mp,prevaddr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
+                    if ( jsonstr != 0 )
+                    {
+                        //printf("should send tokenized.(%s) to %s\n",jsonstr,tokenized_np->H.U.NXTaddr);
+                        /*if ( (retstr= send_tokenized_cmd(hopNXTaddr,Global_mp->Lfactor,srvNXTaddr,cp->srvNXTACCTSECRET,retjsonstr,tokenized_np->H.U.NXTaddr)) != 0 )
+                         {
+                         printf("sent back via UDP.(%s)\n",retstr);
+                         free(retstr);
+                         }*/
+                        free(jsonstr);
+                    }
+                }
+                else printf("encrypted.%d: checkstr.(%s) for (%s)\n",encrypted,checkstr,parmstxt);
             }
-            else printf("valid.%d unexpected non-tokenized message.(%s)\n",valid,decoded);
+            else printf("valid.%d | unexpected non-tokenized message.(%s)\n",valid,decoded);
             free_json(argjson);
+            if ( parmstxt != 0 )
+                free(parmstxt);
             return(tokenized_np);
         }
         else
@@ -254,12 +329,10 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
             {
                 expand_nxt64bits(hopNXTaddr,destbits);
                 //printf("Route to {%s}\n",hopNXTaddr);
-                route_packet(udp,hopNXTaddr,decoded,len);
+                route_packet(1,0,hopNXTaddr,decoded,len);
                 return(0);
             }
         }
-        if ( parmstxt != 0 )
-            free(parmstxt);
     }
     else printf("process_packet got unexpected recvlen.%d %s/%d\n",recvlen,sender,port);
     return(0);
@@ -267,7 +340,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
 
 int32_t has_privacyServer(struct NXT_acct *np)
 {
-    if ( np->mypeerinfo.srvipbits != 0 && np->mypeerinfo.pubnxtbits != np->mypeerinfo.srvnxtbits )
+    if ( np->mypeerinfo.srv.ipbits != 0 && np->mypeerinfo.pubnxtbits != np->mypeerinfo.srvnxtbits )
         return(1);
     else return(0);
 }
@@ -314,7 +387,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
             len = add_random_onionlayers(hopNXTaddr,L,encodedL,&outbuf,len);
         if ( strcmp(srvNXTaddr,hopNXTaddr) != 0 && has_privacyServer(np) != 0 ) // send via privacy server to protect our IP
             len = onionize(hopNXTaddr,encodedP,srvNXTaddr,&outbuf,len);
-        txid = route_packet(Global_mp->udp,hopNXTaddr,outbuf,len);
+        txid = route_packet(1,0,hopNXTaddr,outbuf,len);
         if ( txid == 0 )
         {
             sprintf(buf,"{\"error\":\"%s cant send via p2p sendmessage.(%s) [%s] to %s\"}",verifiedNXTaddr,origargstr,msg,destNXTaddr);
@@ -339,14 +412,16 @@ char *send_tokenized_cmd(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *
     }
     n = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
     {
-        char sender[64];
+        char sender[64],*parmstxt;
         int32_t valid;
         cJSON *json = cJSON_Parse(_tokbuf);
         if ( json != 0 )
         {
-            verify_tokenized_json(sender,&valid,json);
+            parmstxt = verify_tokenized_json(0,sender,&valid,json);
             if ( valid <= 0 )
                 printf("_tokbuf.%s valid.%d sender.(%s)\n",_tokbuf,valid,sender);
+            if ( parmstxt != 0 )
+                free(parmstxt);
             free_json(json);
         }
     }
