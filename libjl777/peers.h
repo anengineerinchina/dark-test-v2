@@ -198,7 +198,7 @@ cJSON *gen_peerinfo_json(struct peerinfo *peer)
         coins = cJSON_Parse(coinsjsonstr+9);
         if ( coins != 0 )
             cJSON_AddItemToObject(json,"coins",coins);
-        else printf("error parsing.(%s)\n",coinsjsonstr);
+        else printf("warning no coin networks.(%s) probably no peerinfo yet\n",coinsjsonstr);
     }
     return(json);
 }

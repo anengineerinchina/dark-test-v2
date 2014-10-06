@@ -176,7 +176,10 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
     struct coin_info *cp = get_coin_info("BTCD");
     char pubkeystr[1024],ipaddr[64],cmdstr[2048],verifiedNXTaddr[64],destNXTaddr[64];
     if ( NXTACCTSECRET[0] == 0 || cp == 0 )
+    {
+        printf("No srvpubaddr or cp.%p NULL\n",cp);
         return(0);
+    }
     init_hexbytes(pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
     verifiedNXTaddr[0] = 0;
     find_NXTacct(verifiedNXTaddr,NXTACCTSECRET);
@@ -253,7 +256,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     {
         if ( destip != 0 && destip[0] != 0 )
         {
-            //printf("inside ping.(%s)\n",destip);
+            printf("inside ping.(%s) pserver.%p\n",destip,get_pserver(0,destip,0,0));
             txid = send_kademlia_cmd(0,get_pserver(0,destip,0,0),"ping",NXTACCTSECRET,0,0);
             sprintf(retstr,"{\"result\":\"kademlia_ping to %s\",\"txid\",\"%llu\"}",destip,(long long)txid);
         }
@@ -269,6 +272,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
             sprintf(retstr,"{\"result\":\"kademlia_pong to (%s/%d)\",\"txid\",\"%llu\"}",ipaddr,port,(long long)txid);
         }
     }
+    printf("PING.(%s)\n",retstr);
     return(clonestr(retstr));
 }
 
