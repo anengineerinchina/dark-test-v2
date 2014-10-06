@@ -1166,5 +1166,5 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         printf("need to have BTCD active and also srvpubaddr\n");
         exit(-1);
     }
-    return(0); 
+    return(0);
 }

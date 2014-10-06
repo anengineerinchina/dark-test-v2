@@ -192,6 +192,11 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
         if ( pserver->nxt64bits == 0 )
             pserver->nxt64bits = nxt64bits;
     } else nxt64bits = pserver->nxt64bits;
+    if ( pserver->nxt64bits == cp->pubnxtbits || pserver->nxt64bits == cp->srvpubnxtbits )
+    {
+        printf("no point to send yourself (%s) dest.%llu pub.%llu srvpub.%llu\n",kadcmd,(long long)pserver->nxt64bits,(long long)cp->pubnxtbits,(long long)cp->srvpubnxtbits);
+        return(0);
+    }
     if ( strcmp(kadcmd,"ping") == 0 )
     {
         stats = get_nodestats(pserver->nxt64bits);
@@ -225,23 +230,41 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
     return(_send_kademlia_cmd(pserver,cmdstr,NXTACCTSECRET,data,len));
 }
 
-void kademlia_update_info(char *NXTACCTSECRET,struct peerinfo *peer,char *ipaddr,int32_t port,char *pubkeystr,uint32_t lastcontact)
+void kademlia_update_info(char *NXTACCTSECRET,struct peerinfo *peer,char *ipaddr,int32_t port,char *pubkeystr,uint32_t lastcontact,int32_t p2pflag)
 {
     static unsigned char zerokey[crypto_box_PUBLICKEYBYTES];
     uint32_t ipbits = calc_ipbits(ipaddr);
     if ( memcmp(peer->srv.pubkey,zerokey,sizeof(peer->srv.pubkey)) == 0 )
         send_kademlia_cmd(0,get_pserver(0,ipaddr,0,0),"ping",NXTACCTSECRET,0,0);
+    if ( port == BTCD_PORT )
+    {
+        printf("warning: kademlia_update_info port is %d?\n",port);
+        port = 0;
+    }
     if ( peer->srv.ipbits == 0 )
     {
         peer->srv.ipbits = ipbits;
-        peer->srv.supernet_port = port;
+        if ( p2pflag != 0 )
+            peer->srv.p2pport = port;
+        else peer->srv.supernet_port = port;
         if ( pubkeystr != 0 && pubkeystr[0] != 0 && update_pubkey(peer->srv.pubkey,pubkeystr) != 0 && lastcontact != 0)
             peer->srv.lastcontact = lastcontact;
     }
     else if ( peer->srv.ipbits == ipbits )
     {
-        if ( peer->srv.supernet_port == 0 )
-            peer->srv.supernet_port = port;
+        if ( port != 0 )
+        {
+            if ( p2pflag != 0 )
+            {
+                if ( peer->srv.p2pport == 0 )
+                    peer->srv.p2pport = port;
+            }
+            else
+            {
+                if ( peer->srv.supernet_port == 0 )
+                    peer->srv.supernet_port = port;
+            }
+        }
         if ( pubkeystr != 0 && pubkeystr[0] != 0 && update_pubkey(peer->srv.pubkey,pubkeystr) != 0 && lastcontact != 0)
             peer->srv.lastcontact = lastcontact;
     }
@@ -390,7 +413,7 @@ char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifi
                     if ( destNXTaddr[0] != 0 && ipaddr[0] != 0 )
                     {
                         destnp = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
-                        kademlia_update_info(NXTACCTSECRET,&destnp->mypeerinfo,ipaddr,port,pubkeystr,lastcontact);
+                        kademlia_update_info(NXTACCTSECRET,&destnp->mypeerinfo,ipaddr,port,pubkeystr,lastcontact,0);
                         dist = calc_np_dist(keynp,destnp);
                         if ( dist < calc_bestdist(keyhash) )
                         {
