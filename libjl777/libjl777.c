@@ -21,9 +21,8 @@ struct hashtable *orderbook_txids;
 #include "orders.h"
 #include "tradebot.h"
 
-char dispstr[65536];
-char testforms[1024*1024],PC_USERNAME[512],MY_IPADDR[512];
-int Finished_loading,Historical_done,Finished_init;
+//char dispstr[65536];
+//char testforms[1024*1024],PC_USERNAME[512],MY_IPADDR[512];
 #define pNXT_SIG 0x99999999
 uv_loop_t *UV_loop;
 
@@ -47,7 +46,7 @@ void run_UVloop(void *arg)
     uv_idle_t idler;
     uv_idle_init(UV_loop,&idler);
     uv_idle_start(&idler,teleport_idler);
-    uv_idle_start(&idler,NXTservices_idler);
+    //uv_idle_start(&idler,NXTservices_idler);
     uv_run(UV_loop,UV_RUN_DEFAULT);
     printf("end of uv_run\n");
 }
@@ -81,7 +80,7 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
         //strcpy(MY_IPADDR,get_ipaddr());
         strcpy(mp->ipaddr,myipaddr);
     }
-    safecopy(mp->ipaddr,MY_IPADDR,sizeof(mp->ipaddr));
+    //safecopy(mp->ipaddr,MY_IPADDR,sizeof(mp->ipaddr));
     mp->upollseconds = 333333 * 0;
     mp->pollseconds = POLL_SECONDS;
     crypto_box_keypair(Global_mp->loopback_pubkey,Global_mp->loopback_privkey);
@@ -92,18 +91,18 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
     mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,(void *)on_udprecv);
     init_MGWconf(JSON_or_fname,myipaddr);
     printf("start getNXTblocks.(%s)\n",myipaddr);
-    if ( 1 && portable_thread_create((void *)getNXTblocks,mp) == 0 )
+    if ( 0 && portable_thread_create((void *)getNXTblocks,mp) == 0 )
         printf("ERROR start_Histloop\n");
     //mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
     init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
 
-    printf("run_NXTservices >>>>>>>>>>>>>>> %p %s: %s %s\n",mp,mp->dispname,PC_USERNAME,mp->ipaddr);
+    printf("run_NXTservices >>>>>>>>>>>>>>> %p %s: %s\n",mp,mp->dispname,mp->ipaddr);
     void run_NXTservices(void *arg);
     if ( 0 && portable_thread_create((void *)run_NXTservices,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
     Finished_loading = 1;
-	while ( Finished_loading == 0 )
-        sleep(1);
+	//while ( Finished_loading == 0 )
+    //    sleep(1);
     printf("start Coinloop\n");
     if ( portable_thread_create((void *)Coinloop,Global_mp) == 0 )
         printf("ERROR Coin_genaddrloop\n");
@@ -319,7 +318,7 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
 {
     static int counter;
     char previp[64],nexthopNXTaddr[64],destNXTaddr[64],msg[MAX_JSON_FIELD],*retstr = 0;
-    int32_t L,port;
+    int32_t L,port,len;
     copy_cJSON(destNXTaddr,objs[0]);
     copy_cJSON(msg,objs[1]);
     L = (int32_t)get_API_int(objs[2],Global_mp->Lfactor);
@@ -334,7 +333,13 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
             counter++;
             //retstr = clonestr("{\"result\":\"received message\"}");
         }
-        else retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,(int32_t)strlen(origargstr)+1,destNXTaddr,origargstr);
+        else
+        {
+            len = (int32_t)strlen(origargstr)+1;
+            stripwhite_ns(origargstr,len);
+            len = (int32_t)strlen(origargstr)+1;
+            retstr = sendmessage(nexthopNXTaddr,L,sender,origargstr,len,destNXTaddr);
+        }
     }
     //if ( retstr == 0 )
     //    retstr = clonestr("{\"error\":\"invalid sendmessage request\"}");
@@ -685,9 +690,134 @@ char *publishPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *pr
     return(retstr);
 }
 
+char *sendfile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    FILE *fp;
+    int32_t L;
+    char fname[MAX_JSON_FIELD],dest[MAX_JSON_FIELD],*retstr = 0;
+    copy_cJSON(fname,objs[0]);
+    copy_cJSON(dest,objs[1]);
+    L = get_API_int(objs[2],0);
+    fp = fopen(fname,"rb");
+    if ( fp != 0 && sender[0] != 0 && valid > 0 )
+        retstr = onion_sendfile(L,prevaddr,NXTaddr,NXTACCTSECRET,sender,dest,fp);
+    else retstr = clonestr("{\"error\":\"invalid sendfile_func arguments\"}");
+    if ( fp != 0 )
+        fclose(fp);
+    return(retstr);
+}
+
+char *ping_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    int32_t port;
+    char pubkey[MAX_JSON_FIELD],destip[MAX_JSON_FIELD],ipaddr[MAX_JSON_FIELD],*retstr = 0;
+    copy_cJSON(pubkey,objs[0]);
+    copy_cJSON(ipaddr,objs[1]);
+    port = get_API_int(objs[2],0);
+    copy_cJSON(destip,objs[3]);
+    //printf("ping got pubkey.(%s) ipaddr.(%s) port.%d destip.(%s)\n",pubkey,ipaddr,port,destip);
+    if ( sender[0] != 0 && valid > 0 )
+        retstr = kademlia_ping(prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,ipaddr,port,destip);
+    else retstr = clonestr("{\"error\":\"invalid ping_func arguments\"}");
+    return(retstr);
+}
+
+char *pong_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char pubkey[MAX_JSON_FIELD],ipaddr[MAX_JSON_FIELD],*retstr = 0;
+    uint16_t port;
+    copy_cJSON(pubkey,objs[0]);
+    copy_cJSON(ipaddr,objs[1]);
+    port = get_API_int(objs[2],0);
+    //printf("pong got pubkey.(%s) ipaddr.(%s) port.%d \n",pubkey,ipaddr,port);
+    if ( sender[0] != 0 && valid > 0 )
+        retstr = kademlia_pong(prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,ipaddr,port);
+    else retstr = clonestr("{\"error\":\"invalid pong_func arguments\"}");
+    return(retstr);
+}
+
+void set_kademlia_args(char *key,cJSON *keyobj,cJSON *nameobj)
+{
+    uint64_t hash;
+    long len;
+    char name[MAX_JSON_FIELD];
+    key[0] = 0;
+    copy_cJSON(name,nameobj);
+    if ( name[0] != 0 )
+    {
+        len = strlen(name);
+        if ( len < 64 )
+        {
+            hash = calc_txid((unsigned char *)name,(int32_t)strlen(name));
+            expand_nxt64bits(key,hash);
+        }
+    }
+    else copy_cJSON(key,keyobj);
+}
+
+char *findnode_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],*retstr = 0;
+    copy_cJSON(pubkey,objs[0]);
+    set_kademlia_args(key,objs[1],objs[2]);
+    printf("findnode.%p (%s) (%s) (%s)\n",prevaddr,sender,pubkey,key);
+    if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
+        retstr = kademlia_find("findnode",prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key);
+    else retstr = clonestr("{\"error\":\"invalid findnode_func arguments\"}");
+    return(retstr);
+}
+
+char *findvalue_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],*retstr = 0;
+    copy_cJSON(pubkey,objs[0]);
+    set_kademlia_args(key,objs[1],objs[2]);
+    if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
+        retstr = kademlia_find("findvalue",prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key);
+    else retstr = clonestr("{\"error\":\"invalid findvalue_func arguments\"}");
+    return(retstr);
+}
+
+char *havenode_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],value[MAX_JSON_FIELD],*retstr = 0;
+    copy_cJSON(pubkey,objs[0]);
+    set_kademlia_args(key,objs[1],objs[2]);
+    copy_cJSON(value,objs[3]);
+    if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
+        retstr = kademlia_havenode(0,prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key,value);
+    else retstr = clonestr("{\"error\":\"invalid havenode_func arguments\"}");
+    return(retstr);
+}
+
+char *havenodeB_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],value[MAX_JSON_FIELD],*retstr = 0;
+    copy_cJSON(pubkey,objs[0]);
+    set_kademlia_args(key,objs[1],objs[2]);
+    copy_cJSON(value,objs[3]);
+    if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
+        retstr = kademlia_havenode(1,prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key,value);
+    else retstr = clonestr("{\"error\":\"invalid havenode_func arguments\"}");
+    return(retstr);
+}
+
+char *store_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],datastr[MAX_JSON_FIELD],*retstr = 0;
+    copy_cJSON(pubkey,objs[0]);
+    set_kademlia_args(key,objs[1],objs[2]);
+    copy_cJSON(datastr,objs[3]);
+    if ( key[0] != 0 && sender[0] != 0 && valid > 0 && datastr[0] != 0 )
+    {
+        retstr = kademlia_storedata(prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key,datastr);
+    }
+    else retstr = clonestr("{\"error\":\"invalid store_func arguments\"}");
+    return(retstr);
+}
+
 char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
-
     static char *getpeers[] = { (char *)getpeers_func, "getpeers", "V",  "only_privacyServer", 0 };
     static char *getPservers[] = { (char *)getPservers_func, "getPservers", "V",  "firsti", 0 };
     static char *publishPservers[] = { (char *)publishPservers_func, "publishPservers", "V", "Pservers", "Numpservers", "firstPserver", "xorsum", 0 };
@@ -709,7 +839,15 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     static char *placebid[] = { (char *)placebid_func, "placebid", "V", "obookid", "polarity", "volume", "price", "assetA", "assetB", 0 };
     static char *placeask[] = { (char *)placeask_func, "placeask", "V", "obookid", "polarity", "volume", "price", "assetA", "assetB", 0 };
     static char *makeoffer[] = { (char *)makeoffer_func, "makeoffer", "V", "other", "assetA", "qtyA", "assetB", "qtyB", "type", 0 };
-    static char **commands[] = { publishPservers, sendpeerinfo, getPservers, getpubkey, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, publishaddrs, checkmsg, placebid, placeask, makeoffer, sendmsg, orderbook, getorderbooks, teleport  };
+    static char *sendfile[] = { (char *)sendfile_func, "sendfile", "V", "filename", "dest", "L", 0 };
+    static char *ping[] = { (char *)ping_func, "ping", "V", "pubkey", "ipaddr", "port", "destip", 0 };
+    static char *pong[] = { (char *)pong_func, "pong", "V", "pubkey", "ipaddr", "port", 0 };
+    static char *store[] = { (char *)store_func, "store", "V", "pubkey", "key", "name", "data", 0 };
+    static char *findvalue[] = { (char *)findvalue_func, "findvalue", "V", "pubkey", "key", "name", 0 };
+    static char *findnode[] = { (char *)findnode_func, "findnode", "V", "pubkey", "key", "name", 0 };
+    static char *havenode[] = { (char *)havenode_func, "havenode", "V", "pubkey", "key", "name", "data", 0 };
+    static char *havenodeB[] = { (char *)havenodeB_func, "havenodeB", "V", "pubkey", "key", "name", "data", 0 };
+    static char **commands[] = { ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, publishPservers, sendpeerinfo, getPservers, getpubkey, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, publishaddrs, checkmsg, placebid, placeask, makeoffer, sendmsg, orderbook, getorderbooks, teleport  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
@@ -731,7 +869,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
         copy_cJSON(NXTACCTSECRET,secretobj);
         if ( NXTACCTSECRET[0] == 0 && (cp= get_coin_info("BTCD")) != 0 )
         {
-            if ( strcmp("127.0.0.1",cp->privacyserver) == 0 )
+            if ( 1 || strcmp("127.0.0.1",cp->privacyserver) == 0 )
             {
                 safecopy(NXTACCTSECRET,cp->srvNXTACCTSECRET,sizeof(NXTACCTSECRET));
                 expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
@@ -801,6 +939,8 @@ char *SuperNET_JSON(char *JSONstr)
     int32_t valid;
     char NXTaddr[64],_tokbuf[2*MAX_JSON_FIELD],encoded[NXT_TOKEN_LEN+1],*cmdstr,*retstr = 0;
     struct coin_info *cp = get_coin_info("BTCD");
+    if ( Finished_init == 0 )
+        return(0);
     //printf("got JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
@@ -817,13 +957,10 @@ char *SuperNET_JSON(char *JSONstr)
             array = cJSON_Parse(_tokbuf);
             if ( array != 0 )
             {
-                cmdstr = verify_tokenized_json(NXTaddr,&valid,array);
+                cmdstr = verify_tokenized_json(0,NXTaddr,&valid,array);
                 retstr = pNXT_json_commands(Global_mp,0,array,NXTaddr,valid,_tokbuf);
                 if ( cmdstr != 0 )
-                {
-                    //printf("parms.(%s) valid.%d\n",cmdstr,valid);
                     free(cmdstr);
-                }
                 free_json(array);
             }
         }
@@ -856,14 +993,7 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
         {
             printf("pNXT NXThandler_info init %d\n",mp->RTflag);
             if ( Global_pNXT == 0 )
-            {
-                /*struct NXT_str *tp = 0;
-                 Global_pNXT = calloc(1,sizeof(*Global_pNXT));
-                 orderbook_txids = hashtable_create("orderbook_txids",HASHTABLES_STARTSIZE,sizeof(struct NXT_str),((long)&tp->txid[0] - (long)tp),sizeof(tp->txid),((long)&tp->modified - (long)tp));
-                 Global_pNXT->orderbook_txidsp = &orderbook_txids;
-                 printf("SET ORDERBOOK HASHTABLE %p\n",orderbook_txids);*/
                 fatal("pNXT_handler: NO GLOBALS!!!");
-            }
             gp = Global_pNXT;
             printf("return gp.%p\n",gp);
         }
@@ -876,27 +1006,25 @@ void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,v
     return(gp);
 }
 
-uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t duration)
+uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t len,int32_t duration)
 {
     int32_t SuperNET_broadcast(char *msg,int32_t duration);
     int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len);
-    unsigned char hash[256>>3];
-    char ip_port[64];
-    uint64_t txid;
-    int i;
-    calc_sha256(0,hash,(uint8_t *)msg,(int32_t)strlen(msg));
-    txid = calc_txid(hash,sizeof(hash));
-    if ( destip != 0 )
+    char ip_port[64],ipaddr[64];
+    struct nodestats *stats;
+    uint64_t txid = 0;
+    int32_t port;
+    printf("call_SuperNET_broadcast.%p %p len.%d\n",pserver,msg,len);
+    txid = calc_txid((uint8_t *)msg,(int32_t)strlen(msg));
+    if ( pserver != 0 )
     {
-        strcpy(ip_port,destip);
-        for (i=0; destip[i]!=0; i++)
-            if ( destip[i] == ':' )
-                break;
-        if ( destip[i] != ':' )
-            strcat(ip_port,":14631");
-        txid ^= calc_ipbits(destip);
-        printf("%s NARROWCAST.(%s) txid.%llu\n",destip,msg,(long long)txid);
-        if ( SuperNET_narrowcast(destip,(unsigned char *)msg,len) == 0 )
+        if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
+            port = (stats->p2pport == 0) ? BTCD_PORT : stats->p2pport;
+        else port = BTCD_PORT;
+        sprintf(ip_port,"%s:%d",pserver->ipaddr,port);
+        txid ^= calc_ipbits(ipaddr);
+        printf("%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,msg,(long long)txid,ip_port);
+        if ( SuperNET_narrowcast(ip_port,(unsigned char *)msg,len) == 0 )
             return(txid);
     }
     else
@@ -907,7 +1035,7 @@ uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t dura
         array = cJSON_Parse(msg);
         if ( array != 0 )
         {
-            cmdstr = verify_tokenized_json(NXTaddr,&valid,array);
+            cmdstr = verify_tokenized_json(0,NXTaddr,&valid,array);
             if ( cmdstr != 0 )
                 free(cmdstr);
             free_json(array);
@@ -916,7 +1044,7 @@ uint64_t call_SuperNET_broadcast(char *destip,char *msg,int32_t len,int32_t dura
                 return(txid);
         } else printf("cant broadcast non-JSON.(%s)\n",msg);
     }
-    return(0);
+    return(txid);
 }
 
 int32_t got_newpeer(char *ip_port)
@@ -929,16 +1057,19 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
 {
     static int flood,duplicates;
     cJSON *json;
-    uint64_t txid;
+    uint16_t p2pport;
+    struct pserver_info *pserver;
+    uint64_t txid,obookid;
     struct sockaddr prevaddr;
-    int32_t len,createdflag;
-    unsigned char packet[2*MAX_JSON_FIELD],hash[256>>3];
-    char txidstr[64];
-    char retjsonstr[2*MAX_JSON_FIELD],*retstr;
-    uint64_t obookid;
-    //printf("gotpacket\n");
-    //for (i=0; i<len; i++)
-    //    printf("%02x ",packet[i]);
+    int32_t len,createdflag,valid;
+    unsigned char packet[2*MAX_JSON_FIELD];
+    char ipaddr[64],txidstr[64],retjsonstr[2*MAX_JSON_FIELD],verifiedNXTaddr[64],*cmdstr,*retstr;
+    if ( Finished_init == 0 )
+        return(0);
+
+    p2pport = parse_ipaddr(ipaddr,ip_port);
+    uv_ip4_addr(ipaddr,p2pport,(struct sockaddr_in *)&prevaddr);
+    pserver = get_pserver(0,ipaddr,0,p2pport);
     strcpy(retjsonstr,"{\"result\":null}");
     if ( Finished_loading == 0 )
     {
@@ -950,8 +1081,8 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
     {
         len >>= 1;
         decode_hex(packet,len,msg);
-        calc_sha256(0,hash,packet,len);
-        txid = calc_txid(hash,sizeof(hash));
+        //calc_sha256(0,hash,packet,len);
+        txid = calc_txid(packet,len);//hash,sizeof(hash));
         sprintf(txidstr,"%llu",(long long)txid);
         MTadd_hashtable(&createdflag,&Global_pNXT->msg_txids,txidstr);
         if ( createdflag == 0 )
@@ -963,7 +1094,7 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
             flood++;
         printf("gotpacket.(%s) %d | Finished_loading.%d | flood.%d duplicates.%d\n",msg,duration,Finished_loading,flood,duplicates);
         if ( is_encrypted_packet(packet,len) != 0 )
-            process_packet(retjsonstr,packet,len,0,0,0,0);
+            process_packet(retjsonstr,packet,len,0,&prevaddr,ipaddr,0);
         else if ( (obookid= is_orderbook_tx(packet,len)) != 0 )
         {
             if ( update_orderbook_tx(1,obookid,(struct orderbook_tx *)packet,txid) == 0 )
@@ -975,8 +1106,8 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
     }
     else
     {
-        calc_sha256(0,hash,(uint8_t *)msg,len);
-        txid = calc_txid(hash,sizeof(hash));
+        //calc_sha256(0,hash,(uint8_t *)msg,len);
+        txid = calc_txid((uint8_t *)msg,len);//hash,sizeof(hash));
         sprintf(txidstr,"%llu",(long long)txid);
         MTadd_hashtable(&createdflag,&Global_pNXT->msg_txids,txidstr);
         if ( createdflag == 0 )
@@ -989,21 +1120,14 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
         printf("C SuperNET_gotpacket.(%s) size.%d ascii txid.%llu | flood.%d\n",msg,len,(long long)txid,flood);
         if ( (json= cJSON_Parse((char *)msg)) != 0 )
         {
-            int32_t valid,port;
-            char ipaddr[64],verifiedNXTaddr[64],*cmdstr;
-            cmdstr = verify_tokenized_json(verifiedNXTaddr,&valid,json);
-            port = parse_ipaddr(ipaddr,ip_port);
-            uv_ip4_addr(ipaddr,port,(struct sockaddr_in *)&prevaddr);
+            cmdstr = verify_tokenized_json(0,verifiedNXTaddr,&valid,json);
             retstr = pNXT_json_commands(Global_mp,&prevaddr,json,verifiedNXTaddr,valid,(char *)msg);
             if ( cmdstr != 0 )
-            {
-                //printf("got parms.(%s) valid.%d\n",(char *)msg,valid);
                 free(cmdstr);
-            }
             free_json(json);
             if ( retstr == 0 )
                 retstr = clonestr("{\"result\":null}");
-                return(retstr);
+            return(retstr);
         } printf("cJSON_Parse error.(%s)\n",msg);
     }
     return(clonestr(retjsonstr));
@@ -1011,8 +1135,14 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
 
 int SuperNET_start(char *JSON_or_fname,char *myipaddr)
 {
+    FILE *fp = 0;
     struct NXT_str *tp = 0;
-    printf("SuperNET_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
+    if ( JSON_or_fname != 0 && JSON_or_fname[0] != '{' )
+        fp = fopen(JSON_or_fname,"rb");
+    printf("SuperNET_start(%s) %p ipaddr.(%s) fp.%p\n",JSON_or_fname,myipaddr,myipaddr,fp);
+    if ( fp == 0 )
+        return(-1);
+    fclose(fp);
     myipaddr = clonestr(myipaddr);
     Global_mp = calloc(1,sizeof(*Global_mp));
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session
@@ -1029,7 +1159,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     printf("back from init_NXTservices\n");
     Finished_init = 1;
     free(myipaddr);
-    broadcast_publishpacket(0);
+   // p2p_publishpacket(0,0);
 
     return(0);
 }

@@ -9,6 +9,8 @@ make
 cp .libs/libuv.a ../libs
 cd ..
 cp libs/*.a ../src
+cp libs/randombytes.o ../src
+./make_shared
 cd ../src
 rm BitcoinDarkd
 make -f makefile.unix
