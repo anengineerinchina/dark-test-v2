@@ -332,12 +332,18 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                         if ( is_cJSON_Number(valueobj) != 0 )
                         {
                             copy_cJSON(datalenstr,valueobj);
-                            if ( datalen > 0 && datalen == atoi(datalenstr) )
+                            if ( datalen > 0 && datalen >= atoi(datalenstr) )
                             {
-                                init_hexbytes(datastr,decoded + parmslen,datalen);
-                                cJSON_ReplaceItemInObject(argjson,"data",cJSON_CreateString(datastr));
+                                init_hexbytes(datastr,decoded + parmslen,atoi(datalenstr));
+                                cJSON_ReplaceItemInObject(tmpjson,"data",cJSON_CreateString(datastr));
+                                free(parmstxt);
+                                parmstxt = cJSON_Print(tmpjson);
+                                stripwhite_ns(parmstxt,strlen(parmstxt));
+                                free_json(argjson);
+                                argjson = cJSON_Parse(parmstxt);
+                                printf("replace data.%s with (%s) (%s)\n",datalenstr,datastr,parmstxt);
                             }
-                            else printf("datalen.%d mismatch.(%s) -> %d\n",datalen,datalenstr,atoi(datalenstr));
+                            else printf("datalen.%d mismatch.(%s) -> %d [%x]\n",datalen,datalenstr,atoi(datalenstr),*(int *)(decoded+parmslen));
                         }
                         strcpy(checkstr,"ping");
                     }
