@@ -754,6 +754,7 @@ char *findnode_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],*retstr = 0;
     copy_cJSON(pubkey,objs[1]);
     set_kademlia_args(key,objs[2],objs[3]);
+    printf("findnode.%p (%s) (%s) (%s)\n",prevaddr,sender,pubkey,key);
     if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
         retstr = kademlia_find("findnode",prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key);
     else retstr = clonestr("{\"error\":\"invalid findnode_func arguments\"}");
@@ -861,7 +862,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
         copy_cJSON(NXTACCTSECRET,secretobj);
         if ( NXTACCTSECRET[0] == 0 && (cp= get_coin_info("BTCD")) != 0 )
         {
-            if ( strcmp("127.0.0.1",cp->privacyserver) == 0 )
+            if ( 1 || strcmp("127.0.0.1",cp->privacyserver) == 0 )
             {
                 safecopy(NXTACCTSECRET,cp->srvNXTACCTSECRET,sizeof(NXTACCTSECRET));
                 expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
