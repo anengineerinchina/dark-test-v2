@@ -67,13 +67,13 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
     memcpy(&packetdest,encoded,sizeof(packetdest));
     if ( packetdest == 0 || ((packetdest == cp->srvpubnxtbits && strcmp(cp->privacyserver,"127.0.0.1") == 0) || packetdest == cp->pubnxtbits) )
     {
-        printf("packedest.%llu srvpub.%llu (%s)\n",(long long)packetdest,(long long)cp->srvpubnxtbits,cp->privacyserver);
         encoded += sizeof(packetdest);
         memcpy(pubkey,encoded,crypto_box_PUBLICKEYBYTES);
         encoded += crypto_box_PUBLICKEYBYTES;
         memcpy(&payload_len,encoded,sizeof(payload_len));
         //printf("deonionize >>>>> pubkey.%llx vs mypubkey.%llx (%llx) -> %d %2x\n",*(long long *)pubkey,*(long long *)Global_mp->session_pubkey,*(long long *)Global_mp->loopback_pubkey,payload_len,payload_len);
         encoded += sizeof(payload_len);
+        printf("packedest.%llu srvpub.%llu (%s) payload_len.%d\n",(long long)packetdest,(long long)cp->srvpubnxtbits,cp->privacyserver,payload_len);
         if ( (payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(packetdest)) <= len )
         {
             len = payload_len;
@@ -109,7 +109,7 @@ int32_t direct_onionize(uint64_t nxt64bits,unsigned char *destpubkey,unsigned ch
     long hdrlen;
     memset(maxbuf,0,MAX_UDPLEN);
     origencoded = encoded;
-    padlen = MAX_UDPLEN - 56 - (len + crypto_box_ZEROBYTES + crypto_box_NONCEBYTES) - (sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits)) - sizeof(uint32_t);
+    padlen = MAX_UDPLEN - 0*56 - (len + crypto_box_ZEROBYTES + crypto_box_NONCEBYTES) - (sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits)) - sizeof(uint32_t);
     if ( padlen < 0 )
         padlen = 0;
     if ( encoded == 0 )
@@ -377,9 +377,9 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                 expand_nxt64bits(hopNXTaddr,destbits);
                 printf("Route to {%s}\n",hopNXTaddr);
                 outbuf = decoded;
-                len = onionize(hopNXTaddr,maxbuf,tmpbuf,hopNXTaddr,&outbuf,len);
-                //route_packet(1,0,hopNXTaddr,outbuf,len);//decoded,len);
-                route_packet(1,0,hopNXTaddr,maxbuf,MAX_UDPLEN-sizeof(uint32_t));
+                len = onionize(hopNXTaddr,maxbuf,0,hopNXTaddr,&outbuf,len);
+                route_packet(1,0,hopNXTaddr,outbuf,len);//decoded,len);
+                //route_packet(1,0,hopNXTaddr,maxbuf,MAX_UDPLEN-sizeof(uint32_t));
                 return(0);
             }
         }
