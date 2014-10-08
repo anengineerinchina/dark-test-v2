@@ -756,7 +756,7 @@ char *restorefile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
     int32_t L,M,N,i,n;
     char fname[MAX_JSON_FIELD],sharenrs[MAX_JSON_FIELD],destfname[MAX_JSON_FIELD],usbname[MAX_JSON_FIELD],password[MAX_JSON_FIELD],*retstr = 0;
     if ( prevaddr != 0 )
-        return(clonestr("{\"error\":\"savefile is only for local access\"}"));
+        return(clonestr("{\"error\":\"restorefile is only for local access\"}"));
     copy_cJSON(fname,objs[0]);
     L = get_API_int(objs[1],0);
     M = get_API_int(objs[2],1);
@@ -781,6 +781,8 @@ char *restorefile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
                 txids[i] = calc_nxt64bits(txidstr);
         }
     }
+    if ( destfname[0] == 0 )
+        strcpy(destfname,fname), strcat(destfname,".restore");
     if ( 0 )
     {
         fp = fopen(destfname,"rb");
