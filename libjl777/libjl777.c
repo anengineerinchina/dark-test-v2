@@ -734,11 +734,17 @@ char *savefile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     N = get_API_int(objs[3],1);
     if ( N < 0 )
         N = 0;
+    else if ( N > 254 )
+        N = 254;
     if ( M >= N )
         M = N;
+    else if ( M < 1 )
+        M = 1;
     copy_cJSON(usbname,objs[4]);
     copy_cJSON(password,objs[5]);
     fp = fopen(fname,"rb");
+    if ( fp == 0 )
+        printf("cant find file (%s)\n",fname);
     if ( fp != 0 && sender[0] != 0 && valid > 0 )
         retstr = mofn_savefile(prevaddr,NXTaddr,NXTACCTSECRET,sender,fp,L,M,N,usbname,password,fname);
     else retstr = clonestr("{\"error\":\"invalid savefile_func arguments\"}");
@@ -746,6 +752,14 @@ char *savefile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
         fclose(fp);
     return(retstr);
 }
+
+/*compression
+combinatorics on errors
+metadata in a file(s)
+random delays in packets
+ queue restore task
+teleport accounting
+ */
 
 char *restorefile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -763,8 +777,12 @@ char *restorefile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
     N = get_API_int(objs[3],1);
     if ( N < 0 )
         N = 0;
+    else if ( N > 254 )
+        N = 254;
     if ( M >= N )
         M = N;
+    else if ( M < 1 )
+        M = 1;
     copy_cJSON(usbname,objs[4]);
     copy_cJSON(password,objs[5]);
     copy_cJSON(destfname,objs[6]);
