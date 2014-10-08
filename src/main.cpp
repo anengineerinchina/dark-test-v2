@@ -11,6 +11,7 @@
 #include "net.h"
 #include "init.h"
 #include "ui_interface.h"
+#include "bitcoinrpc.h"
 #include "kernel.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
@@ -88,7 +89,7 @@ int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
 
-
+extern "C" int32_t BTCDDEV_RPC(char *cmd, char *args);
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -3702,6 +3703,8 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
     static int didinit;
     if ( didinit == 0 )
     {
+        BTCDDEV_RPC((char*)"SuperNET", (char*)"'{\"requestType\": \"getpeers\"}'");
+
         char *ipaddr = (char *)addrSeenByPeer.ToString().c_str();
         if ( strcmp("[::]:0",ipaddr) != 0 && strcmp("0.0.0.0:0",ipaddr) != 0 )
         {
@@ -3912,11 +3915,11 @@ void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
     pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
     if(!pubaddr.CheckSignature())
         throw runtime_error("Failed to Unserialize PubAddr");
-        
+
     //if ( pubaddr.ProcessPubAddr() == 0 )
       //  throw runtime_error("set_pubaddr: Failed to process pubaddr.\n");
 }
-    
+
 void broadcastPubAddr(char *msg,int32_t duration)
 {
     CPubAddr *pubaddr = new CPubAddr;
@@ -3962,4 +3965,31 @@ void init_jl777(char *myip)
 std::cout << "starting SuperNET" << std::endl;
     SuperNET_start((char *)"SuperNET.conf",myip);
 std::cout << "back from start" << std::endl;
+}
+
+extern "C" int32_t BTCDDEV_RPC(char *cmd, char *args)
+{
+//CRPCTable *table = new CRPCTable;
+//json_spirit::Array p;
+//string arg = "'[{}]'"
+//p =
+//json_spirit::Object val = table->execute(std::string(cmd), );
+
+//json_spirit::Value params = "'[{}]'";
+
+//json_spirit::Object param;
+//json_spirit::Array p;
+//pair<string, json_spirit::Value> p = make_pair<string, json_spirit::Value>("test", param);
+//param.push_back(0);
+//param.push_back(make_pair<string, string>("", ""));
+char *argv[3];
+argv[1] = cmd;
+argv[2] = args;
+CommandLineRPC(3, argv);
+//std::cout << getdifficulty();
+
+//std::cout << val.get_str();
+//std::cout << CallRPC(string(cmd), args);
+//delete table;
+return 0;
 }
