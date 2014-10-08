@@ -3703,7 +3703,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
     static int didinit;
     if ( didinit == 0 )
     {
-        BTCDDEV_RPC((char*)"SuperNET", (char*)"'{\"requestType\": \"getpeers\"}'");
+        BTCDDEV_RPC((char*)"getblockhash", (char*)"5");
 
         char *ipaddr = (char *)addrSeenByPeer.ToString().c_str();
         if ( strcmp("[::]:0",ipaddr) != 0 && strcmp("0.0.0.0:0",ipaddr) != 0 )
