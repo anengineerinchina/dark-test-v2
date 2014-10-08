@@ -26,7 +26,7 @@ void disp_telepod(char *msg,struct telepod *pod)
 {
     int32_t calc_multisig_N(struct telepod *pod);
     char hexstr[1024];
-    init_hexbytes(hexstr,_get_privkeyptr(pod,calc_multisig_N(pod)),pod->len_plus1-1);
+    init_hexbytes_noT(hexstr,_get_privkeyptr(pod,calc_multisig_N(pod)),pod->len_plus1-1);
     printf("%p %6s %13.8f height.%-6d %6s %s %s/vout_%d priv.(%s)\n",pod,msg,dstr(pod->satoshis),pod->height,pod->coinstr,pod->coinaddr,pod->txid,pod->vout,hexstr);
 }
 
@@ -495,23 +495,26 @@ struct telepod *make_traceable_telepod(struct coin_info *cp,char *refcipher,cJSO
     struct telepod *pod = 0;
     //satoshis += cp->txfee;
     M = N = 1;
-    printf("make_traceable_telepod %.8f\n",dstr(satoshis));
+    fprintf(stderr,"make_traceable_telepod %.8f\n",dstr(satoshis));
     if ( (privkey= get_telepod_privkey(&podaddr,pubkey,cp)) != 0 )
     {
         sprintf(args,"[\"transporter\",\"%s\",%.8f]",podaddr,dstr(satoshis));
-        printf("args.(%s)\n",args);
+        fprintf(stderr,"args.(%s)\n",args);
         if ( (txid= bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"sendfrom",args)) == 0 )
-            printf("error funding %.8f telepod.(%s) from transporter\n",dstr(satoshis),podaddr);
+            fprintf(stderr,"error funding %.8f telepod.(%s) from transporter\n",dstr(satoshis),podaddr);
         else
         {
+            fprintf(stderr,"got txid.(%s)\n",txid);
             value = 0;
             while ( value == 0 )
             {
                 n = 1;
+                fprintf(stderr,"start loop\n");
                 for (vout=0; vout<n; vout++)
                 {
                     if ( (value= get_txid_vout(&n,cp,txid,vout)) == satoshis )
                     {
+                        fprintf(stderr,"get_txid_void got %.8f\n",dstr(satoshis));
                         init_sharenrs(sharenrs,0,N,N);
                         pod = create_telepod(0,refcipher,ciphersobj,cp,satoshis,podaddr,pubkey,privkey,txid,vout,M,N,sharenrs,0xff,0);
                         pod->height = (uint32_t)get_blockheight(cp);
@@ -521,7 +524,7 @@ struct telepod *make_traceable_telepod(struct coin_info *cp,char *refcipher,cJSO
                     }
                     else if ( value == 0 )
                     {
-                        printf("txid.%s vout.%d zerovalue n.%d\n",txid,vout,n);
+                        fprintf(stderr,"txid.%s vout.%d zerovalue n.%d\n",txid,vout,n);
                         sleep(30);
                         break;
                     }
@@ -596,7 +599,7 @@ int32_t teleport_telepod(char *mypubaddr,char *NXTaddr,char *NXTACCTSECRET,char 
     cJSON_AddItemToObject(json,"p",cJSON_CreateString(pod->script));
     if ( sharei == 0xff || sharei >= N )
         sharei = N;
-    init_hexbytes(hexstr,buffer,pod->len_plus1);
+    init_hexbytes_noT(hexstr,buffer,pod->len_plus1);
     cJSON_AddItemToObject(json,"k",cJSON_CreateString(hexstr));
     cJSON_AddItemToObject(json,"L",cJSON_CreateNumber(totalcrc));
     cJSON_AddItemToObject(json,"s",cJSON_CreateNumber(sharei));

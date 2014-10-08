@@ -886,7 +886,7 @@ int32_t set_json_AM(struct json_AM *ap,int32_t sig,int32_t funcid,char *nxtaddr,
     else jsonflag = 1 + (compressjson != 0);
     if ( jsonflag == 2 )
     {
-        if ( (jsn= encode_json(jsonstr)) != 0 )
+        if ( (jsn= encode_json(jsonstr,(int32_t)strlen(jsonstr)+1)) != 0 )
             len = sizeof(*ap) + jsn->complen;
         else
         {
@@ -1097,7 +1097,7 @@ int32_t init_NXTAPI(CURL *curl_handle)
     cJSON *json,*obj;
     int32_t timestamp;
     char cmd[4096],dest[1024],*jsonstr;
-    init_jsoncodec(0);
+    init_jsoncodec(0,0);
     return(0);
     sprintf(cmd,"%s=getTime",_NXTSERVER);
     while ( 1 )
@@ -1681,7 +1681,7 @@ int32_t gen_tokenjson(CURL *curl_handle,char *jsonstr,char *NXTaddr,long nonce,c
     struct NXT_acct *np;
     char argstr[1024],pubkey[1024],token[1024];
     np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
-    init_hexbytes(pubkey,np->mypeerinfo.srv.pubkey,sizeof(np->mypeerinfo.srv.pubkey));
+    init_hexbytes_noT(pubkey,np->mypeerinfo.srv.pubkey,sizeof(np->mypeerinfo.srv.pubkey));
     sprintf(argstr,"{\"NXT\":\"%s\",\"pubkey\":\"%s\",\"time\":%ld,\"yourip\":\"%s\",\"uport\":%d}",NXTaddr,pubkey,nonce,ipaddr,port);
     //printf("got argstr.(%s)\n",argstr);
     issue_generateToken(curl_handle,token,argstr,NXTACCTSECRET);
