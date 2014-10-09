@@ -276,7 +276,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
         if ( (len= deonionize(pubkey,decoded,recvbuf,recvlen)) > 0 )
         {
             memcpy(&destbits,decoded,sizeof(destbits));
-            if ( cp != 0 && (destbits == 0 || destbits == cp->pubnxtbits || destbits == cp->srvpubnxtbits) )
+            while ( cp != 0 && (destbits == 0 || destbits == cp->pubnxtbits || destbits == cp->srvpubnxtbits) )
             {
                 memset(decoded2,0,sizeof(decoded2));
                 if ( (len2= deonionize(pubkey2,decoded2,decoded,len)) > 0 )
@@ -286,7 +286,12 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                     len = len2;
                     memcpy(decoded,decoded2,len);
                     memcpy(pubkey,pubkey2,sizeof(pubkey));
-                } else printf("couldnt decrypt2 packet len.%d\n",len);
+                }
+                else
+                {
+                    printf("couldnt decrypt2 packet len.%d\n",len);
+                    break;
+                }
             }
         }
         else
@@ -350,7 +355,7 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                     }
                     free_json(tmpjson);
                 }
-                if ( strcmp(checkstr,"ping") == 0 )
+                if ( strcmp(checkstr,"ping") == 0 || strcmp(checkstr,"pong") == 0 )
                 {
                     char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *argjson,char *sender,int32_t valid,char *origargstr);
                     tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
