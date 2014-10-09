@@ -209,8 +209,8 @@ extern json_spirit::Value decodescript(const json_spirit::Array& params, bool fH
 extern json_spirit::Value signrawtransaction(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendrawtransaction(const json_spirit::Array& params, bool fHelp);
 //bitcoindark: teleporter RPC command
-extern json_spirit::Value jl777(const json_spirit::Array& params, bool fHelp);
-extern json_spirit::Value jl777json(const json_spirit::Array& params, bool fHelp);
+//extern json_spirit::Value jl777(const json_spirit::Array& params, bool fHelp);
+//extern json_spirit::Value jl777json(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value jl777_JSON(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getbestblockhash(const json_spirit::Array& params, bool fHelp); // in rpcblockchain.cpp

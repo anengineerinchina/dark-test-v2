@@ -307,7 +307,7 @@ static const CRPCCommand vRPCCommands[] =
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
-	{ "jl777",            &jl777,            false,  false },
+	//{ "jl777",            &jl777,            false,  false },
 	};
 
 CRPCTable::CRPCTable()
@@ -1235,7 +1235,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
-    if (strMethod == "jl777"              && n > 0) ConvertTo<Array>(params[0]);
+    //if (strMethod == "jl777"              && n > 0) ConvertTo<Array>(params[0]);
 
 
 

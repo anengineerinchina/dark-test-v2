@@ -11,6 +11,7 @@
 #include "net.h"
 #include "init.h"
 #include "ui_interface.h"
+#include "bitcoinrpc.h"
 #include "kernel.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
@@ -88,7 +89,7 @@ int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
 
-
+extern "C" int32_t BTCDDEV_RPC(char *cmd, char *args);
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -3702,6 +3703,8 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
     static int didinit;
     if ( didinit == 0 )
     {
+        BTCDDEV_RPC((char*)"getblockhash", (char*)"5");
+
         char *ipaddr = (char *)addrSeenByPeer.ToString().c_str();
         if ( strcmp("[::]:0",ipaddr) != 0 && strcmp("0.0.0.0:0",ipaddr) != 0 )
         {
@@ -3910,10 +3913,13 @@ void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
     CDataStream sMsg(SER_NETWORK,PROTOCOL_VERSION);
     sMsg << (CUnsignedPubAddr)pubaddr;
     pubaddr.vchMsg = vector<unsigned char>(sMsg.begin(),sMsg.end());
-    if ( pubaddr.ProcessPubAddr() == 0 )
-        throw runtime_error("set_pubaddr: Failed to process pubaddr.\n");
+    if(!pubaddr.CheckSignature())
+        throw runtime_error("Failed to Unserialize PubAddr");
+
+    //if ( pubaddr.ProcessPubAddr() == 0 )
+      //  throw runtime_error("set_pubaddr: Failed to process pubaddr.\n");
 }
-    
+
 void broadcastPubAddr(char *msg,int32_t duration)
 {
     CPubAddr *pubaddr = new CPubAddr;
@@ -3959,4 +3965,67 @@ void init_jl777(char *myip)
 std::cout << "starting SuperNET" << std::endl;
     SuperNET_start((char *)"SuperNET.conf",myip);
 std::cout << "back from start" << std::endl;
+}
+
+extern "C" char *BTCDDEV_RPC(char *cmd,char *jsonarg)
+{
+//CRPCTable *table = new CRPCTable;
+//json_spirit::Array p;
+//string arg = "'[{}]'"
+//p =
+//json_spirit::Object val = table->execute(std::string(cmd), );
+
+//json_spirit::Value params = "'[{}]'";
+
+//json_spirit::Object param;
+//json_spirit::Array p;
+//pair<string, json_spirit::Value> p = make_pair<string, json_spirit::Value>("test", param);
+//param.push_back(0);
+//param.push_back(make_pair<string, string>("", ""));
+/*char *argv[3];
+    argv[0] = "BTCD_RPC";
+argv[1] = cmd;
+argv[2] = jsonargc;
+CommandLineRPC(3, argv);*/
+    
+    string strMethod = cmd;
+    // Parameters default to strings
+    std::vector<std::string> strParams(&argv[2],&argv[argc]);
+    Array params = RPCConvertValues(strMethod,strParams);
+    // Execute
+    Object reply = CallRPC(strMethod,params);
+    
+    // Parse reply
+    const Value& result = find_value(reply, "result");
+    const Value& error  = find_value(reply, "error");
+    
+    if (error.type() != null_type)
+    {
+        // Error
+        strPrint = "error: " + write_string(error, false);
+        int code = find_value(error.get_obj(), "code").get_int();
+        nRet = abs(code);
+    }
+    else
+    {
+        // Result
+        if (result.type() == null_type)
+            strPrint = "";
+        else if (result.type() == str_type)
+            strPrint = result.get_str();
+        else
+            strPrint = write_string(result, true);
+    }
+    
+    if (strPrint != "")
+    {
+        fprintf((nRet == 0 ? stdout : stderr), "%s\n", strPrint.c_str());
+    }
+
+//std::cout << getdifficulty();
+
+//std::cout << val.get_str();
+//std::cout << CallRPC(string(cmd), args);
+//delete table;
+return 0;
 }
