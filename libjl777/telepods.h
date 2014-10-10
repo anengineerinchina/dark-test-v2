@@ -465,7 +465,7 @@ struct telepod *clone_telepod(struct coin_info *cp,struct telepod *refpod,uint64
         printf("fee (%.8f) changeaddr.(%s) availchange %.8f, refsatoshis %.8f\n",dstr(fee),change_podaddr,dstr(availchange),dstr(refsatoshis));
         availchange -= refsatoshis;
         printf("availchange %.8f refsatoshis %.8f\n",dstr(availchange),dstr(refsatoshis));
-        getchar();
+        //getchar();
     }
     if ( (privkey= get_telepod_privkey(&podaddr,pubkey,cp)) != 0 )
     {

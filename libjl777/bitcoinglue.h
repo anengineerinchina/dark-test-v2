@@ -238,11 +238,9 @@ uint64_t calc_telepod_inputs(char **privkeys,struct coin_info *cp,struct rawtran
     return(rp->inputsum);
 }
 
-int64_t calc_telepod_outputs(struct coin_info *cp,struct rawtransaction *rp,char *cloneaddr,uint64_t amount,uint64_t change,char *changeaddr)
+int64_t calc_telepod_outputs(struct coin_info *cp,struct rawtransaction *rp,char *cloneaddr,uint64_t amount,uint64_t change,char *changeaddr,uint64_t fee)
 {
     int32_t n = 0;
-    int64_t fee;
-    fee = calc_transporter_fee(cp,amount);
     if ( rp->inputsum == (amount + change + fee) && amount <= rp->inputsum )
     {
         rp->destaddrs[TELEPOD_CONTENTS_VOUT] = cloneaddr;
@@ -373,10 +371,10 @@ char *calc_telepod_transaction(struct coin_info *cp,struct rawtransaction *rp,st
     uint64_t amount = (srcsatoshis + change + fee);
     char *rawparams,*privkeys[MAX_COIN_INPUTS],*retstr = 0;
     memset(privkeys,0,sizeof(privkeys));
-    printf("calc_telepod_transaction amount %.8f = (%.8f + %.8f)\n",dstr(amount),dstr(srcsatoshis),dstr(change));
+    printf("calc_telepod_transaction amount %.8f = (%.8f + %.8f + %.8f)\n",dstr(amount),dstr(srcsatoshis),dstr(change),dstr(fee));
     if ( (retA= calc_telepod_inputs(privkeys,cp,rp,srcpods,changepod,amount,fee,change)) == (srcsatoshis + change + fee) )
     {
-        if ( (retB= calc_telepod_outputs(cp,rp,destaddr,srcsatoshis,change,changeaddr)) == srcsatoshis )
+        if ( (retB= calc_telepod_outputs(cp,rp,destaddr,srcsatoshis,change,changeaddr,fee)) == srcsatoshis )
         {
             rawparams = createrawtxid_json_params(cp,rp);
             if ( rawparams != 0 )
