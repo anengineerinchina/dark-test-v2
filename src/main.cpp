@@ -692,12 +692,14 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         
 		//bitcoindark: value checks for teleport/multisig fees
 		bool isTeleport;
-        std::cout << "tx.vout[0] = " << tx.vout[0].nValue << std::endl;
-        
-        isTeleport = is_teleport_denomination(tx.vout[0].nValue);
-        std::cout << "amount: " << (double)COIN/tx.vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
         int64_t txMinFee;
-        
+
+        isTeleport = is_teleport_denomination(tx.vout[0].nValue);
+        if ( isTeleport != 0 )
+        {
+            std::cout << "tx.vout[0] = " << tx.vout[0].nValue << std::endl;
+            std::cout << "amount: " << (double)COIN/tx.vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
+        }
 		if (isTeleport)
 			txMinFee = tx.GetMinFee(1000, GMF_TELEPORT, nSize);
         //TODO: add another if stmt here to set min fee if multisig
@@ -1467,10 +1469,12 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             
             //bitcoindark: value checks for teleport/multisig fees
             bool isTeleport;
-            std::cout << "In CTransaction::ConnectInputs(). vout[0] = " << vout[0].nValue << std::endl;
             isTeleport = is_teleport_denomination(vout[0].nValue);
-            std::cout << "amount: " << (double)COIN/vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
-            
+            if ( isTeleport != 0 )
+            {
+                std::cout << "In CTransaction::ConnectInputs(). vout[0] = " << vout[0].nValue << std::endl;
+                std::cout << "amount: " << (double)COIN/vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
+            }
             // enforce transaction fees for every block
             if (nTxFee < (isTeleport ? 0 : GetMinFee()))
             {
