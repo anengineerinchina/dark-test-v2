@@ -228,7 +228,7 @@ uint64_t calc_telepod_inputs(char **privkeys,struct coin_info *cp,struct rawtran
         privkeys[rp->numinputs] = (char *)&changepod->privkey_shares[changepod->len_plus1 * calc_multisig_N(changepod)];
         rp->inputs[rp->numinputs++] = conv_telepod(changepod);
     }
-    rp->amount = rp->inputsum - rp->change;
+    rp->amount = rp->inputsum - rp->change - fee;
     printf("numinputs %d sum %.8f vs amount %.8f change %.8f -> miners %.8f\n",rp->numinputs,dstr(rp->inputsum),dstr(rp->amount),dstr(rp->change),dstr(rp->inputsum - rp->change - rp->amount));
     if ( rp->inputsum != (rp->amount + fee + rp->change) )
     {
@@ -370,7 +370,7 @@ char *calc_telepod_transaction(struct coin_info *cp,struct rawtransaction *rp,st
 {
     long len;
     int64_t retA=0,retB=0;
-    uint64_t amount = (srcsatoshis + change);
+    uint64_t amount = (srcsatoshis + change + fee);
     char *rawparams,*privkeys[MAX_COIN_INPUTS],*retstr = 0;
     memset(privkeys,0,sizeof(privkeys));
     printf("calc_telepod_transaction amount %.8f = (%.8f + %.8f)\n",dstr(amount),dstr(srcsatoshis),dstr(change));
