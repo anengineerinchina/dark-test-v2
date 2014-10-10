@@ -1468,7 +1468,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             //bitcoindark: value checks for teleport/multisig fees
             bool isTeleport;
             std::cout << "In CTransaction::ConnectInputs(). vout[0] = " << vout[0].nValue << std::endl;
-            isTeleport = is_teleport_denomination(tx.vout[0].nValue);
+            isTeleport = is_teleport_denomination(vout[0].nValue);
             std::cout << "amount: " << (double)COIN/vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
             
             // enforce transaction fees for every block
