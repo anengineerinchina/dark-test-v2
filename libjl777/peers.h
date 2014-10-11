@@ -358,8 +358,8 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
             pserver = get_pserver(0,ipaddr,0,0);
             pserver->nxt64bits = peer->srvnxtbits;
             printf("ADDED privacyServer.%d: %s\n",Numpservers,ipaddr);
-            if ( cp != 0 && cp->myipaddr[0] != 0 )
-                addto_hasips(1,get_pserver(0,cp->myipaddr,0,0),peer->srv.ipbits);
+            //if ( cp != 0 && cp->myipaddr[0] != 0 )
+            //    addto_hasips(1,get_pserver(0,cp->myipaddr,0,0),peer->srv.ipbits);
         }
     }
     printf("isPserver.%d add_peerinfo Numpeers.%d added %llu srv.%llu\n",isPserver,Numpeers,(long long)refpeer->pubnxtbits,(long long)refpeer->srvnxtbits);
@@ -578,8 +578,8 @@ char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender
     pserver = get_pserver(0,refipaddr,0,0);
     pserver->hasnum = hasnum;
     pserver->xorsum = xorsum;
-    for (i=0; i<n; i++)
-        addto_hasips(0,pserver,pservers[i]);
+    //for (i=0; i<n; i++)
+    //    addto_hasips(0,pserver,pservers[i]);
     port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)prevaddr);
     printf(">>>>>>>>>>>> publishPservers from sender.(%s) prevaddr.%s/%d first.%d hasnum.%d n.%d\n",sender,ipaddr,port,firsti,hasnum,n);
     return(0);

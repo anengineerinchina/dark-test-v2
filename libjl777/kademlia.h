@@ -124,6 +124,7 @@ uint32_t addto_hasips(int32_t recalc_flag,struct pserver_info *pserver,uint32_t 
             if ( pserver->hasips[i] == ipbits )
                 return(0);
     }
+    printf("addto_hasips %p num.%d\n",pserver->hasips,pserver->numips);
     pserver->hasips = realloc(pserver->hasips,sizeof(*pserver->hasips) + (pserver->numips + 1));
     pserver->hasips[pserver->numips] = ipbits;
     pserver->numips++;
@@ -716,6 +717,7 @@ void update_Kbuckets(struct nodestats *stats,uint64_t nxt64bits,char *ipaddr,int
         struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer);
         set_pubpeerinfo(srvNXTaddr,ipaddr,port,&peer,0,pubkeystr,pserver->nxt64bits,0);
         update_peerinfo(&createdflag,&peer);
+        fprintf(stderr,"finished updating peer\n");
     }
     if ( ipaddr != 0 && ipaddr[0] != 0 )
     {
@@ -755,6 +757,7 @@ void update_Kbuckets(struct nodestats *stats,uint64_t nxt64bits,char *ipaddr,int
             xorbits ^= stats->nxt64bits;
             bucketid = bitweight(xorbits);
             Kbucket_updated[bucketid] = time(NULL);
+            fprintf(stderr,"call update_Kbucket\n");
             update_Kbucket(bucketid,K_buckets[bucketid],KADEMLIA_NUMK,stats);
         }
     }
