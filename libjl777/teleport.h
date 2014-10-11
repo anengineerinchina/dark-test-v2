@@ -297,7 +297,8 @@ void teleport_idler(uv_idle_t *handle)
     {
         if ( ((rand()>>8) % 100) < 50 )
         {
-            firstwr = wr;
+            //printf("skip packet\n");
+            //firstwr = wr;
             queue_enqueue(&sendQ,wr);
             wr = queue_dequeue(&sendQ);
         }
