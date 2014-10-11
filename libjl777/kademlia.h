@@ -750,7 +750,7 @@ void update_Kbuckets(struct nodestats *stats,uint64_t nxt64bits,char *ipaddr,int
     if ( cp != 0 )
     {
         pserver = get_pserver(0,cp->myipaddr,0,0);
-        addto_hasips(1,pserver,stats->ipbits);
+        //addto_hasips(1,pserver,stats->ipbits);
         xorbits = (cp->srvpubnxtbits != 0) ? cp->srvpubnxtbits : cp->pubnxtbits;
         if ( stats->nxt64bits != 0 ) //stats->nxt64bits != xorbits && 
         {

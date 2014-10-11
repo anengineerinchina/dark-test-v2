@@ -328,7 +328,7 @@ struct peerinfo *add_peerinfo(struct peerinfo *refpeer)
 {
     char NXTaddr[64],ipaddr[16];
     int32_t createdflag,isPserver;
-    struct coin_info *cp = get_coin_info("BTCD");
+    //struct coin_info *cp = get_coin_info("BTCD");
     struct NXT_acct *np = 0;
     struct peerinfo *peer = 0;
     struct pserver_info *pserver;
@@ -563,7 +563,7 @@ char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECR
 
 char *publishPservers(struct sockaddr *prevaddr,char *NXTACCTSECRET,char *sender,int32_t firsti,int32_t hasnum,uint32_t *pservers,int32_t n,uint32_t xorsum)
 {
-    int32_t i,port,createdflag;
+    int32_t port,createdflag;
     char ipaddr[64],refipaddr[64];
     struct NXT_acct *np;
     struct pserver_info *pserver = 0;
