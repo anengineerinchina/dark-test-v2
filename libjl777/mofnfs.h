@@ -413,19 +413,24 @@ char *mofn_savefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
 
 double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int32_t n,uint64_t calcaddr,int32_t targetdist)
 {
-    int32_t i,flag = 0;
-    double metric,dist,diff,sum;
+    int32_t i,numabove,numbelow,flag = 0;
+    double metric,dist,diff,sum,balance;
     metric = bitweight(refaddr ^ calcaddr);
     if ( metric > targetdist )
-        return(100.);
-    diff = sum = 0.;
+        return(10000000.);
+    diff = sum = balance = 0.;
     if ( list != 0 && n != 0 )
     {
+        numabove = numbelow = 0;
         for (i=0; i<n; i++)
         {
             if ( list[i] != refaddr )
             {
                 dist = bitweight(list[i] ^ calcaddr);
+                if ( dist > metric )
+                    numabove++;
+                else if ( dist < metric )
+                    numbelow++;
                 if ( dispflag != 0 )
                     printf("%.0f ",dist);
                 sum += (dist * dist);
@@ -435,15 +440,16 @@ double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int3
         }
         if ( n == 1 )
             flag = 0;
+        balance = fabs(numabove - numbelow);
+        balance *= balance;
         sum = sqrt(sum / (n - flag));
         diff = sqrt(diff / (n - flag));
         if ( dispflag != 0 )
-            printf("n.%d flag.%d sum %.3f | diff %.3f | ",n,flag,sum,diff);
+            printf("n.%d flag.%d sum %.3f | diff %.3f | above.%d below.%d balance %.0f ",n,flag,sum,diff,numabove,numbelow,balance);
     }
-    dist = fabs(metric - sum);
     if ( dispflag != 0 )
-        printf("metric %.3f dist %.3f -> %.3f\n",metric,dist,metric + dist + diff);
-    return(metric + dist + diff);
+        printf("dist %.3f -> %.3f\n",metric,diff + balance);
+    return(diff + balance);
 }
 
 struct loopargs
@@ -563,7 +569,7 @@ char *findaddress(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTS
             printf(">>>>>>>>>>>>>>> new best (%s) %016llx %llu dist.%d metric %.2f vs %016llx %llu\n",bestpassword,(long long)calcaddr,(long long)calcaddr,bitweight(addr ^ bestaddr),best,(long long)addr,(long long)addr);
             lastbest = best;
         }
-        printf("milli %f vs endmilli %f\n",milliseconds(),endmilli);
+        //printf("milli %f vs endmilli %f\n",milliseconds(),endmilli);
     }
     else
     {
