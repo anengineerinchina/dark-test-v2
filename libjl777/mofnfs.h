@@ -560,7 +560,7 @@ char *findaddress(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTS
         }
         if ( best < lastbest )
         {
-            printf(">>>>>>>>>>>>>>> new best %016llx %llu dist.%d metric %.2f vs %016llx %llu\n",(long long)calcaddr,(long long)calcaddr,bitweight(addr ^ bestaddr),best,(long long)addr,(long long)addr);
+            printf(">>>>>>>>>>>>>>> new best (%s) %016llx %llu dist.%d metric %.2f vs %016llx %llu\n",bestpassword,(long long)calcaddr,(long long)calcaddr,bitweight(addr ^ bestaddr),best,(long long)addr,(long long)addr);
             lastbest = best;
         }
         printf("milli %f vs endmilli %f\n",milliseconds(),endmilli);
