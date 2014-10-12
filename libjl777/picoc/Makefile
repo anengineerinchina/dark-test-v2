@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -pedantic -g -fPIC
+CFLAGS=-Wall -pedantic -g -fPIC -O3 
 LIBS=-lm -lreadline 
 
 TARGET	= picoc

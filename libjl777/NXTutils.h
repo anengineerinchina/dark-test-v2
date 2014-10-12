@@ -1415,17 +1415,23 @@ uint32_t calc_xorsum(struct peerinfo **peers,int32_t n)
     return(xorsum);
 }
 
-struct nodestats *get_nodestats(uint64_t nxt64bits)
+struct nodestats *get_nodestats(struct peerinfo **peerptrp,uint64_t nxt64bits)
 {
     struct nodestats *stats = 0;
     int32_t createdflag;
     struct NXT_acct *np;
+    struct peerinfo *peer;
     char NXTaddr[64];
     if ( nxt64bits != 0 )
     {
         expand_nxt64bits(NXTaddr,nxt64bits);
         np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
-        return(&np->mypeerinfo.srv);
+        peer = &np->mypeerinfo;
+        if ( peer->pubnxtbits == 0 )
+            peer->srvnxtbits = peer->pubnxtbits = peer->srv.nxt64bits = nxt64bits;
+        if ( peerptrp != 0 )
+            (*peerptrp) = peer;
+        return(&peer->srv);
     }
     return(stats);
 }
@@ -1438,7 +1444,7 @@ struct pserver_info *get_pserver(int32_t *createdp,char *ipaddr,uint16_t superne
     if ( createdp == 0 )
         createdp = &createdflag;
     pserver = MTadd_hashtable(createdp,Global_mp->Pservers_tablep,ipaddr);
-    if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
+    if ( (stats= get_nodestats(0,pserver->nxt64bits)) != 0 )
     {
         if ( *createdp != 0 || (supernet_port != 0 && supernet_port != BTCD_PORT && supernet_port != stats->supernet_port) )
             stats->supernet_port = supernet_port;
