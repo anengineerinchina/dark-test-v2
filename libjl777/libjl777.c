@@ -687,7 +687,7 @@ char *getpeers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     if ( prevaddr != 0 )
         return(0);
     copy_cJSON(numstr,objs[0]);
-    json = gen_peers_json(atoi(numstr),NXTACCTSECRET);
+    json = gen_peers_json(prevaddr,NXTaddr,NXTACCTSECRET,sender,atoi(numstr));
     if ( json != 0 )
     {
         jsonstr = cJSON_Print(json);
@@ -903,7 +903,7 @@ char *ping_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char
     copy_cJSON(ipaddr,objs[1]);
     port = get_API_int(objs[2],0);
     copy_cJSON(destip,objs[3]);
-    printf("ping got sender.(%s) valid.%d pubkey.(%s) ipaddr.(%s) port.%d destip.(%s)\n",sender,valid,pubkey,ipaddr,port,destip);
+    //printf("ping got sender.(%s) valid.%d pubkey.(%s) ipaddr.(%s) port.%d destip.(%s)\n",sender,valid,pubkey,ipaddr,port,destip);
     if ( sender[0] != 0 && valid > 0 )
         retstr = kademlia_ping(prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,ipaddr,port,destip);
     else retstr = clonestr("{\"error\":\"invalid ping_func arguments\"}");

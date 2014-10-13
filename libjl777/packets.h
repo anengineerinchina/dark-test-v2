@@ -56,7 +56,7 @@ int32_t _decode_cipher(char *str,unsigned char *cipher,int32_t *lenp,unsigned ch
     return(err);
 }
 
-int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *encoded,int32_t len)
+int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *encoded,int32_t len,char *senderip,int32_t port)
 {
     //void *origencoded = encoded;
     int32_t err;
@@ -73,7 +73,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
         memcpy(&payload_len,encoded,sizeof(payload_len));
         //printf("deonionize >>>>> pubkey.%llx vs mypubkey.%llx (%llx) -> %d %2x\n",*(long long *)pubkey,*(long long *)Global_mp->session_pubkey,*(long long *)Global_mp->loopback_pubkey,payload_len,payload_len);
         encoded += sizeof(payload_len);
-        printf("packedest.%llu srvpub.%llu (%s) payload_len.%d\n",(long long)packetdest,(long long)cp->srvpubnxtbits,cp->privacyserver,payload_len);
+        printf("packedest.%llu srvpub.%llu (%s:%d) payload_len.%d\n",(long long)packetdest,(long long)cp->srvpubnxtbits,senderip,port,payload_len);
         if ( (payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(packetdest)) <= len )
         {
             len = payload_len;
@@ -179,7 +179,7 @@ int32_t pserver_canhop(struct pserver_info *pserver,char *hopNXTaddr)
     np = get_NXTacct(&createdflag,Global_mp,hopNXTaddr);
     if ( (hasips= pserver->hasips) != 0 )
     {
-        for (i=0; i<pserver->numips; i++)
+        for (i=0; i<pserver->numips&&i<(int)(sizeof(pserver->hasips)/sizeof(*pserver->hasips)); i++)
             if ( hasips[i] == np->stats.ipbits )
             {
                 char ipaddr[16];
@@ -268,13 +268,13 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
     {
         recvbuf += sizeof(uint32_t);
         recvlen -= sizeof(uint32_t);
-        if ( (len= deonionize(pubkey,decoded,recvbuf,recvlen)) > 0 )
+        if ( (len= deonionize(pubkey,decoded,recvbuf,recvlen,sender,port)) > 0 )
         {
             memcpy(&destbits,decoded,sizeof(destbits));
             while ( cp != 0 && (destbits == 0 || destbits == cp->pubnxtbits || destbits == cp->srvpubnxtbits) )
             {
                 memset(decoded2,0,sizeof(decoded2));
-                if ( (len2= deonionize(pubkey2,decoded2,decoded,len)) > 0 )
+                if ( (len2= deonionize(pubkey2,decoded2,decoded,len,sender,port)) > 0 )
                 {
                     memcpy(&destbits,decoded2,sizeof(destbits));
                     printf("decrypted2 len2.%d dest2.(%llu)\n",len2,(long long)destbits);
@@ -350,13 +350,27 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                     }
                     free_json(tmpjson);
                 }
-                if ( strcmp(checkstr,"ping") == 0 || strcmp(checkstr,"pong") == 0 )
+                if ( strcmp(checkstr,"ping") == 0 || strcmp(checkstr,"pong") == 0 ) // just means valid
                 {
+                    struct udp_queuecmd *qp;
                     char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *argjson,char *sender,int32_t valid,char *origargstr);
                     tokenized_np = get_NXTacct(&createdflag,Global_mp,senderNXTaddr);
                     update_routing_probs(tokenized_np->H.U.NXTaddr,1,udp == 0,&tokenized_np->stats,sender,port,pubkey);
                     //printf("GOT.(%s)\n",parmstxt);
-                    jsonstr = pNXT_json_commands(Global_mp,prevaddr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
+                    if ( 0 )
+                    {
+                        qp = calloc(1,sizeof(*qp));
+                        qp->prevaddr = *prevaddr;
+                        qp->argjson = argjson;
+                        qp->valid = valid;
+                        qp->tokenized_np = tokenized_np;
+                        qp->decoded = clonestr((char *)decoded);
+                        //printf("queue argjson.%p\n",argjson);
+                        queue_enqueue(&udp_JSON,qp);
+                        argjson = 0;
+                        jsonstr = 0;
+                    }
+                    else jsonstr = pNXT_json_commands(Global_mp,prevaddr,argjson,tokenized_np->H.U.NXTaddr,valid,(char *)decoded);
                     if ( jsonstr != 0 )
                     {
                         //printf("should send tokenized.(%s) to %s\n",jsonstr,tokenized_np->H.U.NXTaddr);
@@ -371,7 +385,8 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
                 else printf("encrypted.%d: checkstr.(%s) for (%s)\n",encrypted,checkstr,parmstxt);
             }
             else printf("valid.%d | unexpected non-tokenized message.(%s)\n",valid,decoded);
-            free_json(argjson);
+            if ( argjson != 0 )
+                free_json(argjson);
             if ( parmstxt != 0 )
                 free(parmstxt);
             return(tokenized_np);

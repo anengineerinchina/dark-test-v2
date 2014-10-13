@@ -50,16 +50,25 @@ struct write_req_t
     int32_t allocflag;
 };
 
-struct peer_queue_entry
+struct udp_queuecmd
+{
+    struct sockaddr prevaddr;
+    cJSON *argjson;
+    struct NXT_acct *tokenized_np;
+    char *decoded;
+    int32_t valid;
+};
+
+/*struct peer_queue_entry
 {
     struct peerinfo *peer,*hop;
     float startmilli,elapsed;
     uint8_t stateid,state;
-};
+};*/
 
 static long server_xferred;
 int Servers_started;
-queue_t P2P_Q,sendQ,JSON_Q;
+queue_t P2P_Q,sendQ,JSON_Q,udp_JSON;
 struct pingpong_queue PeerQ;
 //struct peerinfo **Peers,**Pservers;Numpeers,Numpservers,
 int32_t Num_in_whitelist;
@@ -182,7 +191,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
             //int i;
             //for (i=0; i<16; i++)
             //    printf("%02x ",((unsigned char *)rcvbuf->base)[i]);
-            printf("UDP RECEIVED %ld from %s/%d crc.%x\n",nread,ipaddr,supernet_port,_crc32(0,rcvbuf->base,nread));
+            printf("UDP RECEIVED %ld from %s/%d crc.%x | ",nread,ipaddr,supernet_port,_crc32(0,rcvbuf->base,nread));
         }
         expand_nxt64bits(NXTaddr,cp->pubnxtbits);
         expand_nxt64bits(srvNXTaddr,cp->srvpubnxtbits);
@@ -443,7 +452,7 @@ uint64_t p2p_publishpacket(struct pserver_info *pserver,char *cmd)
         np = get_NXTacct(&createdflag,Global_mp,cp->srvNXTADDR);
         if ( cmd == 0 )
         {
-            sprintf(_cmd,"{\"requestType\":\"%s\",\"NXT\":\"%s\",\"time\":%ld,\"pubkey\":\"%s\",\"ipaddr\":\"%s\"","ping",cp->srvNXTADDR,(long)time(NULL),Global_mp->pubkeystr,cp->myipaddr);
+            sprintf(_cmd,"{\"requestType\":\"%s\",\"NXT\":\"%s\",\"time\":%ld,\"pubkey\":\"%s\",\"ipaddr\":\"%s\"}","ping",cp->srvNXTADDR,(long)time(NULL),Global_mp->pubkeystr,cp->myipaddr);
         }
         else strcpy(_cmd,cmd);
         //printf("_cmd.(%s)\n",_cmd);
