@@ -749,7 +749,6 @@ char *savefile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     char fname[MAX_JSON_FIELD],usbname[MAX_JSON_FIELD],password[MAX_JSON_FIELD],*retstr = 0;
     if ( prevaddr != 0 )
         return(clonestr("{\"error\":\"savefile is only for local access\"}"));
-    
     copy_cJSON(fname,objs[0]);
     L = get_API_int(objs[1],0);
     M = get_API_int(objs[2],1);
@@ -910,8 +909,6 @@ char *ping_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char
 {
     int32_t port;
     char pubkey[MAX_JSON_FIELD],destip[MAX_JSON_FIELD],ipaddr[MAX_JSON_FIELD],*retstr = 0;
-    if ( prevaddr != 0 )
-        return(0);
     copy_cJSON(pubkey,objs[0]);
     copy_cJSON(ipaddr,objs[1]);
     port = get_API_int(objs[2],0);
@@ -927,6 +924,8 @@ char *pong_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char
 {
     char pubkey[MAX_JSON_FIELD],ipaddr[MAX_JSON_FIELD],*retstr = 0;
     uint16_t port;
+    if ( prevaddr == 0 )
+        return(0);
     copy_cJSON(pubkey,objs[0]);
     copy_cJSON(ipaddr,objs[1]);
     port = get_API_int(objs[2],0);
@@ -963,7 +962,7 @@ char *findnode_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     set_kademlia_args(key,objs[1],objs[2]);
     copy_cJSON(value,objs[3]);
     if ( Debuglevel > 1 )
-        printf("findnode.%p (%s) (%s) (%s)\n",prevaddr,sender,pubkey,key);
+        printf("findnode.%p (%s) (%s) (%s) (%s)\n",prevaddr,sender,pubkey,key,value);
     if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
         retstr = kademlia_find("findnode",prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key,value);
     else retstr = clonestr("{\"error\":\"invalid findnode_func arguments\"}");

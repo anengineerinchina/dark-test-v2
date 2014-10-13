@@ -246,7 +246,8 @@ uint64_t _send_kademlia_cmd(int32_t encrypted,struct pserver_info *pserver,char 
     char _tokbuf[4096];
     uint64_t txid;
     len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
-    //printf(">>>>>>>> directsend.[%s]\n",_tokbuf);
+    if ( Debuglevel > 1 )
+        printf(">>>>>>>> directsend.[%s]\n",_tokbuf);
     txid = directsend_packet(encrypted,pserver,_tokbuf,len,data,datalen);
     return(txid);
 }
@@ -295,7 +296,7 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
     }
     else
     {
-        if ( 0 && strcmp(kadcmd,"pong") == 0 )
+        if ( 1 && strcmp(kadcmd,"pong") == 0 )
             encrypted = 0;
         sprintf(cmdstr,"{\"requestType\":\"%s\",\"NXT\":\"%s\",\"time\":%ld,\"pubkey\":\"%s\"",kadcmd,verifiedNXTaddr,(long)time(NULL),pubkeystr);
     }
@@ -387,6 +388,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
 {
     uint64_t txid = 0;
     char retstr[1024];
+    printf("got ping.%d\n",ismynode(prevaddr));
     if ( ismynode(prevaddr) != 0 ) // user invoked
     {
         if ( destip != 0 && destip[0] != 0 && ismyipaddr(destip) == 0 )
@@ -400,7 +402,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     else // sender ping'ed us
     {
         if ( verify_addr(prevaddr,ipaddr,port) < 0 )
-            sprintf(retstr,"{\"error\":\"kademlia_pong from %s doesnt verify (%s/%d)\"}",sender,ipaddr,port);
+            sprintf(retstr,"{\"error\":\"kademlia_ping from %s doesnt verify (%s/%d)\"}",sender,ipaddr,port);
         else
         {
             txid = send_kademlia_cmd(0,get_pserver(0,ipaddr,0,0),"pong",NXTACCTSECRET,0,0);
@@ -585,7 +587,7 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
     struct kademlia_store *sp;
     struct nodestats *stats;
     if ( Debuglevel > 1 )
-        printf("kademlia_find.(%s) (%s)\n",cmd,key);
+        printf("kademlia_find.(%s) (%s) data.(%s) mynode.%d %p\n",cmd,key,datastr!=0?datastr:"",ismynode(prevaddr),prevaddr);
     if ( key != 0 && key[0] != 0 )
     {
         senderbits = calc_nxt64bits(sender);
@@ -635,11 +637,11 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
                             send_kademlia_cmd(destbits,0,"ping",NXTACCTSECRET,0,0);
                         if ( Debuglevel > 1 )
                             printf("call %llu (%s)\n",(long long)destbits,cmd);
-                        txid = send_kademlia_cmd(destbits,0,cmd,NXTACCTSECRET,key,0);
+                        txid = send_kademlia_cmd(destbits,0,cmd,NXTACCTSECRET,key,datastr);
                     }
                 }
             }
-            else if ( ismynxtbits(senderbits) == 0 ) // need to respond to sender
+            else if ( ismynxtbits(senderbits) == 0 && (strcmp(cmd,"findnode") != 0 || datastr == 0) ) // need to respond to sender
             {
                 array = cJSON_CreateArray();
                 for (i=0; i<n&&i<KADEMLIA_NUMK; i++)
