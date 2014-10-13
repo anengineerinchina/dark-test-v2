@@ -85,7 +85,7 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
     mp->pollseconds = POLL_SECONDS;
     crypto_box_keypair(Global_mp->loopback_pubkey,Global_mp->loopback_privkey);
     crypto_box_keypair(Global_mp->session_pubkey,Global_mp->session_privkey);
-    init_hexbytes_noT(Global_mp->pubkeystr,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
+    init_hexbytes_noT(Global_mp->pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
     if ( portable_thread_create((void *)process_hashtablequeues,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
     mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,(void *)on_udprecv);
@@ -94,7 +94,7 @@ void init_NXTservices(char *JSON_or_fname,char *myipaddr)
     if ( 0 && portable_thread_create((void *)getNXTblocks,mp) == 0 )
         printf("ERROR start_Histloop\n");
     //mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
-    init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
+    //init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
 
     printf("run_NXTservices >>>>>>>>>>>>>>> %p %s: %s\n",mp,mp->dispname,mp->ipaddr);
     void run_NXTservices(void *arg);
@@ -226,6 +226,8 @@ char *placequote_func(struct sockaddr *prevaddr,int32_t dir,char *sender,int32_t
     double price,volume;
     struct orderbook_tx tx;
     char buf[MAX_JSON_FIELD],txidstr[64],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     nxt64bits = calc_nxt64bits(sender);
     obookid = get_API_nxt64bits(objs[0]);
     polarity = get_API_int(objs[1],1);
@@ -296,6 +298,8 @@ char *teleport_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     int32_t M,N;
     struct coin_info *cp;
     char destaddr[MAX_JSON_FIELD],minage[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     if ( Historical_done == 0 )
         return(clonestr("historical processing is not done yet"));
     amount = get_API_float(objs[0]);
@@ -319,6 +323,8 @@ char *sendmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     static int counter;
     char previp[64],nexthopNXTaddr[64],destNXTaddr[64],msg[MAX_JSON_FIELD],*retstr = 0;
     int32_t L,port,len;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(destNXTaddr,objs[0]);
     copy_cJSON(msg,objs[1]);
     L = (int32_t)get_API_int(objs[2],Global_mp->Lfactor);
@@ -351,6 +357,8 @@ char *sendbinary_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
     static int counter;
     char previp[64],nexthopNXTaddr[64],destNXTaddr[64],cmdstr[MAX_JSON_FIELD],datastr[MAX_JSON_FIELD],*retstr = 0;
     int32_t L,port;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(destNXTaddr,objs[0]);
     copy_cJSON(datastr,objs[1]);
     L = (int32_t)get_API_int(objs[2],Global_mp->Lfactor);
@@ -379,6 +387,8 @@ char *sendbinary_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
 char *checkmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char senderNXTaddr[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(senderNXTaddr,objs[0]);
     if ( sender[0] != 0 && valid > 0 )
         retstr = checkmessages(sender,NXTACCTSECRET,senderNXTaddr);
@@ -386,6 +396,7 @@ char *checkmsg_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     return(retstr);
 }
 
+/*
 char *getpubkey_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char addr[MAX_JSON_FIELD],destcoin[MAX_JSON_FIELD],*retstr = 0;
@@ -448,7 +459,7 @@ char *publishaddrs_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
         retstr = publishaddrs(prevaddr,m!=0?coins:0,NXTACCTSECRET,pubNXT,pubkey,BTCDaddr,BTCaddr,srvNXTaddr,srvipaddr,atoi(srvport),atoi(haspservers),(uint32_t)atol(xorsumstr));
     else retstr = clonestr("{\"result\":\"invalid publishaddrs request\"}");
     return(retstr);
-}
+}*/
 
 char *makeoffer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -456,6 +467,8 @@ char *makeoffer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr
     double qtyA,qtyB;
     int32_t type;
     char otherNXTaddr[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(otherNXTaddr,objs[0]);
     assetA = get_API_nxt64bits(objs[1]);
     qtyA = get_API_float(objs[2]);
@@ -484,6 +497,8 @@ char *processutx_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
 char *respondtx_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char signedtx[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(signedtx,objs[0]);
     if ( sender[0] != 0 && valid > 0 && signedtx[0] != 0 )
         retstr = respondtx(sender,signedtx);
@@ -498,6 +513,8 @@ char *tradebot_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     long len;
     cJSON *botjson;
     char code[MAX_JSON_FIELD],retbuf[4096],*str,*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(code,objs[0]);
     printf("tradebotfunc.(%s) sender.(%s) valid.%d code.(%s)\n",origargstr,sender,valid,code);
     if ( sender[0] != 0 && valid > 0 && code[0] != 0 )
@@ -652,6 +669,8 @@ char *maketelepods_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
 {
     uint64_t value;
     char coinstr[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     value = (SATOSHIDEN * get_API_float(objs[0]));
     copy_cJSON(coinstr,objs[1]);
     printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
@@ -665,8 +684,10 @@ char *getpeers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 {
     cJSON *json;
     char numstr[MAX_JSON_FIELD],*jsonstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(numstr,objs[0]);
-    json = gen_peers_json(atoi(numstr));
+    json = gen_peers_json(atoi(numstr),NXTACCTSECRET);
     if ( json != 0 )
     {
         jsonstr = cJSON_Print(json);
@@ -675,7 +696,7 @@ char *getpeers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     return(jsonstr);
 }
 
-char *getPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+/*char *getPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     cJSON *json;
     char numstr[MAX_JSON_FIELD],*jsonstr = 0;
@@ -689,6 +710,7 @@ char *getPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
     }
     return(jsonstr);
 }
+
 
 char *publishPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -718,7 +740,7 @@ char *publishPservers_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *pr
     if ( pservers != 0 )
         free(pservers);
     return(retstr);
-}
+}*/
 
 char *savefile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
@@ -857,6 +879,8 @@ char *sendfile_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     FILE *fp;
     int32_t L;
     char fname[MAX_JSON_FIELD],dest[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(fname,objs[0]);
     copy_cJSON(dest,objs[1]);
     L = get_API_int(objs[2],0);
@@ -873,6 +897,8 @@ char *ping_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char
 {
     int32_t port;
     char pubkey[MAX_JSON_FIELD],destip[MAX_JSON_FIELD],ipaddr[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(pubkey,objs[0]);
     copy_cJSON(ipaddr,objs[1]);
     port = get_API_int(objs[2],0);
@@ -1002,7 +1028,7 @@ char *cosign_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,ch
     }
     if ( seedstr[0] == 0 )
         init_hexbytes(seedstr,seed.bytes,sizeof(seed));
-    stats = get_nodestats(0,calc_nxt64bits(otheracctstr));
+    stats = get_nodestats(calc_nxt64bits(otheracctstr));
     if ( strlen(seedstr) == 64 && sender[0] != 0 && valid > 0 && stats != 0 && memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) != 0 )
     {
         memcpy(priv.bytes,Global_mp->loopback_privkey,sizeof(priv));
@@ -1067,11 +1093,11 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     
    // privacyNetwork and comms
     static char *getpeers[] = { (char *)getpeers_func, "getpeers", "V",  "only_privacyServer", 0 };
-    static char *getPservers[] = { (char *)getPservers_func, "getPservers", "V",  "firsti", 0 };
-    static char *publishPservers[] = { (char *)publishPservers_func, "publishPservers", "V", "Pservers", "Numpservers", "firstPserver", "xorsum", 0 };
-    static char *publishaddrs[] = { (char *)publishaddrs_func, "publishaddrs", "V", "pubNXT", "pubkey", "BTCD", "BTC", "srvNXTaddr", "srvipaddr", "srvport", "coins", "Numpservers", "xorsum", 0 };
-    static char *getpubkey[] = { (char *)getpubkey_func, "getpubkey", "V", "addr", "destcoin", 0 };
-    static char *sendpeerinfo[] = { (char *)sendpeerinfo_func, "sendpeerinfo", "V", "addr", "destcoin", "pserver_flag", 0 };
+    //static char *getPservers[] = { (char *)getPservers_func, "getPservers", "V",  "firsti", 0 };
+    //static char *publishPservers[] = { (char *)publishPservers_func, "publishPservers", "V", "Pservers", "Numpservers", "firstPserver", "xorsum", 0 };
+    //static char *publishaddrs[] = { (char *)publishaddrs_func, "publishaddrs", "V", "pubNXT", "pubkey", "BTCD", "BTC", "srvNXTaddr", "srvipaddr", "srvport", "coins", "Numpservers", "xorsum", 0 };
+    //static char *getpubkey[] = { (char *)getpubkey_func, "getpubkey", "V", "addr", "destcoin", 0 };
+   // static char *sendpeerinfo[] = { (char *)sendpeerinfo_func, "sendpeerinfo", "V", "addr", "destcoin", "pserver_flag", 0 };
     static char *sendmsg[] = { (char *)sendmsg_func, "sendmessage", "V", "dest", "msg", "L", 0 };
     static char *sendbinary[] = { (char *)sendbinary_func, "sendbinary", "V", "dest", "data", "L", 0 };
     static char *checkmsg[] = { (char *)checkmsg_func, "checkmessages", "V", "sender", 0 };
@@ -1095,7 +1121,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     // Tradebot
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
 
-     static char **commands[] = { cosign, cosigned, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, publishPservers, sendpeerinfo, getPservers, getpubkey, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, publishaddrs, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, savefile, restorefile  };
+     static char **commands[] = { cosign, cosigned, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, savefile, restorefile  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
@@ -1306,7 +1332,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
     txid = calc_txid((uint8_t *)msg,(int32_t)strlen(msg));
     if ( pserver != 0 )
     {
-        if ( (stats= get_nodestats(0,pserver->nxt64bits)) != 0 )
+        if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
             port = (stats->p2pport == 0) ? BTCD_PORT : stats->p2pport;
         else port = BTCD_PORT;
         sprintf(ip_port,"%s:%d",pserver->ipaddr,port);

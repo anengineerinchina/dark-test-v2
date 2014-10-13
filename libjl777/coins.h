@@ -401,11 +401,13 @@ struct coin_info *create_coin_info(int32_t nohexout,int32_t useaddmultisig,int32
 extern int32_t process_podQ(void *ptr);
 struct coin_info *init_coin_info(cJSON *json,char *coinstr)
 {
+    void add_new_node(uint64_t nxt64bits);
     char *get_telepod_privkey(char **podaddrp,char *pubkey,struct coin_info *cp);
     int32_t useaddmultisig,nohexout,estblocktime,minconfirms,pollseconds,blockheight,forkblock,*cipherids;
     char rpcuserpass[512],asset[256],_marker[512],conf_filename[512],tradebotfname[512],serverip_port[512],buf[512];
     char *marker,*privkey,*coinaddr,**privkeys;
     cJSON *ciphersobj;
+    struct nodestats *stats;
     uint64_t txfee,NXTfee_equiv,min_telepod_satoshis,dust;
     struct coin_info *cp = 0;
     printf("init_coin.(%s)\n",cJSON_Print(json));
@@ -469,6 +471,9 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
 
                         printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->pubaddr,cp->NXTACCTSECRET,(long long)cp->pubnxtbits);
                         free(privkey);
+                        stats = get_nodestats(cp->pubnxtbits);
+                        add_new_node(cp->pubnxtbits);
+                        memcpy(stats->pubkey,Global_mp->session_pubkey,sizeof(stats->pubkey));
                     }
                     printf("check srvpubaddr\n");
                     if ( extract_cJSON_str(cp->srvpubaddr,sizeof(cp->srvpubaddr),json,"srvpubaddr") > 0 )
@@ -481,6 +486,9 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                             expand_nxt64bits(cp->srvNXTADDR,cp->srvpubnxtbits);
                             printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->srvpubaddr,cp->srvNXTACCTSECRET,(long long)cp->srvpubnxtbits);
                             free(privkey);
+                            stats = get_nodestats(cp->srvpubnxtbits);
+                            add_new_node(cp->srvpubnxtbits);
+                            memcpy(stats->pubkey,Global_mp->loopback_pubkey,sizeof(stats->pubkey));
                         }
                     }
                     printf("end check srvpubaddr\n");
@@ -536,17 +544,17 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
 
 void init_MGWconf(char *JSON_or_fname,char *myipaddr)
 {
-    int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxtbits,char *pubBTC);
-    struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer);
+    //int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxtbits,char *pubBTC);
+    //struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer);
     int32_t init_tradebots(cJSON *languagesobj);
     static int32_t exchangeflag;
     uint64_t nxt64bits;
     struct coin_info *cp;
     cJSON *array,*item,*languagesobj = 0;
-    char ipaddr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],NXTADDR[MAX_JSON_FIELD],*buf=0,*jsonstr,*str;
-    int32_t i,n,ismainnet,createdflag,timezone=0;
+    char ipaddr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],NXTADDR[MAX_JSON_FIELD],*buf=0,*jsonstr;
+    int32_t i,n,ismainnet,timezone=0;
     int64_t len=0,allocsize=0;
-    struct peerinfo *refpeer,peer;
+    //struct peerinfo *refpeer,peer;
     NXTACCTSECRET[0] = 0;
     NXTADDR[0] = 0;
     exchangeflag = 0;//!strcmp(NXTACCTSECRET,"exchanges");
@@ -623,7 +631,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
             array = cJSON_GetObjectItem(MGWconf,"coins");
             if ( array != 0 && is_cJSON_Array(array) != 0 )
             {
-                char *pubNXT,*BTCDaddr,*BTCaddr,pubkey[crypto_box_PUBLICKEYBYTES*2+1];
+                char *pubNXT,*BTCDaddr,*BTCaddr;//,pubkey[crypto_box_PUBLICKEYBYTES*2+1];
                 pubNXT = BTCDaddr = BTCaddr = "";
                 n = cJSON_GetArraySize(array);
                 for (i=0; i<n; i++)
@@ -649,7 +657,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                             printf("BTCDaddr.(%s)\n",BTCDaddr);
                             if ( cp->pubnxtbits != 0 )
                                 expand_nxt64bits(NXTADDR,cp->pubnxtbits);
-                            set_pubpeerinfo(cp->srvNXTADDR,cp->privacyserver,cp->srvport,&peer,BTCDaddr,cp->coinpubkey,cp->pubnxtbits,0);
+                            /*set_pubpeerinfo(cp->srvNXTADDR,cp->privacyserver,cp->srvport,&peer,BTCDaddr,cp->coinpubkey,cp->pubnxtbits,0);
                             refpeer = update_peerinfo(&createdflag,&peer);
                             if ( refpeer != 0 && strcmp(cp->privacyserver,"127.0.0.1") == 0 )
                             {
@@ -658,7 +666,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                                 set_pubpeerinfo(cp->srvNXTADDR,cp->myipaddr,cp->srvport,&peer,cp->srvpubaddr,cp->srvcoinpubkey,cp->srvpubnxtbits,0);
                                 update_peerinfo(&createdflag,&peer);
                                 printf("update_peerinfo loopback privacyServer (%s)\n",cp->myipaddr);
-                            }
+                            }*/
                         }
                         else if ( strcmp(coinstr,"BTC") == 0 )
                             BTCaddr = cp->pubaddr;
@@ -666,7 +674,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                             pubNXT = cp->pubaddr;
                      }
                 }
-                if ( (cp= get_coin_info("BTCD")) != 0 )
+                /*if ( (cp= get_coin_info("BTCD")) != 0 )
                 {
                     char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkey,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport,int32_t haspservers,uint32_t xorsum);
                     init_hexbytes_noT(pubkey,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
@@ -681,7 +689,7 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         if ( str != 0 )
                             printf("publish loopback privacyserver.(%s)\n",str), free(str);
                     }
-                }
+                }*/
             } else printf("no coins array.%p ?\n",array);
             if ( NXTACCTSECRET[0] == 0 )
                 gen_randomacct(0,33,NXTADDR,NXTACCTSECRET,"randvals");
