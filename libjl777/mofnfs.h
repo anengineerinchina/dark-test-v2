@@ -426,7 +426,7 @@ double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int3
     int32_t i,numabove,numbelow,flag = 0;
     double metric,dist,diff,sum,balance;
     metric = bitweight(refaddr ^ calcaddr);
-    if ( metric > targetdist )
+    if ( metric > targetdist+4 )
         return(10000000.);
     diff = sum = balance = 0.;
     if ( list != 0 && n != 0 )
@@ -557,7 +557,7 @@ char *findaddress(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTS
         numthreads = args[0]->numthreads;
         duration = args[0]->duration;
     }
-    if ( milliseconds() < endmilli )
+    //if ( milliseconds() < endmilli )
     {
         best = lastbest;
         calcaddr = 0;
@@ -565,8 +565,12 @@ char *findaddress(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTS
         {
             if ( args[i]->best < best )
             {
-                calcaddr = conv_NXTpassword(secret.bytes,pubkey.bytes,args[i]->bestpassword);
+                if ( args[i]->bestpassword[0] != 0 )
+                    calcaddr = conv_NXTpassword(secret.bytes,pubkey.bytes,args[i]->bestpassword);
+                else calcaddr = args[i]->bestaddr;
+                //printf("(%llx %f) ",(long long)calcaddr,args[i]->best);
                 metric = calc_address_metric(1,addr,list,n,calcaddr,targetdist);
+                //printf("-> %f, ",metric);
                 if ( metric < best )
                 {
                     best = metric;
@@ -578,6 +582,7 @@ char *findaddress(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTS
                 }
             }
         }
+        //printf("best %f lastbest %f %llu\n",best,lastbest,(long long)addr);
         if ( best < lastbest )
         {
             printf(">>>>>>>>>>>>>>> new best (%s) %016llx %llu dist.%d metric %.2f vs %016llx %llu\n",bestpassword,(long long)calcaddr,(long long)calcaddr,bitweight(addr ^ bestaddr),best,(long long)addr,(long long)addr);
@@ -585,7 +590,7 @@ char *findaddress(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTS
         }
         //printf("milli %f vs endmilli %f\n",milliseconds(),endmilli);
     }
-    else
+    if ( milliseconds() >= endmilli )
     {
         for (i=0; i<numthreads; i++)
             args[i]->abortflag = 1;

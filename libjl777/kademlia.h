@@ -146,24 +146,15 @@ int32_t ismynode(struct sockaddr *addr)
 
 uint32_t addto_hasips(int32_t recalc_flag,struct pserver_info *pserver,uint32_t ipbits)
 {
-    //static int didinit;
-    //static portable_mutex_t mutex;
     int32_t i,n;
     uint32_t xorsum = 0;
-    /*if ( didinit == 0 )
-    {
-        portable_mutex_init(&mutex);
-        didinit = 1;
-    }*/
     if ( ipbits == 0 )
         return(0);
-    //portable_mutex_lock(&mutex);
     n = (pserver->numips < (int)(sizeof(pserver->hasips)/sizeof(*pserver->hasips))) ? pserver->numips : (int)(sizeof(pserver->hasips)/sizeof(*pserver->hasips));
     if ( pserver->numips > 0 )
     {
         for (i=0; i<pserver->numips; i++)
         {
-            //fprintf(stderr,"%x ",ipbits);
             if ( pserver->hasips[i] == ipbits )
                 return(0);
         }
@@ -173,7 +164,6 @@ uint32_t addto_hasips(int32_t recalc_flag,struct pserver_info *pserver,uint32_t 
         expand_ipbits(ipstr,ipbits);
         printf("addto_hasips %p n.%d num.%d <- %x %s\n",pserver->hasips,n,pserver->numips,ipbits,ipstr);
     }
-    //pserver->hasips = realloc(pserver->hasips,sizeof(*pserver->hasips) + (pserver->numips + 1));
     pserver->hasips[n % (int)(sizeof(pserver->hasips)/sizeof(*pserver->hasips))] = ipbits;
     pserver->numips++;
     n++;
@@ -184,38 +174,45 @@ uint32_t addto_hasips(int32_t recalc_flag,struct pserver_info *pserver,uint32_t 
         pserver->xorsum = xorsum;
         pserver->hasnum = pserver->numips;
     }
-    //portable_mutex_unlock(&mutex);
     return(xorsum);
+}
+
+void addto_hasnxt(struct pserver_info *pserver,uint64_t nxtbits)
+{
+    int32_t i,n;
+    if ( nxtbits == 0 )
+        return;
+    n = (pserver->numnxt < (int)(sizeof(pserver->hasnxt)/sizeof(*pserver->hasnxt))) ? pserver->numnxt : (int)(sizeof(pserver->hasnxt)/sizeof(*pserver->hasnxt));
+    if ( pserver->numnxt > 0 )
+    {
+        for (i=0; i<pserver->numnxt; i++)
+        {
+            if ( pserver->hasnxt[i] == nxtbits )
+                return;
+        }
+    }
+    pserver->hasnxt[n % (int)(sizeof(pserver->hasnxt)/sizeof(*pserver->hasnxt))] = nxtbits;
+    pserver->numnxt++;
 }
 
 int32_t sort_all_buckets(uint64_t *sortbuf,uint64_t hash)
 {
-    //uint64_t *sortbuf = 0;
     struct nodestats *stats;
     int32_t i,j,n;
-    //long now = time(NULL);
-    //sortbuf = calloc(2 * sizeof(*sortbuf),KADEMLIA_NUMBUCKETS * KADEMLIA_NUMK);
     for (i=n=0; i<KADEMLIA_NUMBUCKETS; i++)
     {
         for (j=0; j<KADEMLIA_NUMK; j++)
         {
             if ( (stats= K_buckets[i][j]) == 0 )
                 break;
-            //if ( stats->numsent > stats->numrecv+10 )//&& (now - stats->lastcontact) > 3600 )
-            //    continue;
             sortbuf[n<<1] = bitweight(stats->nxt64bits ^ hash);// + ((stats->gotencrypted == 0) ? 64 : 0);
             sortbuf[(n<<1) + 1] = stats->nxt64bits;
             n++;
         }
     }
-    //*nump = n;
     if ( n == 0 )
         return(0);
-    else
-    {
-        //sortbuf = realloc(sortbuf,n * sizeof(uint64_t) * 2);
-        sort64s(sortbuf,n,sizeof(*sortbuf)*2);
-    }
+    else sort64s(sortbuf,n,sizeof(*sortbuf)*2);
     return(n);
 }
 
@@ -330,7 +327,7 @@ void kademlia_update_info(char *destNXTaddr,char *ipaddr,int32_t port,char *pubk
     if ( destNXTaddr != 0 && destNXTaddr[0] != 0 )
         nxt64bits = calc_nxt64bits(destNXTaddr);
     else nxt64bits = 0;
-    if ( port == BTCD_PORT )
+    if ( port == BTCD_PORT && p2pflag == 0 )
     {
         printf("warning: kademlia_update_info port is %d?\n",port);
         port = 0;
@@ -379,16 +376,6 @@ void kademlia_update_info(char *destNXTaddr,char *ipaddr,int32_t port,char *pubk
         }
         if ( pubkeystr != 0 && pubkeystr[0] != 0 && update_pubkey(stats->pubkey,pubkeystr) != 0 && lastcontact != 0 )
             stats->lastcontact = lastcontact;
-        /*add_peerinfo(peer);
-        expand_nxt64bits(srvNXTaddr,pserver->nxt64bits);
-        if ( memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) != 0 )
-            init_hexbytes_noT(pubkeystr,stats->pubkey,sizeof(stats->pubkey));
-        else pubkeystr[0] = 0;
-        int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxtbits,char *pubBTC);
-        struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer);
-        set_pubpeerinfo(srvNXTaddr,ipaddr,port,&peer,0,pubkeystr,pserver->nxt64bits,0);
-        update_peerinfo(&createdflag,&peer);
-        fprintf(stderr,"finished updating peer\n");*/
     }
 }
 
@@ -542,6 +529,8 @@ char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifi
                 if ( is_cJSON_Array(item) != 0 && cJSON_GetArraySize(item) == 5 )
                 {
                     copy_cJSON(destNXTaddr,cJSON_GetArrayItem(item,0));
+                    if ( destNXTaddr[0] != 0 )
+                        addto_hasnxt(pserver,calc_nxt64bits(destNXTaddr));
                     copy_cJSON(pubkeystr,cJSON_GetArrayItem(item,1));
                     copy_cJSON(ipaddr,cJSON_GetArrayItem(item,2));
                     if ( ipaddr[0] != 0 )
@@ -896,7 +885,7 @@ cJSON *gen_pserver_json(struct pserver_info *pserver)
 {
     cJSON *array,*json = cJSON_CreateObject();
     int32_t i;
-    char ipaddr[64];
+    char ipaddr[64],NXTaddr[64];
     uint32_t *ipaddrs;
     struct nodestats *stats;
     double millis = milliseconds();
@@ -911,9 +900,19 @@ cJSON *gen_pserver_json(struct pserver_info *pserver)
                 cJSON_AddItemToArray(array,cJSON_CreateString(ipaddr));
             }
             cJSON_AddItemToObject(json,"hasips",array);
+            cJSON_AddItemToObject(json,"hasnum",cJSON_CreateNumber(pserver->hasnum));
         }
-        cJSON_AddItemToObject(json,"hasnum",cJSON_CreateNumber(pserver->hasnum));
-        cJSON_AddItemToObject(json,"xorsum",cJSON_CreateNumber(pserver->xorsum));
+        if ( pserver->numnxt > 0 )
+        {
+            array = cJSON_CreateArray();
+            for (i=0; i<pserver->numnxt&&i<(int)(sizeof(pserver->hasnxt)/sizeof(*pserver->hasnxt)); i++)
+            {
+                expand_nxt64bits(NXTaddr,pserver->hasnxt[i]);
+                cJSON_AddItemToArray(array,cJSON_CreateString(NXTaddr));
+            }
+            cJSON_AddItemToObject(json,"hasnxt",array);
+            cJSON_AddItemToObject(json,"numnxt",cJSON_CreateNumber(pserver->numnxt));
+        }
         if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
         {
             if ( stats->p2pport != 0 && stats->p2pport != BTCD_PORT )
@@ -977,7 +976,6 @@ cJSON *gen_peerinfo_json(struct nodestats *stats)
         //cJSON_AddItemToObject(json,"is_privacyServer",cJSON_CreateNumber(1));
         cJSON_AddItemToObject(json,"srvNXT",cJSON_CreateString(srvnxtaddr));
         cJSON_AddItemToObject(json,"srvipaddr",cJSON_CreateString(srvipaddr));
-        cJSON_AddItemToObject(json,"ipbits",cJSON_CreateNumber(stats->ipbits));
         sprintf(numstr,"%d",stats->supernet_port);
         if ( stats->supernet_port != 0 && stats->supernet_port != SUPERNET_PORT )
             cJSON_AddItemToObject(json,"srvport",cJSON_CreateString(numstr));
@@ -1007,6 +1005,16 @@ cJSON *gen_peerinfo_json(struct nodestats *stats)
     return(json);
 }
 
+int32_t update_newaccts(uint64_t *newaccts,int32_t num,uint64_t nxtbits)
+{
+    int32_t i;
+    for (i=0; i<num; i++)
+        if ( newaccts[i] == nxtbits )
+            return(num);
+    newaccts[num++] = nxtbits;
+    return(num);
+}
+
 int32_t scan_nodes(uint64_t *newaccts,int32_t max,char *NXTACCTSECRET)
 {
     struct coin_info *cp = get_coin_info("BTCD");
@@ -1028,11 +1036,20 @@ int32_t scan_nodes(uint64_t *newaccts,int32_t max,char *NXTACCTSECRET)
                 if ( (otherbits= Allnodes[i]) != mypserver->nxt64bits )
                 {
                     if ( num < max )
-                        newaccts[num++] = otherbits;
+                        num = update_newaccts(newaccts,num,otherbits);
                     if ( (stats= get_nodestats(otherbits)) != 0 )
                     {
                         expand_ipbits(ipaddr,stats->ipbits);
                         pserver = get_pserver(0,ipaddr,0,0);
+                        if ( num < max && pserver->numnxt > 0 )
+                        {
+                            for (j=0; j<(int)(sizeof(pserver->hasnxt)/sizeof(*pserver->hasnxt)); j++)
+                            {
+                                num = update_newaccts(newaccts,num,otherbits);
+                                if ( num >= max )
+                                    break;
+                            }
+                        }
                         if ( pserver->hasips != 0 && pserver->numips > 0 )
                         {
                             for (j=0; j<pserver->numips&&j<(int)(sizeof(pserver->hasips)/sizeof(*pserver->hasips)); j++)
@@ -1071,8 +1088,10 @@ cJSON *gen_peers_json(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTA
     int32_t i,n;
     char pubkeystr[512],key[64],*retstr;
     cJSON *json,*array;
-    uint64_t newaccts[16];
+    struct coin_info *cp = get_coin_info("BTCD");
     //printf("inside gen_peer_json.%d\n",only_privacyServers);
+    if ( cp == 0 )
+        return(0);
     json = cJSON_CreateObject();
     array = cJSON_CreateArray();
     n = (Numallnodes < MAX_ALLNODES) ? Numallnodes : MAX_ALLNODES;
@@ -1088,11 +1107,11 @@ cJSON *gen_peers_json(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTA
         cJSON_AddItemToObject(json,"num",cJSON_CreateNumber(n));
         cJSON_AddItemToObject(json,"Numpservers",cJSON_CreateNumber(Numallnodes));
     }
-    memset(newaccts,0,sizeof(newaccts));
-    n = scan_nodes(newaccts,sizeof(newaccts)/sizeof(*newaccts),NXTACCTSECRET);
+    memset(cp->nxtaccts,0,sizeof(cp->nxtaccts));
+    cp->numnxtaccts = n = scan_nodes(cp->nxtaccts,sizeof(cp->nxtaccts)/sizeof(*cp->nxtaccts),NXTACCTSECRET);
     for (i=0; i<n; i++)
     {
-        expand_nxt64bits(key,newaccts[i]);
+        expand_nxt64bits(key,cp->nxtaccts[i]);
         init_hexbytes(pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
         retstr = kademlia_find("findnode",prevaddr,verifiedNXTaddr,NXTACCTSECRET,sender,pubkeystr,key);
         if ( retstr != 0 )
