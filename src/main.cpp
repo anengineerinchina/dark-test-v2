@@ -3560,7 +3560,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 	//BitcoinDark Custom Message Implementation
 	else if(strCommand == "pubaddr")
 	{
-        std::cout << "pubaddr called by peer " << pfrom->addr.ToString() << std::endl;
+        //std::cout << "pubaddr called by peer " << pfrom->addr.ToString() << std::endl;
         CPubAddr pubaddr;
         vRecv >> pubaddr;
         //uint256 pubaddrHash = pubaddr.GetHash();
@@ -3926,6 +3926,11 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 		return((char *)"{\"result\":null}");
 	}
 	retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
+    if ( retstr == 0 )
+    {
+        retstr = malloc(16);
+        strcpy(retstr,"{\"result\":null}");
+    }
 	if ( retstr != 0 )
 	{
 		if ( (len= strlen(retstr)) >= retlen )

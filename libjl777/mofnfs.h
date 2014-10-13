@@ -162,7 +162,7 @@ char *mofn_restorefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXT
             if ( fragments[i] != 0 )
                 continue;
             expand_nxt64bits(key,txids[i]);
-            str = kademlia_find("findvalue",prevaddr,verifiedNXTaddr,NXTACCTSECRET,sender,0,key);
+            str = kademlia_find("findvalue",prevaddr,verifiedNXTaddr,NXTACCTSECRET,sender,0,key,0);
             if ( str != 0 )
             {
                 if ( (json= cJSON_Parse(str)) != 0 )
@@ -423,11 +423,12 @@ char *mofn_savefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
 
 double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int32_t n,uint64_t calcaddr,int32_t targetdist)
 {
-    int32_t i,numabove,numbelow,flag = 0;
+    int32_t i,numabove,numbelow,exact,flag = 0;
     double metric,dist,diff,sum,balance;
     metric = bitweight(refaddr ^ calcaddr);
-    if ( metric > targetdist+4 )
+    if ( metric > targetdist )
         return(10000000.);
+    exact = 0;
     diff = sum = balance = 0.;
     if ( list != 0 && n != 0 )
     {
@@ -437,11 +438,14 @@ double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int3
             if ( list[i] != refaddr )
             {
                 dist = bitweight(list[i] ^ calcaddr);
-                if ( dist >= metric )
+                if ( dist > metric )
                     numabove++;
-                else if ( dist <= metric )
+                else if ( dist < metric )
                     numbelow++;
-                if ( dispflag != 0 )
+                else exact++;
+                if ( dispflag > 1 )
+                    printf("(%llx %.0f) ",(long long)list[i],dist);
+                else if ( dispflag != 0 )
                     printf("%.0f ",dist);
                 sum += (dist * dist);
                 dist -= metric;
@@ -451,15 +455,15 @@ double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int3
         if ( n == 1 )
             flag = 0;
         balance = fabs(numabove - numbelow);
-        balance *= balance;
+        balance *= balance * 10;
         sum = sqrt(sum / (n - flag));
         diff = sqrt(diff / (n - flag));
         if ( dispflag != 0 )
-            printf("n.%d flag.%d sum %.3f | diff %.3f | above.%d below.%d balance %.0f ",n,flag,sum,diff,numabove,numbelow,balance);
+            printf("n.%d flag.%d sum %.3f | diff %.3f | exact.%d above.%d below.%d balance %.0f ",n,flag,sum,diff,exact,numabove,numbelow,balance);
     }
     if ( dispflag != 0 )
-        printf("dist %.3f -> %.3f\n",metric,diff + balance);
-    return(diff + balance);
+        printf("dist %.3f -> %.3f %llx %llu\n",metric,(diff + balance)/(exact*exact+1),(long long)refaddr,(long long)refaddr);
+    return((cbrt(metric) + diff + balance)/(exact*exact+1));
 }
 
 struct loopargs
@@ -497,7 +501,7 @@ void *findaddress_loop(void *ptr)
             calcaddr = conv_NXTpassword(hash,mypublic,(char *)pass);
         }
         else randombytes((unsigned char *)&calcaddr,sizeof(calcaddr));
-        if ( bitweight(addr ^ calcaddr) <= args->targetdist+4 )
+        if ( bitweight(addr ^ calcaddr) <= args->targetdist )
         {
             metric = calc_address_metric(0,addr,args->list,args->numinlist,calcaddr,args->targetdist);
             if ( metric < args->best )
@@ -539,7 +543,7 @@ char *findaddress(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTS
             strcpy(args[i]->refacct,refNXTaddr);
             args[i]->threadid = i;
             args[i]->numthreads = numthreads;
-            args[i]->targetdist = targetdist;
+            args[i]->targetdist = targetdist-(i%5);
             args[i]->best = lastbest;
             args[i]->list = list;
             args[i]->numinlist = n;
@@ -602,7 +606,7 @@ char *findaddress(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTS
         }
         free(args);
         args = 0;
-        metric = calc_address_metric(1,addr,list,n,bestaddr,targetdist);
+        metric = calc_address_metric(2,addr,list,n,bestaddr,targetdist);
         free(list);
         endmilli = 0;
         sprintf(retbuf,"{\"result\":\"metric %.3f\",\"privateaddr\":\"%s\",\"password\":%s\",\"dist\":%d,\"targetdist\":%d}",best,bestNXTaddr,bestpassword,bitweight(addr ^ bestaddr),targetdist);

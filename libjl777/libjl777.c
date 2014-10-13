@@ -846,6 +846,7 @@ char *findaddress_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
 {
     char txidstr[MAX_JSON_FIELD],*retstr = 0;
     cJSON *array,*item;
+    struct coin_info *cp = get_coin_info("BTCD");
     int32_t targetdist,numthreads,duration,i,n = 0;
     uint64_t refaddr,*txids = 0;
     if ( prevaddr != 0 )
@@ -865,6 +866,18 @@ char *findaddress_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
             if ( txidstr[0] != 0 )
                 txids[i] = calc_nxt64bits(txidstr);
         }
+    }
+    else if ( (n= cp->numnxtaccts) > 0 )
+    {
+        txids = calloc(n+1,sizeof(*txids));
+        memcpy(txids,cp->nxtaccts,n*sizeof(*txids));
+    }
+    else
+    {
+        n = 512;
+        txids = calloc(n+1,sizeof(*txids));
+        for (i=0; i<n; i++)
+            randombytes((unsigned char *)&txids[i],sizeof(txids[i]));
     }
     if ( txids != 0 && sender[0] != 0 && valid > 0 )
         retstr = findaddress(prevaddr,NXTaddr,NXTACCTSECRET,sender,refaddr,txids,n,targetdist,duration,numthreads);
@@ -945,26 +958,31 @@ void set_kademlia_args(char *key,cJSON *keyobj,cJSON *nameobj)
 
 char *findnode_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],*retstr = 0;
+    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],value[MAX_JSON_FIELD],*retstr = 0;
     copy_cJSON(pubkey,objs[0]);
     set_kademlia_args(key,objs[1],objs[2]);
-    printf("findnode.%p (%s) (%s) (%s)\n",prevaddr,sender,pubkey,key);
+    copy_cJSON(value,objs[3]);
+    if ( Debuglevel > 1 )
+        printf("findnode.%p (%s) (%s) (%s)\n",prevaddr,sender,pubkey,key);
     if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
-        retstr = kademlia_find("findnode",prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key);
+        retstr = kademlia_find("findnode",prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key,value);
     else retstr = clonestr("{\"error\":\"invalid findnode_func arguments\"}");
     return(retstr);
 }
 
 char *findvalue_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],*retstr = 0;
+    char pubkey[MAX_JSON_FIELD],key[MAX_JSON_FIELD],value[MAX_JSON_FIELD],*retstr = 0;
     copy_cJSON(pubkey,objs[0]);
     set_kademlia_args(key,objs[1],objs[2]);
-    printf("findvalue.%p (%s) (%s) (%s)\n",prevaddr,sender,pubkey,key);
+    copy_cJSON(value,objs[3]);
+    if ( Debuglevel > 1 )
+        printf("findvalue.%p (%s) (%s) (%s)\n",prevaddr,sender,pubkey,key);
     if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
-        retstr = kademlia_find("findvalue",prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key);
+        retstr = kademlia_find("findvalue",prevaddr,NXTaddr,NXTACCTSECRET,sender,pubkey,key,value);
     else retstr = clonestr("{\"error\":\"invalid findvalue_func arguments\"}");
-    printf("back from findvalue\n");
+    if ( Debuglevel > 1 )
+        printf("back from findvalue\n");
     return(retstr);
 }
 
@@ -1073,15 +1091,16 @@ char *cosigned_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 
 char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
+    // multisig
     static char *cosign[] = { (char *)cosign_func, "cosign", "V", "otheracct", "seed", "text", 0 };
     static char *cosigned[] = { (char *)cosigned_func, "cosigned", "V", "seed", "result", "privacct", "pubacct", 0 };
 
-   // Kademlia DHT
+    // Kademlia DHT
     static char *ping[] = { (char *)ping_func, "ping", "V", "pubkey", "ipaddr", "port", "destip", 0 };
     static char *pong[] = { (char *)pong_func, "pong", "V", "pubkey", "ipaddr", "port", 0 };
     static char *store[] = { (char *)store_func, "store", "V", "pubkey", "key", "name", "data", 0 };
-    static char *findvalue[] = { (char *)findvalue_func, "findvalue", "V", "pubkey", "key", "name", 0 };
-    static char *findnode[] = { (char *)findnode_func, "findnode", "V", "pubkey", "key", "name", 0 };
+    static char *findvalue[] = { (char *)findvalue_func, "findvalue", "V", "pubkey", "key", "name", "data", 0 };
+    static char *findnode[] = { (char *)findnode_func, "findnode", "V", "pubkey", "key", "name", "data", 0 };
     static char *havenode[] = { (char *)havenode_func, "havenode", "V", "pubkey", "key", "name", "data", 0 };
     static char *havenodeB[] = { (char *)havenodeB_func, "havenodeB", "V", "pubkey", "key", "name", "data", 0 };
     static char *findaddress[] = { (char *)findaddress_func, "findaddress", "V", "refaddr", "list", "dist", "duration", "numthreads", 0 };
@@ -1269,12 +1288,14 @@ char *SuperNET_JSON(char *JSONstr)
     cJSON *json;
     if ( Finished_init == 0 )
         return(0);
-    printf("got JSON.(%s)\n",JSONstr);
+    if ( Debuglevel > 0 )
+        printf("got JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
         if ( is_BTCD_command(json) != 0 ) // deadlocks as the SuperNET API came from locked BTCD RPC
         {
-            printf("is_BTCD_command\n");
+            if ( Debuglevel > 1 )
+                printf("is_BTCD_command\n");
             queue_enqueue(&JSON_Q,clonestr(JSONstr));
             return(clonestr("{\"result\":\"SuperNET BTCD command queued\"}"));
         } else retstr = call_SuperNET_JSON(JSONstr);
@@ -1328,7 +1349,8 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
     struct nodestats *stats;
     uint64_t txid = 0;
     int32_t port;
-    printf("call_SuperNET_broadcast.%p %p len.%d\n",pserver,msg,len);
+    if ( Debuglevel > 1 )
+        printf("call_SuperNET_broadcast.%p %p len.%d\n",pserver,msg,len);
     txid = calc_txid((uint8_t *)msg,(int32_t)strlen(msg));
     if ( pserver != 0 )
     {
@@ -1337,7 +1359,8 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
         else port = BTCD_PORT;
         sprintf(ip_port,"%s:%d",pserver->ipaddr,port);
         txid ^= calc_ipbits(ipaddr);
-        printf("%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,msg,(long long)txid,ip_port);
+        if ( Debuglevel > 1 )
+            printf("%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,msg,(long long)txid,ip_port);
         if ( SuperNET_narrowcast(ip_port,(unsigned char *)msg,len) == 0 )
             return(txid);
     }
@@ -1353,7 +1376,8 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
             if ( cmdstr != 0 )
                 free(cmdstr);
             free_json(array);
-            //printf("BROADCAST parms.(%s) valid.%d txid.%llu\n",msg,valid,(long long)txid);
+            if ( Debuglevel > 1 )
+                printf("BROADCAST parms.(%s) valid.%d duration.%d txid.%llu\n",msg,valid,duration,(long long)txid);
             if ( SuperNET_broadcast(msg,duration) == 0 )
                 return(txid);
         } else printf("cant broadcast non-JSON.(%s)\n",msg);
@@ -1378,24 +1402,26 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
     int32_t len,createdflag,valid;
     unsigned char packet[2*MAX_JSON_FIELD];
     char ipaddr[64],txidstr[64],retjsonstr[2*MAX_JSON_FIELD],verifiedNXTaddr[64],*cmdstr,*retstr;
-    if ( Finished_init == 0 )
-        return(0);
-
-    p2pport = parse_ipaddr(ipaddr,ip_port);
-    uv_ip4_addr(ipaddr,p2pport,(struct sockaddr_in *)&prevaddr);
-    pserver = get_pserver(0,ipaddr,0,p2pport);
+    if ( Debuglevel > 0 )
+        printf("gotpacket.(%s) duration.%d from (%s)\n",msg,duration,ip_port);
     strcpy(retjsonstr,"{\"result\":null}");
     if ( Finished_loading == 0 )
     {
-        printf("QUEUE.(%s)\n",msg);
+        if ( is_hexstr(msg) == 0 )
+        {
+            printf("QUEUE.(%s)\n",msg);
+            queue_enqueue(&JSON_Q,clonestr(msg));
+        }
         return(clonestr(retjsonstr));
     }
+    p2pport = parse_ipaddr(ipaddr,ip_port);
+    uv_ip4_addr(ipaddr,p2pport,(struct sockaddr_in *)&prevaddr);
+    pserver = get_pserver(0,ipaddr,0,p2pport);
     len = (int32_t)strlen(msg);
     if ( is_hexstr(msg) != 0 )
     {
         len >>= 1;
         decode_hex(packet,len,msg);
-        //calc_sha256(0,hash,packet,len);
         txid = calc_txid(packet,len);//hash,sizeof(hash));
         sprintf(txidstr,"%llu",(long long)txid);
         MTadd_hashtable(&createdflag,&Global_pNXT->msg_txids,txidstr);
@@ -1406,7 +1432,8 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
         }
         if ( (len<<1) == 30 ) // hack against flood
             flood++;
-        printf("gotpacket.(%s) %d | Finished_loading.%d | flood.%d duplicates.%d\n",msg,duration,Finished_loading,flood,duplicates);
+        if ( Debuglevel > 0 )
+            printf("gotpacket.(%s) %d | Finished_loading.%d | flood.%d duplicates.%d\n",msg,duration,Finished_loading,flood,duplicates);
         if ( is_encrypted_packet(packet,len) != 0 )
             process_packet(retjsonstr,packet,len,0,&prevaddr,ipaddr,0);
         else if ( (obookid= is_orderbook_tx(packet,len)) != 0 )
@@ -1431,7 +1458,8 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
         }
         if ( len == 30 ) // hack against flood
             flood++;
-        printf("C SuperNET_gotpacket.(%s) size.%d ascii txid.%llu | flood.%d\n",msg,len,(long long)txid,flood);
+        if ( Debuglevel > 0 )
+            printf("C SuperNET_gotpacket.(%s) from %s:%d size.%d ascii txid.%llu | flood.%d\n",msg,ipaddr,p2pport,len,(long long)txid,flood);
         if ( (json= cJSON_Parse((char *)msg)) != 0 )
         {
             cJSON *argjson;
@@ -1487,7 +1515,6 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     printf("call init_NXTservices.(%s)\n",myipaddr);
     init_NXTservices(JSON_or_fname,myipaddr);
     printf("back from init_NXTservices\n");
-    Finished_init = 1;
     free(myipaddr);
     p2p_publishpacket(0,0);
     if ( (cp= get_coin_info("BTCD")) == 0 || cp->srvNXTACCTSECRET[0] == 0 || cp->srvNXTADDR[0] == 0 )
@@ -1495,6 +1522,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         printf("need to have BTCD active and also srvpubaddr\n");
         exit(-1);
     }
+    Finished_init = 1;
     return(0);
 }
 

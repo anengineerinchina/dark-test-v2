@@ -144,7 +144,8 @@ int32_t process_sendQ_item(struct write_req_t *wr)
         }
         //for (i=0; i<16; i++)
         //    printf("%02x ",((unsigned char *)buf)[i]);
-        printf("portable_udpwrite %ld bytes to %s/%d crx.%x\n",wr->buf.len,ipaddr,supernet_port,_crc32(0,wr->buf.base,wr->buf.len));
+        if ( Debuglevel > 0 )
+            printf("portable_udpwrite %ld bytes to %s/%d crx.%x\n",wr->buf.len,ipaddr,supernet_port,_crc32(0,wr->buf.base,wr->buf.len));
     }
     r = uv_udp_send(&wr->U.ureq,wr->udp,&wr->buf,1,&wr->addr,(uv_udp_send_cb)after_write);
     if ( r != 0 )
@@ -191,7 +192,8 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
             //int i;
             //for (i=0; i<16; i++)
             //    printf("%02x ",((unsigned char *)rcvbuf->base)[i]);
-            printf("UDP RECEIVED %ld from %s/%d crc.%x | ",nread,ipaddr,supernet_port,_crc32(0,rcvbuf->base,nread));
+            if ( Debuglevel > 1 )
+                printf("UDP RECEIVED %ld from %s/%d crc.%x | ",nread,ipaddr,supernet_port,_crc32(0,rcvbuf->base,nread));
         }
         expand_nxt64bits(NXTaddr,cp->pubnxtbits);
         expand_nxt64bits(srvNXTaddr,cp->srvpubnxtbits);
@@ -366,7 +368,8 @@ uint64_t route_packet(int32_t encrypted,struct sockaddr *destaddr,char *hopNXTad
     if ( destaddr != 0 )
     {
         port = extract_nameport(destip,sizeof(destip),(struct sockaddr_in *)destaddr);
-        printf("DIRECT send encrypted.%d to (%s/%d) finalbuf.%d\n",encrypted,destip,port,len);
+        if ( Debuglevel > 0 )
+            printf("DIRECT send encrypted.%d to (%s/%d) finalbuf.%d\n",encrypted,destip,port,len);
         send_packet(0,destaddr,outbuf,len);
     }
     else
@@ -375,7 +378,8 @@ uint64_t route_packet(int32_t encrypted,struct sockaddr *destaddr,char *hopNXTad
         expand_ipbits(destip,np->stats.ipbits);
         //if ( is_privacyServer(&np->mypeerinfo) != 0 )
         {
-            printf("DIRECT udpsend {%s} to %s/%d finalbuf.%d\n",hopNXTaddr,destip,np->stats.supernet_port,len);
+            if ( Debuglevel > 0 )
+                printf("DIRECT udpsend {%s} to %s/%d finalbuf.%d\n",hopNXTaddr,destip,np->stats.supernet_port,len);
             uv_ip4_addr(destip,np->stats.supernet_port,&addr);
             send_packet(&np->stats,(struct sockaddr *)&addr,finalbuf,len);
         }
@@ -448,7 +452,8 @@ uint64_t p2p_publishpacket(struct pserver_info *pserver,char *cmd)
     struct coin_info *cp = get_coin_info("BTCD");
     if ( cp != 0 )
     {
-        fprintf(stderr,"p2p_publishpacket.%p (%s)\n",pserver,cmd);
+        //if ( Debuglevel > 1 )
+            fprintf(stderr,"p2p_publishpacket.%p (%s)\n",pserver,cmd);
         np = get_NXTacct(&createdflag,Global_mp,cp->srvNXTADDR);
         if ( cmd == 0 )
         {
@@ -457,7 +462,8 @@ uint64_t p2p_publishpacket(struct pserver_info *pserver,char *cmd)
         else strcpy(_cmd,cmd);
         //printf("_cmd.(%s)\n",_cmd);
         len = construct_tokenized_req(packet,_cmd,cp->srvNXTACCTSECRET);
-        printf("len.%d (%s)\n",len,packet);
+        //if ( Debuglevel > 1 )
+            printf("len.%d (%s)\n",len,packet);
         return(call_SuperNET_broadcast(pserver,packet,len+1,PUBADDRS_MSGDURATION));
     }
     printf("ERROR: broadcast_publishpacket null cp\n");
@@ -568,8 +574,13 @@ void add_SuperNET_peer(char *ip_port)
 
 void every_second(int32_t counter)
 {
+    static double firstmilli;
     char *ip_port;
     if ( Finished_init == 0 )
+        return;
+    if ( firstmilli == 0 )
+        firstmilli = milliseconds();
+    if ( milliseconds() < firstmilli+5000 )
         return;
     if ( (ip_port= queue_dequeue(&P2P_Q)) != 0 )
     {

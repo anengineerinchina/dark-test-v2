@@ -293,6 +293,8 @@ void teleport_idler(uv_idle_t *handle)
     struct udp_queuecmd *qp;
     void *wr,*firstwr = 0;
     char *jsonstr,*retstr;
+    if ( Finished_init == 0 )
+        return;
     millis = ((double)uv_hrtime() / 1000000);
     if ( millis > (lastattempt + 10) && (wr= queue_dequeue(&sendQ)) != 0 )
     {
@@ -326,15 +328,15 @@ void teleport_idler(uv_idle_t *handle)
     if ( millis > (lastattempt + 1000) )
     {
         every_second(counter);
+        retstr = findaddress(0,0,0,0,0,0,0,0,0,0);
+        if ( retstr != 0 )
+        {
+            printf("findaddress completed (%s)\n",retstr);
+            free(retstr);
+        }
         if ( (counter % 60) == 17 )
         {
             every_minute(counter/60);
-            retstr = findaddress(0,0,0,0,0,0,0,0,0,0);
-            if ( retstr != 0 )
-            {
-                printf("findaddress completed (%s)\n",retstr);
-                free(retstr);
-            }
         }
         counter++;
         process_pingpong_queue(&PeerQ,0);

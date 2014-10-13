@@ -73,7 +73,8 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
         memcpy(&payload_len,encoded,sizeof(payload_len));
         //printf("deonionize >>>>> pubkey.%llx vs mypubkey.%llx (%llx) -> %d %2x\n",*(long long *)pubkey,*(long long *)Global_mp->session_pubkey,*(long long *)Global_mp->loopback_pubkey,payload_len,payload_len);
         encoded += sizeof(payload_len);
-        printf("packedest.%llu srvpub.%llu (%s:%d) payload_len.%d\n",(long long)packetdest,(long long)cp->srvpubnxtbits,senderip,port,payload_len);
+        if ( Debuglevel > 0 )
+            printf("packedest.%llu srvpub.%llu (%s:%d) payload_len.%d\n",(long long)packetdest,(long long)cp->srvpubnxtbits,senderip,port,payload_len);
         if ( (payload_len + sizeof(payload_len) + sizeof(Global_mp->session_pubkey) + sizeof(packetdest)) <= len )
         {
             len = payload_len;
@@ -156,7 +157,7 @@ int32_t direct_onionize(uint64_t nxt64bits,unsigned char *destpubkey,unsigned ch
         }
         else memcpy(maxbuf,encoded,len);
     }
-    printf("new len.%d + %ld = %ld (%d %d)\n",len,sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits),sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits)+len,*payload_lenp,*max_lenp);
+    //printf("new len.%d + %ld = %ld (%d %d)\n",len,sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits),sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits)+len,*payload_lenp,*max_lenp);
     return(len + sizeof(*payload_lenp) + sizeof(onetime_pubkey) + sizeof(nxt64bits));
 }
 
@@ -297,7 +298,8 @@ struct NXT_acct *process_packet(char *retjsonstr,unsigned char *recvbuf,int32_t 
     }
     else
     {
-        printf("process_packet got nonencrypted len.%d %s/%d (%s)\n",recvlen,sender,port,recvbuf);
+        if ( Debuglevel > 1 )
+            printf("process_packet got nonencrypted len.%d %s/%d (%s)\n",recvlen,sender,port,recvbuf);
         len = recvlen;
         memcpy(decoded,recvbuf,recvlen);
         encrypted = 0;
