@@ -1,6 +1,6 @@
-sudo apt-get install libtool
-sudo apt-get install clang
-sudo apt-get install libcurl4-gnutls-dev
+#sudo apt-get install libtool
+#sudo apt-get install clang
+#sudo apt-get install libcurl4-gnutls-dev
 cd libuv
 sh autogen.sh
 ./configure
