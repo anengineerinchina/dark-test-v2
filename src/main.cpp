@@ -3928,7 +3928,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
     if ( retstr == 0 )
     {
-        retstr = malloc(16);
+        retstr = (char *)malloc(16);
         strcpy(retstr,"{\"result\":null}");
     }
 	if ( retstr != 0 )
