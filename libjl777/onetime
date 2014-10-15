@@ -1,9 +1,9 @@
-#sudo apt-get install libtool
-#sudo apt-get install clang
-#sudo apt-get install libcurl4-gnutls-dev
 cd libuv
 sh autogen.sh
 ./configure
+make
+cp .libs/libuv.a ../libs
+cp .libs/libuv.so ../libs
 cd ..
 echo "expanding nacl"
 bzip2 -dc < nacl-20090405.tar.bz2 | tar -xf -;
