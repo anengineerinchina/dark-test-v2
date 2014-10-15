@@ -7,7 +7,9 @@ cp libjl777.a libs
 cd libuv
 make
 cp .libs/libuv.a ../libs
+cp .libs/libuv.so ../libs
 cd ..
+cp libs/*.so ../src
 cp libs/*.a ../src
 cp libs/randombytes.o ../src
 ./make_shared
