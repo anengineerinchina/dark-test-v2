@@ -53,7 +53,7 @@ static const int fHaveUPnP = false;
 static const uint256 hashGenesisBlock("0x0000044966f40703b516c5af180582d53f783bfd319bb045e2dc3e05ea695d46");
 static const uint256 hashGenesisBlockTestNet("0x0000a3af4d553378169e82ac59a767b343ad5a4b8acb9c84ca4d3fbd0ae54fee");
 
-inline bool IsPoSV2(int nHeight){ return nHeight > 175000; }
+inline bool IsPoSV2(int nHeight){ return nHeight > 255000; }
 
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
