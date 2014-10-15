@@ -549,6 +549,7 @@ int32_t init_tradebots(cJSON *tradebot_languages)
         {
             item = cJSON_GetArrayItem(tradebot_languages,i);
             copy_cJSON(dyldfname,item);
+#ifdef later
             if ( dyldfname[0] != 0 )
             {
                 printf("try to load tradebot_language in (%s)\n",dyldfname);
@@ -568,6 +569,7 @@ int32_t init_tradebots(cJSON *tradebot_languages)
                     } else printf("error (%s) trying to find langname (%s)\n",uv_dlerror(&lib),dyldfname);
                 } else printf("error (%s) trying to load tradebot_language in (%s)\n",uv_dlerror(&lib),dyldfname);
             }
+#endif
         }
     }
     return(Num_languages);
