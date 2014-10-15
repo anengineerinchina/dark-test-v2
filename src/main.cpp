@@ -695,7 +695,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         int64_t txMinFee;
 
         isTeleport = is_teleport_denomination(tx.vout[0].nValue);
-        if ( isTeleport != 0 )
+        if ( 0 && isTeleport != 0 )
         {
             std::cout << "tx.vout[0] = " << tx.vout[0].nValue << std::endl;
             std::cout << "amount: " << (double)COIN/tx.vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
@@ -1470,7 +1470,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             //bitcoindark: value checks for teleport/multisig fees
             bool isTeleport;
             isTeleport = is_teleport_denomination(vout[0].nValue);
-            if ( isTeleport != 0 )
+            if ( 0 && isTeleport != 0 )
             {
                 std::cout << "In CTransaction::ConnectInputs(). vout[0] = " << vout[0].nValue << std::endl;
                 std::cout << "amount: " << (double)COIN/vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
