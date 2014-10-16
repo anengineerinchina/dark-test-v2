@@ -794,16 +794,18 @@ uint64_t gen_randacct(char *randaddr)
     return(randacct);
 }
 
-struct args_connect { uint64_t mytxid,othertxid,refaddr,refaddrs[8],otheraddrs[8]; bits256 mypubkey,otherpubkey; int numrefs; };
+struct args_mindmeld { uint64_t mytxid,othertxid,refaddr,bestaddr,refaddrs[8],otheraddrs[8]; bits256 mypubkey,otherpubkey; int numrefs; };
 
-int32_t Task_connect(void *_args,int32_t argsize)
+int32_t Task_mindmeld(void *_args,int32_t argsize)
 {
     static bits256 zerokey;
-    struct args_connect *args = _args;
-    int32_t i,j;
+    struct args_mindmeld *args = _args;
+    int32_t i,j,iter,dist;
+    double sum,metric,bestmetric;
     cJSON *json;
+    uint64_t calcaddr;
     struct coin_info *cp = get_coin_info("BTCD");
-    char key[64],datastr[1024],sender[64],*retstr;
+    char key[64],datastr[1024],sender[64],otherkeystr[512],*retstr;
     if ( cp == 0 )
         return(-1);
     if ( memcmp(&args->otherpubkey,&zerokey,sizeof(zerokey)) == 0 )
@@ -826,23 +828,65 @@ int32_t Task_connect(void *_args,int32_t argsize)
             free(retstr);
         }
     }
+    sum = 0.;
     for (i=0; i<args->numrefs; i++)
     {
         for (j=0; j<args->numrefs; j++)
-            printf("%2d ",bitweight(args->refaddrs[i] ^ args->refaddrs[j]));
+        {
+            if ( i == j )
+                dist = bitweight(args->refaddr ^ args->refaddrs[j]);
+            else
+            {
+                dist = bitweight(args->refaddrs[i] ^ args->refaddrs[j]);
+                sum += dist;
+            }
+            printf("%2d ",dist);
+        }
         printf("\n");
     }
-
+    printf("dist from privateaddr above -> ");
+    sum /= (args->numrefs * args->numrefs - args->numrefs);
+    if ( args->bestaddr == 0 )
+        randombytes((uint8_t *)&args->bestaddr,sizeof(args->bestaddr));
+    bestmetric = calc_nradius(args->refaddrs,args->numrefs,args->bestaddr,(int)sum);
+    printf("bestmetric %.3f avedist %.1f\n",bestmetric,sum);
+    for (iter=0; iter<1000000; iter++)
+    {
+        //ind = (iter % 65);
+        //if ( ind == 64 )
+        if( (iter & 1) != 0 )
+            randombytes((unsigned char *)&calcaddr,sizeof(calcaddr));
+        else calcaddr = (args->bestaddr ^ (1L << ((rand()>>8)&63)));
+        metric = calc_nradius(args->refaddrs,args->numrefs,calcaddr,(int)sum);
+        if ( metric < bestmetric )
+        {
+            bestmetric = metric;
+            args->bestaddr = calcaddr;
+        }
+    }
+    for (i=0; i<args->numrefs; i++)
+    {
+        for (j=0; j<args->numrefs; j++)
+        {
+            if ( i == j )
+                printf("%2d ",bitweight(args->bestaddr ^ args->refaddrs[j]));
+            else printf("%2d ",bitweight(args->refaddrs[i] ^ args->refaddrs[j]));
+        }
+        printf("\n");
+    }
+    printf("bestaddr.%llu bestmetric %.3f\n",(long long)args->bestaddr,bestmetric);
+    init_hexbytes(otherkeystr,args->otherpubkey.bytes,sizeof(args->otherpubkey));
+    printf("Other pubkey.(%s)\n",otherkeystr);
     for (i=0; i<args->numrefs; i++)
         printf("%llu ",(long long)args->refaddrs[i]);
     printf("mytxid.%llu othertxid.%llu | myaddr.%llu\n",(long long)args->mytxid,(long long)args->othertxid,(long long)args->refaddr);
     return(0);
 }
 
-char *connect_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+char *mindmeld_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     struct coin_info *cp = get_coin_info("BTCD");
-    struct args_connect args;
+    struct args_mindmeld args;
     bits256 myhash,otherhash;
     char retbuf[1000],datastr[128],key[64],myname[MAX_JSON_FIELD],othername[MAX_JSON_FIELD],*retstr = 0;
     if ( prevaddr != 0 || cp == 0 )
@@ -865,12 +909,12 @@ char *connect_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
         memset(&args,0,sizeof(args));
         args.mytxid = myhash.txid;
         args.othertxid = otherhash.txid;
-        args.refaddr = cp->srvpubnxtbits;
+        args.refaddr = cp->privatebits;
         args.numrefs = scan_nodes(args.refaddrs,sizeof(args.refaddrs)/sizeof(*args.refaddrs),NXTACCTSECRET);
-        start_task(Task_connect,"connect",1000000,(void *)&args,sizeof(args));
+        start_task(Task_mindmeld,"mindmeld",1000000,(void *)&args,sizeof(args));
         retstr = clonestr(retbuf);
     }
-    else retstr = clonestr("{\"error\":\"invalid connect_func arguments\"}");
+    else retstr = clonestr("{\"error\":\"invalid mindmeld_func arguments\"}");
     return(retstr);
 }
 
@@ -1114,6 +1158,44 @@ char *pong_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char
     return(retstr);
 }
 
+char *addcontact_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char handle[MAX_JSON_FIELD],acct[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
+    copy_cJSON(handle,objs[0]);
+    copy_cJSON(acct,objs[1]);
+    printf("handle.(%s) acct.(%s) valid.%d\n",handle,acct,valid);
+    if ( handle[0] != 0 && acct[0] != 0 && sender[0] != 0 && valid > 0 )
+        retstr = addcontact(prevaddr,NXTaddr,NXTACCTSECRET,sender,handle,acct);
+    else retstr = clonestr("{\"error\":\"invalid addcontact_func arguments\"}");
+    return(retstr);
+}
+
+char *removecontact_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char handle[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
+    copy_cJSON(handle,objs[0]);
+    if ( handle[0] != 0 && sender[0] != 0 && valid > 0 )
+        retstr = removecontact(prevaddr,NXTaddr,NXTACCTSECRET,sender,handle);
+    else retstr = clonestr("{\"error\":\"invalid removecontact_func arguments\"}");
+    return(retstr);
+}
+
+char *dispcontact_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char handle[MAX_JSON_FIELD],*retstr = 0;
+    if ( prevaddr != 0 )
+        return(0);
+    copy_cJSON(handle,objs[0]);
+    if ( handle[0] != 0 && sender[0] != 0 && valid > 0 )
+        retstr = dispcontact(prevaddr,NXTaddr,NXTACCTSECRET,sender,handle);
+    else retstr = clonestr("{\"error\":\"invalid dispcontact arguments\"}");
+    return(retstr);
+}
+
 void set_kademlia_args(char *key,cJSON *keyobj,cJSON *nameobj)
 {
     uint64_t hash;
@@ -1289,7 +1371,10 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     
    // privacyNetwork and comms
     static char *getpeers[] = { (char *)getpeers_func, "getpeers", "V",  "scan", 0 };
-    static char *connect[] = { (char *)connect_func, "connect", "V",  "myname", "other", 0 };
+    static char *mindmeld[] = { (char *)mindmeld_func, "mindmeld", "V",  "myname", "other", 0 };
+    static char *addcontact[] = { (char *)addcontact_func, "addcontact", "V",  "handle", "acct", 0 };
+    static char *removecontact[] = { (char *)removecontact_func, "removecontact", "V",  "handle", 0 };
+    static char *dispcontact[] = { (char *)dispcontact_func, "dispcontact", "V",  "handle", 0 };
     //static char *getPservers[] = { (char *)getPservers_func, "getPservers", "V",  "firsti", 0 };
     //static char *publishPservers[] = { (char *)publishPservers_func, "publishPservers", "V", "Pservers", "Numpservers", "firstPserver", "xorsum", 0 };
     //static char *publishaddrs[] = { (char *)publishaddrs_func, "publishaddrs", "V", "pubNXT", "pubkey", "BTCD", "BTC", "srvNXTaddr", "srvipaddr", "srvport", "coins", "Numpservers", "xorsum", 0 };
@@ -1318,7 +1403,7 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
     // Tradebot
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
 
-     static char **commands[] = { cosign, cosigned, connect, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, savefile, restorefile  };
+     static char **commands[] = { cosign, cosigned, mindmeld, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, transporterstatus, telepod, transporter, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, savefile, restorefile  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
@@ -1348,8 +1433,8 @@ char *pNXT_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJ
             }
             else
             {
-                safecopy(NXTACCTSECRET,cp->NXTACCTSECRET,sizeof(NXTACCTSECRET));
-                expand_nxt64bits(NXTaddr,cp->pubnxtbits);
+                safecopy(NXTACCTSECRET,cp->privateNXTACCTSECRET,sizeof(NXTACCTSECRET));
+                expand_nxt64bits(NXTaddr,cp->privatebits);
                 //printf("use NXT.%s to send command\n",NXTaddr);
             }
         }
@@ -1415,13 +1500,13 @@ char *call_SuperNET_JSON(char *JSONstr)
     //printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
-        expand_nxt64bits(NXTaddr,cp->pubnxtbits);
+        expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
         cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
         cmdstr = cJSON_Print(json);
         if ( cmdstr != 0 )
         {
             stripwhite_ns(cmdstr,strlen(cmdstr));
-            issue_generateToken(0,encoded,cmdstr,cp->NXTACCTSECRET);
+            issue_generateToken(0,encoded,cmdstr,cp->srvNXTACCTSECRET);
             encoded[NXT_TOKEN_LEN] = 0;
             sprintf(_tokbuf,"[%s,{\"token\":\"%s\"}]",cmdstr,encoded);
             free(cmdstr);
@@ -1679,6 +1764,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
             return(-1);
         fclose(fp);
     }
+    portable_mutex_init(&Contacts_mutex);
     myipaddr = clonestr(myipaddr);
     Global_mp = calloc(1,sizeof(*Global_mp));
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session

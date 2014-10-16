@@ -421,7 +421,23 @@ char *mofn_savefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     return(retstr);
 }
 
-double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int32_t n,uint64_t calcaddr,int32_t targetdist)
+double calc_nradius(uint64_t *addrs,int32_t n,uint64_t testaddr,double refdist)
+{
+    int32_t i;
+    double dist,sum = 0.;
+    if ( n == 0 )
+        return(0.);
+    for (i=0; i<n; i++)
+    {
+        dist = (bitweight(addrs[i] ^ testaddr) - refdist);
+        sum += (dist * dist);
+    }
+    if ( sum < 0. )
+        printf("huh? sum %f n.%d -> %f\n",sum,n,sqrt(sum/n));
+    return(sqrt(sum/n));
+}
+
+double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int32_t n,uint64_t calcaddr,double targetdist)
 {
     int32_t i,numabove,numbelow,exact,flag = 0;
     double metric,dist,diff,sum,balance;
