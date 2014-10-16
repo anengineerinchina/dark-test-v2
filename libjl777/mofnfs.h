@@ -26,26 +26,31 @@ char *onion_sendfile(int32_t L,struct sockaddr *prevaddr,char *verifiedNXTaddr,c
     return(0);
 }
 
-char **gen_privkeys(int32_t **cipheridsp,char *name,char *password,char *keygen)
+char **gen_privkeys(int32_t **cipheridsp,char *name,char *password,char *keygen,char *pin)
 {
     long i,len;
-    uint64_t passwordhash,namehash;
-    char key[64],**privkeys = 0;
+    bits256 passkey,G;
+    char key[128],**privkeys = 0;
     *cipheridsp = 0;
+    if ( password == 0 || password[0] == 0 )
+        password = keygen;
+    else if ( strcmp(password,"none") == 0 )
+        return(0);
     if ( password != 0 && password[0] != 0 )
     {
-        namehash = calc_txid((unsigned char *)name,(int32_t)strlen(name));
-        len = strlen(password);
-        passwordhash = (namehash ^ calc_txid((unsigned char *)keygen,(int32_t)strlen(keygen)) ^ calc_txid((unsigned char *)password,(int32_t)len));
-        privkeys = calloc(len+1,sizeof(*privkeys));
-        (*cipheridsp) = calloc(len+1,sizeof(*cipheridsp));
-        for (i=0; i<len; i++)
+        memset(&G,0,sizeof(G));
+        G.bytes[0] = 9;
+        calc_sha256cat(passkey.bytes,(uint8_t *)name,(int32_t)strlen(name),(uint8_t *)password,(int32_t)strlen(password));
+        len = strlen(pin);
+        privkeys = calloc(len+2,sizeof(*privkeys));
+        (*cipheridsp) = calloc(len+2,sizeof(*cipheridsp));
+        for (i=0; i<=len; i++)
         {
-            expand_nxt64bits(key,passwordhash);
-            (*cipheridsp)[i] = (password[i] % NUM_CIPHERS);
+            init_hexbytes(key,passkey.bytes,sizeof(passkey));
+            (*cipheridsp)[i] = (pin[i] % NUM_CIPHERS);
             privkeys[i] = clonestr(key);
-            if ( i < len-1 )
-                passwordhash ^= (namehash ^ calc_txid((unsigned char *)key,(int32_t)strlen(key)));
+            if ( i < len )
+                passkey = curve25519(passkey,G);
         }
     }
     return(privkeys);
@@ -118,7 +123,7 @@ int32_t verify_fragment(char *usbdir,uint64_t txid,unsigned char *fragment,int32
 void calc_shares(unsigned char *shares,unsigned char *secret,int32_t size,int32_t width,int32_t M,int32_t N,unsigned char *sharenrs);
 void gfshare_extract(unsigned char *secretbuf,uint8_t *sharenrs,int32_t N,uint8_t *buffer,int32_t len,int32_t size);
 
-char *mofn_restorefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,FILE *fp,int32_t L,int32_t M,int32_t N,char *usbdir,char *password,char *filename,char *sharenrsstr,uint64_t *txids)
+char *mofn_restorefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *pin,FILE *fp,int32_t L,int32_t M,int32_t N,char *usbdir,char *password,char *filename,char *sharenrsstr,uint64_t *txids)
 {
     long i,len;
     cJSON *json;
@@ -153,7 +158,7 @@ char *mofn_restorefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXT
     }
     lengths = calloc(n,sizeof(*lengths));
     fragments = calloc(n,sizeof(*fragments));
-    privkeys = gen_privkeys(&cipherids,filename,password,NXTACCTSECRET);
+    privkeys = gen_privkeys(&cipherids,filename,password,NXTACCTSECRET,pin);
     hwmgood = 0;
     while ( milliseconds() < endmilli )
     {
@@ -304,7 +309,7 @@ char *mofn_restorefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXT
     return(clonestr(retstr));
 }
 
-char *mofn_savefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,FILE *fp,int32_t L,int32_t M,int32_t N,char *usbdir,char *password,char *filename)
+char *mofn_savefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *pin,FILE *fp,int32_t L,int32_t M,int32_t N,char *usbdir,char *password,char *filename)
 {
     long i,len;
     FILE *savefp;
@@ -315,7 +320,7 @@ char *mofn_savefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     char *retstr,savefname[512],key[64],datastr[sizeof(buf)*3+1],*str,**privkeys = 0;
     i = n = 0;
     array = cJSON_CreateArray();
-    privkeys = gen_privkeys(&cipherids,filename,password,NXTACCTSECRET);
+    privkeys = gen_privkeys(&cipherids,filename,password,NXTACCTSECRET,pin);
     memset(sharenrs,0,sizeof(sharenrs));
     init_sharenrs(sharenrs,0,N,N);
     while ( (len= fread(buf,1,sizeof(buf),fp)) > 0 )
@@ -410,7 +415,7 @@ char *mofn_savefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     {
         FILE *fp = fopen("foo.txt.restore","wb");
         txids[n] = 0;
-        mofn_restorefile(0,verifiedNXTaddr,NXTACCTSECRET,sender,fp,L,M,N,usbdir,password,filename,datastr,txids);
+        mofn_restorefile(0,verifiedNXTaddr,NXTACCTSECRET,sender,pin,fp,L,M,N,usbdir,password,filename,datastr,txids);
         fclose(fp);
         char cmdstr[512];
         printf("\n*****************\ncompare (%s) vs (%s)\n",filename,"foo.txt.restore");
@@ -419,22 +424,6 @@ char *mofn_savefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
         printf("done\n\n");
     }
     return(retstr);
-}
-
-double calc_nradius(uint64_t *addrs,int32_t n,uint64_t testaddr,double refdist)
-{
-    int32_t i;
-    double dist,sum = 0.;
-    if ( n == 0 )
-        return(0.);
-    for (i=0; i<n; i++)
-    {
-        dist = (bitweight(addrs[i] ^ testaddr) - refdist);
-        sum += (dist * dist);
-    }
-    if ( sum < 0. )
-        printf("huh? sum %f n.%d -> %f\n",sum,n,sqrt(sum/n));
-    return(sqrt(sum/n));
 }
 
 double calc_address_metric(int32_t dispflag,uint64_t refaddr,uint64_t *list,int32_t n,uint64_t calcaddr,double targetdist)

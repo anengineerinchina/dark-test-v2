@@ -469,6 +469,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                         safecopy(cp->privateNXTACCTSECRET,privkey,sizeof(cp->privateNXTACCTSECRET));
                         cp->privatebits = issue_getAccountId(0,privkey);
                         expand_nxt64bits(cp->privateNXTADDR,cp->privatebits);
+                        conv_NXTpassword(Global_mp->myprivkey.bytes,Global_mp->mypubkey.bytes,cp->privateNXTACCTSECRET);
                         printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->pubaddr,cp->privateNXTACCTSECRET,(long long)cp->privatebits);
                         free(privkey);
                         stats = get_nodestats(cp->privatebits);
@@ -729,12 +730,12 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
             {
                 char handle[MAX_JSON_FIELD],acct[MAX_JSON_FIELD],*retstr;
                 n = cJSON_GetArraySize(array);
-                for (i=0; i<n; i++)
+                for (i=0; i<n; i+=2)
                 {
                     if ( array == 0 || n == 0 )
                         break;
-                    copy_cJSON(handle,cJSON_GetArrayItem(array,0));
-                    copy_cJSON(acct,cJSON_GetArrayItem(array,1));
+                    copy_cJSON(handle,cJSON_GetArrayItem(array,i));
+                    copy_cJSON(acct,cJSON_GetArrayItem(array,i+1));
                     if ( handle[0] != 0 && acct[0] != 0 )
                     {
                         retstr = addcontact(0,NXTADDR,NXTACCTSECRET,NXTADDR,handle,acct);

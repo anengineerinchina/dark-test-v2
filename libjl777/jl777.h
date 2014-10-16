@@ -230,6 +230,8 @@ struct pserver_info
     uint8_t states[NUM_PEER_STATES + 1];
     char pubBTCD[36],pubBTC[36];
 };*/
+union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
+typedef union _bits256 bits256;
 
 struct NXThandler_info
 {
@@ -247,6 +249,7 @@ struct NXThandler_info
     unsigned char loopback_pubkey[crypto_box_PUBLICKEYBYTES],loopback_privkey[crypto_box_SECRETKEYBYTES];
     unsigned char session_pubkey[crypto_box_PUBLICKEYBYTES],session_privkey[crypto_box_SECRETKEYBYTES];
     char pubkeystr[crypto_box_PUBLICKEYBYTES*2+1],myhandle[64];
+    bits256 mypubkey,myprivkey;
     uint64_t coins[4];//*privacyServers,
     //CURL *curl_handle,*curl_handle2,*curl_handle3;
     //portable_tcp_t Punch_tcp;
@@ -396,9 +399,6 @@ typedef int32_t (*tfunc)(void *,int32_t argsize);
 uv_work_t *start_task(tfunc func,char *name,int32_t sleepmicros,void *args,int32_t argsize);
 char *addcontact(struct sockaddr *prevaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,char *handle,char *acct);
 
-union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
-typedef union _bits256 bits256;
-
 bits256 curve25519(bits256 mysecret,bits256 theirpublic)
 {
     bits256 rawkey;
@@ -464,10 +464,10 @@ uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,char *
 #include "ciphers.h"
 #include "coins.h"
 #include "udp.h"
-#include "contacts.h"
 #include "kademlia.h"
 //#include "peers.h"
 #include "packets.h"
 #include "mofnfs.h"
+#include "telepathy.h"
 
 #endif

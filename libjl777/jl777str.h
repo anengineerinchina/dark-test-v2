@@ -65,6 +65,19 @@ void myfree(void *ptr,char *str)
     while ( 1 ) sleep(1);
     free(ptr);
 }
+
+
+int32_t is_decimalstr(char *str)
+{
+    int32_t i;
+    if ( str == 0 || str[0] == 0 )
+        return(0);
+    for (i=0; str[i]!=0; i++)
+        if ( str[i] < '0' || str[i] > '9' )
+            return(-1);
+    return(i);
+}
+
 /*
 int32_t expand_nxt64bits(char *NXTaddr,uint64_t nxt64bits)
 {
