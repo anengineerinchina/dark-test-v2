@@ -37,15 +37,15 @@ cd ../
 #---
 echo `pwd`
 cp libjl777.a libs
-echo "going into libuv"
-cd libuv
-echo "doing make in libuv"
-make
-echo "copy libuv.a to ../libs"
-cp -v .libs/libuv.a ../libs
-cd ..
-cp -v libs/*.a ../src
-cp -v libs/randombytes.o ../src
+#echo "going into libuv"
+#cd libuv
+#echo "doing make in libuv"
+#make
+#echo "copy libuv.a to ../libs"
+#cp -v .libs/libuv.a ../libs
+#cd ..
+#cp -v libs/*.a ../src
+#cp -v libs/randombytes.o ../src
 echo "doing make_shared"
 ./make_shared
 echo "cd ../src"
@@ -53,7 +53,7 @@ cd ../src
 echo "Remove BitcoinDarkd if it exists."
 [[ -f "BitcoinDarkd" ]] && rm -vf "BitcoinDarkd"
 echo "running make -f makefile.unix with UPnP disabled"
-make -f makefile.unix USE_UPNP=-
+make -f makefile.unix #USE_UPNP=-
 echo "Remove BitcoinDark debug.log if it exists."
 [[ -f "~/.BitcoinDarkd/debug.log" ]] && rm -vf ".BitcoinDarkd/debug.log"
 strip BitcoinDarkd
