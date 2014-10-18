@@ -2,7 +2,7 @@ CC=clang
 CFLAGS=-Wall -pedantic -g -fPIC 
 LIBS=-lm -lreadline 
 
-TARGET	= picoc
+TARGET	= libjl777.a
 SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
 	variable.c clibrary.c platform.c include.c \
 	platform/platform_unix.c platform/library_unix.c \
