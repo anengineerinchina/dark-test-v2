@@ -21,13 +21,17 @@ cd libjl777
 #---
 git pull
 echo "Stop the BitcoinDarkd if running.."
-[ -f "../BitcoinDarkd" ] && ../BitcoinDarkd stop
+if [ -f "../BitcoinDarkd" ] ; then
+  ../BitcoinDarkd stop
+fi
 sleep 3
 ps -ef |grep -i BitcoinDark
 ./clean
 #---
 echo "Remove libjl777.a library archive if it exists."
-[ -f "libjl777.a" ] && rm -vf "libjl777.a"
+if [ -f "libjl777.a" ] ; then
+  rm -vf "libjl777.a"
+fi
 cd gzip
 gcc -fPIC -c *.c
 cd ../libtom
@@ -37,7 +41,7 @@ make
 cd ../
 #---
 echo `pwd`
-cp libjl777.a libs
+cp -v libjl777.a libs
 #echo "going into libuv"
 #cd libuv
 #echo "doing make in libuv"
@@ -52,11 +56,15 @@ echo "doing make_shared"
 echo "cd ../src"
 cd ../src
 echo "Remove BitcoinDarkd if it exists."
-[ -f "BitcoinDarkd" ] && rm -vf "BitcoinDarkd"
-echo "running make -f makefile.unix with UPnP disabled"
+if [ -f "BitcoinDarkd" ] ; then
+  rm -vf "BitcoinDarkd" 
+fi
+echo "running make -f makefile.unix"
 make -f makefile.unix #USE_UPNP=-
 echo "Remove BitcoinDark debug.log if it exists."
-[ -f "~/.BitcoinDarkd/debug.log" ] && rm -vf ".BitcoinDarkd/debug.log"
+if [ -f "~/.BitcoinDarkd/debug.log" ] ; then
+  rm -vf "~/.BitcoinDarkd/debug.log" 
+fi
 strip BitcoinDarkd
 cp -vf BitcoinDarkd ..
 cd ..
