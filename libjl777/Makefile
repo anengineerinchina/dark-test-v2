@@ -37,7 +37,7 @@ install: /usr/lib/libjl777.so; \
 
 btcd: ../src/BitcoinDarkd; \
     cd ../src; make -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd .
-    
+
 onetime: doesntexist; \
     cd libuv; \
     sh autogen.sh; \
@@ -63,6 +63,7 @@ count:
 
 .PHONY: clibrary.c
 
+../src/BitcoinDarkd: libjl777.a
 libs/randombytes.o:
 libs/libuv.a:
 /usr/lib/libjl777.so: libs/libjl777.so
