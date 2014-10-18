@@ -1,7 +1,3 @@
-I changed a bash construct into a sh compatible if condition.
-
-
-
 #!/bin/sh
 #------------ m_unix ------------#
 
