@@ -128,7 +128,6 @@ void usleep(int32_t);
 //#define NXTPROTOCOL_WEBJSON 7777
 #define SUPERNET_PORT 7777
 #define BTCD_PORT 14631
-//#define NXTSYNC_PORT 5777
 
 #define NUM_GATEWAYS 3
 #define _NXTSERVER "requestType"
@@ -243,7 +242,7 @@ struct NXThandler_info
     void *handlerdata;
     char *origblockidstr,lastblock[256],blockidstr[256];
     queue_t hashtable_queue[2];
-    struct hashtable **Pservers_tablep,**NXTaccts_tablep,**NXTassets_tablep,**NXTasset_txids_tablep,**NXTguid_tablep,**otheraddrs_tablep;
+    struct hashtable **Pservers_tablep,**NXTaccts_tablep,**NXTassets_tablep,**NXTasset_txids_tablep,**NXTguid_tablep,**otheraddrs_tablep,**Telepathy_tablep;
     cJSON *accountjson;
     uv_udp_t *udp;
     unsigned char loopback_pubkey[crypto_box_PUBLICKEYBYTES],loopback_privkey[crypto_box_SECRETKEYBYTES];
