@@ -144,7 +144,7 @@ int32_t process_sendQ_item(struct write_req_t *wr)
         }
         //for (i=0; i<16; i++)
         //    printf("%02x ",((unsigned char *)buf)[i]);
-        if ( Debuglevel > 0 )
+        if ( Debuglevel > 1 )
             printf("uv_udp_send %ld bytes to %s/%d crx.%x\n",wr->buf.len,ipaddr,supernet_port,_crc32(0,wr->buf.base,wr->buf.len));
     }
     r = uv_udp_send(&wr->U.ureq,wr->udp,&wr->buf,1,&wr->addr,(uv_udp_send_cb)after_write);
@@ -305,7 +305,7 @@ int32_t is_encrypted_packet(unsigned char *tx,int32_t len)
 void send_packet(struct nodestats *peerstats,struct sockaddr *destaddr,unsigned char *finalbuf,int32_t len)
 {
     char ipaddr[64];
-    int32_t port;
+    int32_t port,queueflag;
     struct nodestats *stats;
     struct pserver_info *pserver;
     port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)destaddr);
@@ -317,9 +317,10 @@ void send_packet(struct nodestats *peerstats,struct sockaddr *destaddr,unsigned 
             port = SUPERNET_PORT;
             uv_ip4_addr(ipaddr,port,(struct sockaddr_in *)destaddr);
         }
+        queueflag = 0*1;
         if ( Debuglevel > 1 )
-            printf("portable_udpwrite %d to (%s:%d)\n",len,ipaddr,port);
-        portable_udpwrite(1,destaddr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
+            printf("portable_udpwrite Q.%d %d to (%s:%d)\n",queueflag,len,ipaddr,port);
+        portable_udpwrite(queueflag,destaddr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
     }
     else call_SuperNET_broadcast(get_pserver(0,ipaddr,0,0),(char *)finalbuf,len,0);
     pserver = get_pserver(0,ipaddr,0,0);

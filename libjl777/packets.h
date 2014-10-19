@@ -72,7 +72,7 @@ int32_t deonionize(unsigned char *pubkey,unsigned char *decoded,unsigned char *e
         encoded += crypto_box_PUBLICKEYBYTES;
         memcpy(&payload_len,encoded,sizeof(payload_len));
         encoded += sizeof(payload_len);
-        if ( Debuglevel > 0 )
+        if ( Debuglevel > 1 )
             printf("packedest.%llu srvpub.%llu (%s:%d) payload_len.%d\n",(long long)packetdest,(long long)cp->srvpubnxtbits,senderip,port,payload_len);
         if ( payload_len > 0 && (payload_len + sizeof(payload_len) + sizeof(Global_mp->loopback_pubkey) + sizeof(packetdest)) <= len )
         {
@@ -133,7 +133,7 @@ int32_t direct_onionize(uint64_t nxt64bits,unsigned char *destpubkey,unsigned ch
         maxbuf += sizeof(*payload_lenp);
     } else max_lenp = payload_lenp;
     encoded += sizeof(*payload_lenp);
-    if ( Debuglevel > 0 )
+    if ( Debuglevel > 1 )
     {
         char hexstr[1024];
         init_hexbytes_noT(hexstr,destpubkey,crypto_box_PUBLICKEYBYTES);
@@ -210,6 +210,8 @@ int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,uint8_t *maxbu
         numlayers = ((rand() >> 8) % numlayers);
     if ( numlayers > 0 )
     {
+        if ( numlayers > MAX_ONION_LAYERS )
+            numlayers = MAX_ONION_LAYERS;
         if ( Debuglevel > 0 )
             printf("add_random_onionlayers %d of %d *srcp %p\n",numlayers,Global_mp->Lfactor,*srcp);
         memset(dest,0,sizeof(dest));
@@ -402,7 +404,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
     uint64_t destbits = 0;
     struct NXT_acct *tokenized_np = 0;
     int32_t valid,len=0,len2,createdflag,datalen,parmslen,encrypted = 1;
-    cJSON *argjson,*tmpjson,*valueobj;
+    cJSON *tmpjson,*valueobj,*argjson = 0;
     unsigned char pubkey[crypto_box_PUBLICKEYBYTES],pubkey2[crypto_box_PUBLICKEYBYTES],decoded[4096],decoded2[4096],tmpbuf[4096],maxbuf[4096],*outbuf;
     char senderNXTaddr[64],datastr[4096],hopNXTaddr[64],destNXTaddr[64],checkstr[MAX_JSON_FIELD],datalenstr[MAX_JSON_FIELD];
     char *parmstxt=0,*jsonstr;
@@ -468,9 +470,12 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
         if ( len > parmslen )
             datalen = (len - parmslen);
         else datalen = 0;
-        parmstxt = clonestr((char *)decoded);
-        argjson = cJSON_Parse(parmstxt);
-        free(parmstxt), parmstxt = 0;
+        if ( decoded[0] == '{' || decoded[0] == '[' )
+        {
+            parmstxt = clonestr((char *)decoded);
+            argjson = cJSON_Parse(parmstxt);
+            free(parmstxt), parmstxt = 0;
+        }
         if ( argjson != 0 ) // if it parses, we must have been the ultimate destination
         {
             senderNXTaddr[0] = 0;
