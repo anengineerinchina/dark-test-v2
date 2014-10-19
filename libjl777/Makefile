@@ -21,7 +21,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	ar rcu  libjl777.a  $(OBJS) gzip/*.o libtom/*.o libs/randombytes.o;\
+	ar rcu  libs/libjl777.a  $(OBJS) gzip/*.o libtom/*.o libs/randombytes.o;\
     gcc -shared -Wl,-soname,libjl777.so -o libs/libjl777.so $(OBJS) -lstdc++ -lc -lcurl -lm -ldl
 #g++ -shared -o ../libjl777.so $(OBJS) -lcurl -lm
 #$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
@@ -42,6 +42,9 @@ onetime: doesntexist; \
     cd libuv; \
     sh autogen.sh; \
     ./configure; \
+    make; \
+    cp .libs/libuv.a ../libs \
+    cp .libs/libuv.so ../libs \
     cd ..; \
     echo "expanding nacl"; \
     bzip2 -dc < nacl-20090405.tar.bz2 | tar -xf -; \
