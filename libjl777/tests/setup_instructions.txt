@@ -28,3 +28,6 @@ rvm use ruby --default
 rvm rubygems current
 bundle install # to automatically install missing gems
 gem update
+
+# Required to unbuffer the output of BitcoinDarkd
+sudo apt-get install expect-dev 

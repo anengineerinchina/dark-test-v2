@@ -24,4 +24,4 @@ end
 # Initalize configuration
 $rpcuser, $rpcpassword = Configuration.load
 
-$log_file = Pathname.new( File.join($btcd_binary_folder, 'nohup.out') ).expand_path
+$log_file = Pathname.new( File.join($btcd_binary_folder, 'btcd.log') ).expand_path

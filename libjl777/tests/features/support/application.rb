@@ -7,11 +7,10 @@ class App
         btcd_file = Pathname.new(File.join($btcd_binary_folder,'BitcoinDarkd')).expand_path
         raise ApplicationMissingException,"Could not find BitcoinDarkd in path #{btcd_file.to_s}" unless btcd_file.exist?
         puts "Starting BitcoinDarkd"
-        File.open($log_file, 'w') {|file| file.truncate(0) } if $log_file.exist? # Clean log file
         cwd = Dir.pwd
         Dir.chdir(btcd_file.dirname)
         job = fork do
-            exec "nohup #{btcd_file.to_s}"
+            exec "unbuffer #{btcd_file.to_s} > #{$log_file.to_s} &"
         end
         _, status = Process.waitpid2(job)
         Dir.chdir(cwd)
