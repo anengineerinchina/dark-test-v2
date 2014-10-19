@@ -13,7 +13,6 @@ Feature: General requests and answers from superNET API
     Given superNET is running on the computer with some peers
     When I send a ping request to one random peer
     Then I receive a pong answer
-    # Pong response identification is still needed
 
   @general @send_message
   Scenario: As a superNET user I want to make a ping and receive an answer

@@ -24,11 +24,15 @@ class App
         puts "Completely finished starting BitcoinDarkd"
     end
 
-    def self.searchLog(text, timeout = 10)
+    def self.searchLog(text, strict_search = true, timeout = 10)
         old_timeout = timeout
         while timeout > 0
-            Elif.open($log_file).each_line do |l|
-                return true if l.include?(text)
+            Elif.open($log_file).each_line do |line|
+                if strict_search
+                    return line if line.include?(text)
+                else
+                    return line if line.match(text)
+                end
             end
             sleep 1 
             timeout -= 1

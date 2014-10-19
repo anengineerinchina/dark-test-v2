@@ -23,13 +23,15 @@ end
 When /^I send a ping request to one random peer$/ do
     raise 'Not enough peers found on the network' unless $peers.size > 2
     peer_ip = $peers[rand(2..($peers.size-1))]['srvipaddr']
+    $ping_requested_ip_address = peer_ip
     request = "{\"requestType\":\"ping\",\"destip\":\"#{peer_ip}\"}"
     SuperNETTest.requestSuperNET($rpcuser, $rpcpassword, request)
 end
 
 Then /^I receive a pong answer( in less than (\d+) seconds)?$/ do |with_timeout, seconds|
     timeout = with_timeout ? Integer(seconds) : 50
-    App.searchLog('PONG', timeout)
+    raise 'Missing ping IP before pong response' if $ping_requested_ip_address.nil?
+    App.searchLog("PONG.*#{$ping_requested_ip_address}", false, timeout)
 end
 
 When /^I send a message to myself with content "(.*)"$/ do |text|
@@ -40,5 +42,5 @@ end
 
 Then /^I receive a message to myself with content "(.*)"( in less than (\d+) seconds)?$/ do |text, with_timeout, seconds|
     timeout = with_timeout ? Integer(seconds) : 10
-    App.searchLog('GOT MESSAGE.('+text, timeout)
+    App.searchLog('GOT MESSAGE.('+text, true, timeout)
 end
