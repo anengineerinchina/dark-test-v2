@@ -16,11 +16,10 @@ rvm install ruby
 rvm use ruby --default
 [ -f $HOME/.bashrc ] && echo "[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm">>$HOME/.bashrc
 [ -f $HOME/.zshrc ] && echo "[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm">>$HOME/.zshrc
-- Add this to the end of your $HOME/.bashrc (or $HOME/.zshrc if you use ZSH)
-    # Load RVM, if you are using it
-    [[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm
 rvm rubygems current
 
 echo "Installing Cucumber (behavioural testing framework) and other libraries required for testing"
 bundle install # to automatically install missing gems
 gem update
+
+sudo apt-get install expect-dev # Required to unbuffer the output of BitcoinDarkd
