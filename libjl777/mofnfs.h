@@ -49,9 +49,11 @@ char **gen_privkeys(int32_t **cipheridsp,char *name,char *password,char *keygen,
             init_hexbytes(key,passkey.bytes,sizeof(passkey));
             (*cipheridsp)[i] = (pin[i] % NUM_CIPHERS);
             privkeys[i] = clonestr(key);
+            //printf("(%d %s) ",(*cipheridsp)[i],privkeys[i]);
             if ( i < len )
                 passkey = curve25519(passkey,G);
         }
+        //printf("gen_privkeys len.%ld\n",len);
     }
     return(privkeys);
 }
@@ -167,7 +169,7 @@ char *mofn_restorefile(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXT
             if ( fragments[i] != 0 )
                 continue;
             expand_nxt64bits(key,txids[i]);
-            str = kademlia_find("findvalue",prevaddr,verifiedNXTaddr,NXTACCTSECRET,sender,key,0);
+            str = kademlia_find("findvalue",prevaddr,verifiedNXTaddr,NXTACCTSECRET,sender,key,0,0);
             if ( str != 0 )
             {
                 if ( (json= cJSON_Parse(str)) != 0 )

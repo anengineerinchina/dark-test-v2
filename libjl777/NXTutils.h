@@ -363,6 +363,7 @@ uint64_t issue_transferAsset(char **retstrp,CURL *curl_handle,char *secret,char 
                 if ( _get_gatewayid() >= 0 )
                 {
                     sleep(60);
+                    fprintf(stderr,"ERROR submitting assetxfer.(%s)\n",jsontxt);
                     exit(-1);
                 }
 #endif
@@ -926,7 +927,7 @@ char *submit_AM(CURL *curl_handle,char *recipient,struct NXT_AMhdr *ap,char *ref
             errjson = cJSON_GetObjectItem(json,"errorCode");
             if ( errjson != 0 )
             {
-                printf("ERROR submitting AM.(%s)\n",jsonstr);
+                fprintf(stderr,"ERROR submitting AM.(%s)\n",jsonstr);
                 sleep(60);
                 exit(-1);
             }
@@ -1520,6 +1521,7 @@ struct pserver_info *get_pserver(int32_t *createdp,char *ipaddr,uint16_t superne
     return(pserver);
 }
 
+
 //#ifndef WIN32
 
 //#endif
@@ -1744,7 +1746,8 @@ void ensure_directory(char *dirname) // jl777: does this work in windows?
         if ( system(cmd) != 0 )
             printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
         fp = fopen(fname,"wb");
-        fclose(fp);
+        if ( fp != 0 )
+            fclose(fp);
     }
     else fclose(fp);
 }
@@ -1888,7 +1891,15 @@ char *verify_tokenized_json(unsigned char *pubkey,char *sender,int32_t *validp,c
                 update_pubkey(pubkey,pubkeystr);
         }
         return(parmstxt);
-    } else printf("verify_tokenized_json not array of 2\n");
+    }
+    else
+    {
+        char *str = cJSON_Print(json);
+        printf("verify_tokenized_json not array of 2 (%s)\n",str);
+        free(str);
+        //while ( 1 )
+        //    sleep(1);
+    }
     return(0);
 }
 
