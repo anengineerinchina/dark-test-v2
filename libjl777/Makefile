@@ -43,8 +43,8 @@ onetime: doesntexist; \
     sh autogen.sh; \
     ./configure; \
     make; \
-    cp .libs/libuv.a ../libs \
-    cp .libs/libuv.so ../libs \
+    cp .libs/libuv.a ../libs; \
+    cp .libs/libuv.so ../libs; \
     cd ..; \
     echo "expanding nacl"; \
     bzip2 -dc < nacl-20090405.tar.bz2 | tar -xf -; \
