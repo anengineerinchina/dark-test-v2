@@ -473,7 +473,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
         {
             if ( ismyipaddr(destip) == 0 )
                 txid = send_kademlia_cmd(0,get_pserver(0,destip,0,0),"ping",NXTACCTSECRET,0,0);
-            sprintf(retstr,"{\"result\":\"kademlia_ping to %s\",\"txid\",\"%llu\"}",destip,(long long)txid);
+            sprintf(retstr,"{\"result\":\"kademlia_ping to %s\",\"txid\":\"%llu\"}",destip,(long long)txid);
         }
         else sprintf(retstr,"{\"error\":\"kademlia_ping no destip\"}");
     }
@@ -484,7 +484,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
         else
         {
             txid = send_kademlia_cmd(0,get_pserver(0,ipaddr,0,0),"pong",NXTACCTSECRET,0,0);
-            sprintf(retstr,"{\"result\":\"kademlia_pong to (%s/%d)\",\"txid\",\"%llu\"}",ipaddr,port,(long long)txid);
+            sprintf(retstr,"{\"result\":\"kademlia_pong to (%s/%d)\",\"txid\":\"%llu\"}",ipaddr,port,(long long)txid);
         }
     }
    // if ( Debuglevel > 0 )
