@@ -593,7 +593,7 @@ char *kademlia_storedata(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *N
 char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *value)
 {
     char retstr[1024],ipaddr[MAX_JSON_FIELD],destNXTaddr[MAX_JSON_FIELD],pubkeystr[MAX_JSON_FIELD],portstr[MAX_JSON_FIELD],lastcontactstr[MAX_JSON_FIELD];
-    int32_t i,n,createdflag,dist,mydist;
+    int32_t i,n,createdflag,dist,mydist,threshold;
     uint32_t lastcontact,port;
     uint64_t keyhash,txid = 0;
     cJSON *array,*item;
@@ -644,7 +644,8 @@ char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifi
                             keynp->bestdist = dist;
                             keynp->bestbits = calc_nxt64bits(destNXTaddr);
                         }
-                        if ( keynp->bestbits != 0 && ismynxtbits(keynp->bestbits) == 0 && (dist < mydist || dist <= KADEMLIA_MAXTHRESHOLD) )
+                        threshold = (valueflag == 0) ? KADEMLIA_MAXTHRESHOLD : KADEMLIA_MINTHRESHOLD;
+                        if ( keynp->bestbits != 0 && ismynxtbits(keynp->bestbits) == 0 && (dist < mydist || dist <= threshold) )
                             txid = send_kademlia_cmd(keynp->bestbits,0,valueflag!=0?"findvalue":"findnode",NXTACCTSECRET,key,0);
                     }
                 }
@@ -665,7 +666,7 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
     char retstr[32768],pubkeystr[256],databuf[32768],numstr[64],ipaddr[64],destNXTaddr[64],*value;
     uint64_t keyhash,senderbits,destbits,txid = 0;
     uint64_t sortbuf[2 * KADEMLIA_NUMBUCKETS * KADEMLIA_NUMK];
-    int32_t i,n,createdflag,port,datalen,mydist,dist,remoteflag = 0;
+    int32_t i,n,threshold,isvalue,createdflag,port,datalen,mydist,dist,remoteflag = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     struct NXT_acct *keynp,*destnp,*np;
     cJSON *array,*item;
@@ -678,7 +679,8 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
         senderbits = calc_nxt64bits(sender);
         keyhash = calc_nxt64bits(key);
         mydist = bitweight(cp->srvpubnxtbits ^ keyhash);
-        if ( strcmp(cmd,"findvalue") == 0 )
+        isvalue = (strcmp(cmd,"findvalue") == 0);
+        if ( isvalue != 0 )
         {
             sp = kademlia_getstored(keyhash,0);
             if ( sp != 0 && sp->data != 0 )
@@ -715,11 +717,12 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
                 keynp->bestdist = 10000;
                 keynp->bestbits = 0;
                 int z = 0;
+                threshold = (isvalue == 0) ? KADEMLIA_MAXTHRESHOLD : KADEMLIA_MINTHRESHOLD;
                 for (i=0; i<n&&i<KADEMLIA_ALPHA; i++)
                 {
                     destbits = sortbuf[(i<<1) + 1];
                     dist = bitweight(destbits ^ keyhash);
-                    if ( ismynxtbits(destbits) == 0 && (dist < mydist || dist <= KADEMLIA_MAXTHRESHOLD) )
+                    if ( ismynxtbits(destbits) == 0 && (dist < mydist || dist <= threshold) )
                     {
                         if ( (stats= get_nodestats(destbits)) != 0 && memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
                             send_kademlia_cmd(destbits,0,"ping",NXTACCTSECRET,0,0);
@@ -743,7 +746,7 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
                     }
                 }
             }
-            else if ( ismynxtbits(senderbits) == 0 && (strcmp(cmd,"findnode") != 0 || datastr == 0) ) // need to respond to sender
+            if ( ismynxtbits(senderbits) == 0 && (isvalue == 0 || datastr == 0) ) // need to respond to sender
             {
                 array = cJSON_CreateArray();
                 for (i=0; i<n&&i<KADEMLIA_NUMK; i++)
@@ -772,7 +775,8 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
                 value = cJSON_Print(array);
                 free_json(array);
                 stripwhite_ns(value,strlen(value));
-                txid = send_kademlia_cmd(senderbits,0,strcmp(cmd,"findnode")==0?"havenode":"havenodeB",NXTACCTSECRET,key,value);
+                printf("send back.(%s) to %llu\n",value,(long long)senderbits);
+                txid = send_kademlia_cmd(senderbits,0,isvalue==0?"havenode":"havenodeB",NXTACCTSECRET,key,value);
                 free(value);
             }
             //free(sortbuf);

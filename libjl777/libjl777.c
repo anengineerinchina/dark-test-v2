@@ -1072,7 +1072,7 @@ char *addcontact_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
     copy_cJSON(acct,objs[1]);
     printf("handle.(%s) acct.(%s) valid.%d\n",handle,acct,valid);
     if ( handle[0] != 0 && acct[0] != 0 && sender[0] != 0 && valid > 0 )
-        retstr = addcontact(prevaddr,NXTaddr,NXTACCTSECRET,sender,handle,acct);
+        retstr = addcontact(handle,acct);
     else retstr = clonestr("{\"error\":\"invalid addcontact_func arguments\"}");
     return(retstr);
 }
@@ -1156,6 +1156,7 @@ char *havenode_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     copy_cJSON(pubkey,objs[0]);
     set_kademlia_args(key,objs[1],objs[2]);
     copy_cJSON(value,objs[3]);
+    printf("got HAVENODE.(%s) for key.(%s) from %s\n",value,key,sender);
     if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
         retstr = kademlia_havenode(0,prevaddr,NXTaddr,NXTACCTSECRET,sender,key,value);
     else retstr = clonestr("{\"error\":\"invalid havenode_func arguments\"}");
@@ -1168,9 +1169,10 @@ char *havenodeB_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr
     copy_cJSON(pubkey,objs[0]);
     set_kademlia_args(key,objs[1],objs[2]);
     copy_cJSON(value,objs[3]);
+    printf("got HAVENODEB.(%s) for key.(%s) from %s\n",value,key,sender);
     if ( key[0] != 0 && sender[0] != 0 && valid > 0 )
         retstr = kademlia_havenode(1,prevaddr,NXTaddr,NXTACCTSECRET,sender,key,value);
-    else retstr = clonestr("{\"error\":\"invalid havenode_func arguments\"}");
+    else retstr = clonestr("{\"error\":\"invalid havenodeB_func arguments\"}");
     return(retstr);
 }
 
