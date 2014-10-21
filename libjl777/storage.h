@@ -183,7 +183,7 @@ struct kademlia_storage **find_closer_Kstored(int32_t selector,uint64_t refbits,
 {
     DB *dbp = get_selected_database(selector);
     struct kademlia_storage *sp,**sps = 0;
-    int32_t ret,dist,refdist,i,n = 0;
+    int32_t ret,dist,refdist,n = 0;
     DBT key,data;
     DBC *cursorp = 0;
     printf("find_closer_Kstored\n");
@@ -198,10 +198,7 @@ struct kademlia_storage **find_closer_Kstored(int32_t selector,uint64_t refbits,
             refdist = bitweight(refbits ^ sp->keyhash);
             dist = bitweight(newbits ^ sp->keyhash);
             if ( dist < refdist )
-            {
-                if ( i != n )
-                    sps[n++] = sp;
-            }
+                sps[n++] = sp;
         }
         cursorp->close(cursorp);
     }
