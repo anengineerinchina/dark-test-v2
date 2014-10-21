@@ -45,7 +45,7 @@ onetime: doesntexist; \
     make; \
     cp libdb.a ../libs; \
     cp *.h ../includes; \
-    cd ..; \
+    cd ../..; \
     cd libuv; \
     sh autogen.sh; \
     ./configure; \
