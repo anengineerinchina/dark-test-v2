@@ -32,12 +32,17 @@ struct storage_queue_entry { struct kademlia_storage *sp; union _storage_type U;
 int32_t init_storage()
 {
     int ret;
+    ensure_directory("storage");
     if ( (ret = db_env_create(&Storage, 0)) != 0 )
     {
         fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
         return(-1);
     }
-    ret = Storage->open(Storage,"storage",DB_CREATE | DB_INIT_TXN | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_RECOVER,0);
+    if ( (ret= Storage->open(Storage,"storage",DB_CREATE | DB_INIT_TXN | DB_INIT_LOG | DB_INIT_MPOOL | DB_RECOVER | DB_THREAD |DB_USE_ENVIRON,0)) != 0 )
+    {
+        printf("error.%d opening Storage environment\n",ret);
+        exit(ret);
+    }
     if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
     {
         printf("error.%d creating Public_dbp database\n",ret);
