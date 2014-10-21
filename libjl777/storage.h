@@ -38,7 +38,7 @@ int32_t init_storage()
         fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
         return(-1);
     }
-    if ( (ret= Storage->open(Storage,"/tmp",DB_CREATE | DB_INIT_TXN | DB_INIT_LOG | DB_INIT_MPOOL | DB_RECOVER | DB_THREAD | DB_USE_ENVIRON,0)) != 0 )
+    if ( (ret= Storage->open(Storage,0,DB_CREATE | DB_INIT_TXN | DB_INIT_LOG | DB_INIT_MPOOL | DB_RECOVER | DB_THREAD | DB_USE_ENVIRON,0)) != 0 )
     {
         printf("error.%d opening Storage environment\n",ret);
         exit(ret);
