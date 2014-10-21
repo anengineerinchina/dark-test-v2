@@ -29,115 +29,40 @@ DB *Public_dbp,*Private_dbp;
 union _storage_type { uint64_t destbits; int32_t selector; };
 struct storage_queue_entry { struct kademlia_storage *sp; union _storage_type U; };
 
-
-DB_ENV *db_setup(const char *home,const char *data_dir,FILE *errfp,const char *progname)
-{
-	DB_ENV *dbenv;
-	DB *dbp;
-	int ret;
-    
-	/*
-	 * Create an environment object and initialize it for error
-	 * reporting.
-	 */
-	if ((ret = db_env_create(&dbenv, 0)) != 0) {
-		fprintf(errfp, "%s: %s\n", progname, db_strerror(ret));
-		return (0);
-	}
-	dbenv->set_errfile(dbenv, errfp);
-	dbenv->set_errpfx(dbenv, progname);
-    
-	/*
-	 * We want to specify the shared memory buffer pool cachesize,
-	 * but everything else is the default.
-	 */
-	if ((ret = dbenv->set_cachesize(dbenv, 0, 64 * 1024, 0)) != 0) {
-		dbenv->err(dbenv, ret, "set_cachesize");
-		dbenv->close(dbenv, 0);
-		return (0);
-	}
-    
-	/* Databases are in a subdirectory. */
-	(void)dbenv->set_data_dir(dbenv, data_dir);
-    
-	/* Open the environment with full transactional support. */
-	if ((ret = dbenv->open(dbenv, home, DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN, 0644)) != 0) {
-		dbenv->err(dbenv, ret, "environment open: %s", home);
-		if (ret == ENOENT) {
-		    printf("Please check whether home dir \"%s\" existed.\n",
-                   home);
-		}
-		dbenv->close(dbenv, 0);
-		return (0);
-	}
-    if ( 0 )
-    {
-        /*
-         * Open a database in the environment to verify the data_dir
-         * has been set correctly.
-         * Create a database object and initialize it for error
-         * reporting.
-         */
-        if ((ret = db_create(&dbp, dbenv, 0)) != 0) {
-            fprintf(errfp, "%s: %s\n", progname, db_strerror(ret));
-            return (0);
-        }
-        
-        /* Open a database with DB_BTREE access method. */
-        if ((ret = dbp->open(dbp, NULL, "exenv_db1.db", NULL,
-                             DB_BTREE, DB_CREATE, 0644)) != 0) {
-            fprintf(stderr, "database open: %s\n", db_strerror(ret));
-            if (ret == ENOENT) {
-                printf("Please check whether data dir \"%s\" "
-                       "exists under \"%s\".\n", data_dir, home);
-            }
-            return (0);
-        }
-        
-        /* Close the database handle. */
-        if ((ret = dbp->close(dbp, 0)) != 0) {
-            fprintf(stderr, "database close: %s\n", db_strerror(ret));
-            return (0);
-        }
-        
-        /* Close the environment handle. */
-        if ((ret = dbenv->close(dbenv, 0)) != 0) {
-            fprintf(stderr, "DB_ENV->close: %s\n", db_strerror(ret));
-            return (0);
-        }
-    }
-	return(dbenv);
-}
-
 int32_t init_storage()
 {
     int ret;
     ensure_directory("storage");
-    ensure_directory("storage/data");
-    //printf("init_storage getchar()\n");
-    //Storage = db_setup("storage","data",stderr,"SuperNET");
-    //fprintf(stderr,"got Storage.%p\n",Storage);
-    //return(0);
+    if ( (ret = db_env_create(&Storage, 0)) != 0 )
+    {
+        fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
+        return(-1);
+    }
+    if ( (ret= Storage->open(Storage,"storage",DB_CREATE | DB_INIT_TXN | DB_INIT_LOG | DB_INIT_MPOOL | DB_RECOVER | DB_THREAD |DB_USE_ENVIRON,0)) != 0 )
+    {
+        printf("error.%d opening Storage environment\n",ret);
+        exit(ret);
+    }
     if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
     {
-        fprintf(stderr,"error.%d creating Public_dbp database\n",ret);
+        printf("error.%d creating Public_dbp database\n",ret);
         return(ret);
     }
     if ( (ret= db_create(&Private_dbp,Storage,0)) != 0 )
     {
-        fprintf(stderr,"error.%d creating Private_dbp database\n",ret);
+        printf("error.%d creating Private_dbp database\n",ret);
         return(ret);
     }
-    if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE,0)) != 0 ) //DB_AUTO_COMMIT
+    if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
     {
-        fprintf(stderr,"error.%d creating Public_dbp database\n",ret);
+        printf("error.%d creating Public_dbp database\n",ret);
         return(ret);
     }
-    if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE,0)) != 0 ) //DB_AUTO_COMMIT
+    if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
     {
-        fprintf(stderr,"error.%d creating Private_dbp database\n",ret);
+        printf("error.%d creating Private_dbp database\n",ret);
         return(ret);
-    } 
+    }
     return(0);
 }
 
