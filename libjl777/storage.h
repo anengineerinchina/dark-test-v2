@@ -8,12 +8,6 @@
 
 #ifndef libjl777_storage_h
 #define libjl777_storage_h
-#include <sys/types.h>
-
-#include <errno.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "db.h"
 
@@ -120,10 +114,10 @@ int32_t init_storage()
     int ret;
     ensure_directory("storage");
     ensure_directory("storage/data");
-    printf("init_storage getchar()\n");
-    Storage = db_setup("storage","data",stderr,"SuperNET");
-    fprintf(stderr,"got Storage.%p\n",Storage);
-    return(0);
+    //printf("init_storage getchar()\n");
+    //Storage = db_setup("storage","data",stderr,"SuperNET");
+    //fprintf(stderr,"got Storage.%p\n",Storage);
+    //return(0);
     if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
     {
         fprintf(stderr,"error.%d creating Public_dbp database\n",ret);
@@ -134,16 +128,16 @@ int32_t init_storage()
         fprintf(stderr,"error.%d creating Private_dbp database\n",ret);
         return(ret);
     }
-    if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
+    if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE,0)) != 0 ) //DB_AUTO_COMMIT
     {
         fprintf(stderr,"error.%d creating Public_dbp database\n",ret);
         return(ret);
     }
-    if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
+    if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE,0)) != 0 ) //DB_AUTO_COMMIT
     {
         fprintf(stderr,"error.%d creating Private_dbp database\n",ret);
         return(ret);
-    } //else Private_dbp->verify(Private_dbp,0);
+    } 
     return(0);
 }
 
