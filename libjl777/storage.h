@@ -58,12 +58,12 @@ int32_t init_storage()
     }
     if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
     {
-        printf("error.%d creating Public_dbp database\n",ret);
+        printf("error.%d opening Public_dbp database\n",ret);
         return(ret);
     }
     if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
     {
-        printf("error.%d creating Private_dbp database\n",ret);
+        printf("error.%d opening Private_dbp database\n",ret);
         return(ret);
     }
     return(0);
