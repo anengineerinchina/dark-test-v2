@@ -231,6 +231,7 @@ int32_t kademlia_pushstore(int32_t selector,uint64_t refbits,uint64_t newbits)
     int32_t n = 0;
     struct storage_queue_entry *ptr;
     struct kademlia_storage **sps,*sp;
+    fprintf(stderr,"pushstore\n");
     if ( (sps= find_closer_Kstored(selector,refbits,newbits)) != 0 )
     {
         while ( (sp= sps[n++]) != 0 )
