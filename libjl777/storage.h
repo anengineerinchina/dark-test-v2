@@ -34,15 +34,15 @@ int32_t init_storage()
     int ret;
     ensure_directory("storage");
     ensure_directory("storage/data");
-    if ( 1 )
+    if ( 0 )
     {
         if ( (ret = db_env_create(&Storage,0)) != 0 )
         {
             fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
             return(-1);
         }
-      	//(void)Storage->set_data_dir(Storage,"storage");
-        if ( (ret= Storage->open(Storage,"storage",DB_CREATE,0)) != 0 )
+      	(void)Storage->set_data_dir(Storage,"storage");
+        if ( (ret= Storage->open(Storage,"storage",DB_CREATE|DB_INIT_LOCK|DB_INIT_LOG|DB_INIT_MPOOL|DB_INIT_TXN,0)) != 0 )
         {
             printf("error.%d opening Storage environment\n",ret);
             exit(ret);
@@ -95,6 +95,8 @@ struct kademlia_storage *find_storage(int32_t selector,char *keystr)
     uint64_t keybits = calc_nxt64bits(keystr);
     DBT key,data;
     int ret;
+    if ( dbp == 0 )
+        return(0);
     clear_pair(&key,&data);
     key.data = &keybits;
     key.size = sizeof(keybits);
@@ -117,6 +119,8 @@ struct kademlia_storage *add_storage(int32_t selector,char *keystr,char *datastr
     DBT key,data;
     DB_TXN *txn = 0;
     struct kademlia_storage *sp;
+    if ( dbp == 0 )
+        return(0);
     if ( Total_stored > MAX_KADEMLIA_STORAGE )
     {
         printf("Total_stored %s > %s\n",_mbstr(Total_stored),_mbstr2(MAX_KADEMLIA_STORAGE));
