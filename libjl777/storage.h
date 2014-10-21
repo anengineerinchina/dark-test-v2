@@ -56,6 +56,8 @@ int32_t init_storage()
         printf("error.%d creating Private_dbp database\n",ret);
         return(ret);
     }
+  	(void)Public_dbp->set_create_dir(Public_dbp,"storage");
+	(void)Private_dbp->set_create_dir(Private_dbp,"storage");
     if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
     {
         printf("error.%d opening Public_dbp database\n",ret);
