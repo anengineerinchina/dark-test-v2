@@ -247,7 +247,7 @@ uint64_t calc_privatedatastr(bits256 *AESpassword,char *AESpasswordstr,char *pri
     return(retval);
 }
 
-cJSON *parse_encrypted_data(int32_t *sequenceidp,struct contact_info *contact,char *key,uint8_t *data,int32_t datalen,char *AESpasswordstr)
+cJSON *parse_encrypted_data(int32_t updatedb,int32_t *sequenceidp,struct contact_info *contact,char *key,uint8_t *data,int32_t datalen,char *AESpasswordstr)
 {
     cJSON *json = 0;
     uint64_t deaddrop;
@@ -259,9 +259,12 @@ cJSON *parse_encrypted_data(int32_t *sequenceidp,struct contact_info *contact,ch
     {
         if ( (json= cJSON_Parse(decoded)) != 0 )
         {
-            init_hexbytes(privatedatastr,data,datalen);
-            add_storage(PRIVATE_DATA,key,privatedatastr,0,0);
-            printf("saved parsed decrypted.(%s)\n",decoded);
+            if ( updatedb != 0 )
+            {
+                init_hexbytes(privatedatastr,data,datalen);
+                add_storage(PRIVATE_DATA,key,privatedatastr,0,0);
+                printf("saved parsed decrypted.(%s)\n",decoded);
+            }
             hint = get_API_int(cJSON_GetObjectItem(json,"hint"),-1);
             if ( hint > 0 )
             {
@@ -302,7 +305,7 @@ char *check_privategenesis(struct contact_info *contact)
         sp = kademlia_getstored(PUBLIC_DATA,location,0);
         if ( sp != 0 && sp->data != 0 ) // no need to query if we already have it
         {
-            if ( (json= parse_encrypted_data(&sequenceid,contact,key,sp->data,sp->datalen,AESpasswordstr)) != 0 )
+            if ( (json= parse_encrypted_data(0,&sequenceid,contact,key,sp->data,sp->datalen,AESpasswordstr)) != 0 )
                 free_json(json);
         }
         else
@@ -371,7 +374,7 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
         {
             init_hexbytes_noT(AESpasswordstr,tel->AESpassword.bytes,sizeof(tel->AESpassword));
             //printf("try AESpassword.(%s)\n",AESpasswordstr);
-            if ( (json= parse_encrypted_data(&sequenceid,contact,key,data,datalen,AESpasswordstr)) != 0 )
+            if ( (json= parse_encrypted_data(1,&sequenceid,contact,key,data,datalen,AESpasswordstr)) != 0 )
             {
                 if ( sequenceid == tel->sequenceid )
                 {
@@ -463,6 +466,56 @@ struct contact_info *find_contact(char *handle)
     contact = _find_contact(handle);
     portable_mutex_unlock(&Contacts_mutex);
     return(contact);
+}
+
+char *getdb(struct sockaddr *prevaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int32_t dir,char *contactstr,int32_t sequenceid,char *keystr)
+{
+    char retbuf[4096],hexstr[4096],AESpasswordstr[512],locationstr[64],*jsonstr;
+    cJSON *json;
+    int32_t seqid;
+    uint64_t location;
+    bits256 AESpassword;
+    struct kademlia_storage *sp = 0;
+    struct contact_info *contact;
+    retbuf[0] = 0;
+    if ( contactstr[0] == 0 )
+    {
+        if ( keystr[0] != 0 )
+        {
+            if ( (sp= find_storage(PUBLIC_DATA,keystr)) != 0 )
+            {
+                if ( sp->datalen < sizeof(hexstr)/2 )
+                {
+                    init_hexbytes(hexstr,sp->data,sp->datalen);
+                    sprintf(retbuf,"{\"data\":\"%s\"}",hexstr);
+                } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
+            } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
+        } else strcpy(retbuf,"{\"error\":\"no contact and no key\"}");
+    }
+    else
+    {
+        if ( (contact= find_contact(contactstr)) != 0 )
+        {
+            if ( dir > 0 )
+                location = calc_sendAESkeys(&AESpassword,AESpasswordstr,contact,sequenceid);
+            else location = calc_recvAESkeys(&AESpassword,AESpasswordstr,contact,sequenceid);
+            if ( location != 0 )
+            {
+                expand_nxt64bits(locationstr,location);
+                if ( (sp= find_storage(PRIVATE_DATA,locationstr)) != 0 )
+                {
+                    if ( (json= parse_encrypted_data(0,&seqid,contact,locationstr,sp->data,sp->datalen,AESpasswordstr)) != 0 )
+                    {
+                        jsonstr = cJSON_Print(json);
+                        stripwhite_ns(jsonstr,strlen(jsonstr));
+                        free_json(json);
+                        return(jsonstr);
+                    } else strcpy(retbuf,"{\"error\":\"couldnt decrypt data\"}");
+                } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
+            } else strcpy(retbuf,"{\"error\":\"cant get location\"}");
+        } else strcpy(retbuf,"{\"error\":\"cant find contact\"}");
+    }
+    return(clonestr(retbuf));
 }
 
 char *addcontact(char *handle,char *acct)
