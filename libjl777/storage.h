@@ -33,32 +33,35 @@ int32_t init_storage()
 {
     int ret;
     ensure_directory("storage");
-    if ( (ret = db_env_create(&Storage, 0)) != 0 )
+    if ( 0 )
     {
-        fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
-        return(-1);
-    }
-    if ( (ret= Storage->open(Storage,"storage",DB_CREATE|DB_INIT_LOCK|DB_INIT_LOG|DB_INIT_MPOOL|DB_INIT_TXN,0)) != 0 )
-    {
-        printf("error.%d opening Storage environment\n",ret);
-        exit(ret);
-    }
-    if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
-    {
-        printf("error.%d creating Public_dbp database\n",ret);
-        return(ret);
+        if ( (ret = db_env_create(&Storage, 0)) != 0 )
+        {
+            fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
+            return(-1);
+        }
+        if ( (ret= Storage->open(Storage,"storage",DB_CREATE|DB_INIT_LOCK|DB_INIT_LOG|DB_INIT_MPOOL|DB_INIT_TXN,0)) != 0 )
+        {
+            printf("error.%d opening Storage environment\n",ret);
+            exit(ret);
+        }
+        if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
+        {
+            printf("error.%d creating Public_dbp database\n",ret);
+            return(ret);
+        }
     }
     if ( (ret= db_create(&Private_dbp,Storage,0)) != 0 )
     {
         printf("error.%d creating Private_dbp database\n",ret);
         return(ret);
     }
-    if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
+    if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
     {
         printf("error.%d creating Public_dbp database\n",ret);
         return(ret);
     }
-    if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
+    if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
     {
         printf("error.%d creating Private_dbp database\n",ret);
         return(ret);
