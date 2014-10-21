@@ -45,11 +45,11 @@ int32_t init_storage()
             printf("error.%d opening Storage environment\n",ret);
             exit(ret);
         }
-        if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
-        {
-            printf("error.%d creating Public_dbp database\n",ret);
-            return(ret);
-        }
+    }
+    if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
+    {
+        printf("error.%d creating Public_dbp database\n",ret);
+        return(ret);
     }
     if ( (ret= db_create(&Private_dbp,Storage,0)) != 0 )
     {
