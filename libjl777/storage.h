@@ -32,6 +32,9 @@ struct storage_queue_entry { struct kademlia_storage *sp; union _storage_type U;
 int32_t init_storage()
 {
     int ret;
+#ifdef __linux__
+    return(0);
+#endif
     ensure_directory("storage");
     ensure_directory("storage/data");
     if ( 0 )
