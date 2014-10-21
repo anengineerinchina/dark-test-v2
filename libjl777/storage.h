@@ -115,8 +115,9 @@ int32_t init_storage()
     ensure_directory("storage");
     ensure_directory("storage/data");
     printf("init_storage getchar()\n");
-    //Storage = db_setup("storage","data",stderr,"SuperNET");
+    Storage = db_setup("storage","data",stderr,"SuperNET");
     fprintf(stderr,"got Storage.%p\n",Storage);
+    return(0);
     if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
     {
         fprintf(stderr,"error.%d creating Public_dbp database\n",ret);
