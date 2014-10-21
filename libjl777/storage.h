@@ -8,6 +8,12 @@
 
 #ifndef libjl777_storage_h
 #define libjl777_storage_h
+#include <sys/types.h>
+
+#include <errno.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "db.h"
 
