@@ -46,12 +46,12 @@ int32_t init_storage()
             exit(ret);
         }
     }
-    if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
+    if ( (ret= db_create(&Public_dbp,NULL,0)) != 0 )
     {
         printf("error.%d creating Public_dbp database\n",ret);
         return(ret);
     }
-    if ( (ret= db_create(&Private_dbp,Storage,0)) != 0 )
+    if ( (ret= db_create(&Private_dbp,NULL,0)) != 0 )
     {
         printf("error.%d creating Private_dbp database\n",ret);
         return(ret);
