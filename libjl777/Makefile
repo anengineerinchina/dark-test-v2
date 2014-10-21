@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -pedantic -g -fPIC 
+CFLAGS=-Wall -pedantic -g -fPIC -I includes
 LIBS=-lm -lreadline 
 
 TARGET	= libjl777.a
@@ -39,6 +39,13 @@ btcd: ../src/BitcoinDarkd; \
     cd ../src; rm BitcoinDarkd; make -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
 
 onetime: doesntexist; \
+    unzip db-6.1.19.zip \
+    cd db-6.1.19/build_unix \
+    ../dist/configure \
+    make \
+    cp libdb.a ../libs \
+    cp *.h ../includes \
+    cd .. \
     cd libuv; \
     sh autogen.sh; \
     ./configure; \
