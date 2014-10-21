@@ -115,24 +115,25 @@ int32_t init_storage()
     ensure_directory("storage");
     ensure_directory("storage/data");
     Storage = db_setup("storage","data",stderr,"SuperNET");
+    fprintf(stderr,"got Storage.%p\n",Storage);
     if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
     {
-        printf("error.%d creating Public_dbp database\n",ret);
+        fprintf(stderr,"error.%d creating Public_dbp database\n",ret);
         return(ret);
     }
     if ( (ret= db_create(&Private_dbp,Storage,0)) != 0 )
     {
-        printf("error.%d creating Private_dbp database\n",ret);
+        fprintf(stderr,"error.%d creating Private_dbp database\n",ret);
         return(ret);
     }
     if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
     {
-        printf("error.%d creating Public_dbp database\n",ret);
+        fprintf(stderr,"error.%d creating Public_dbp database\n",ret);
         return(ret);
     }
     if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
     {
-        printf("error.%d creating Private_dbp database\n",ret);
+        fprintf(stderr,"error.%d creating Private_dbp database\n",ret);
         return(ret);
     } //else Private_dbp->verify(Private_dbp,0);
     return(0);
