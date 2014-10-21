@@ -36,13 +36,13 @@ int32_t init_storage()
     ensure_directory("storage/data");
     if ( 1 )
     {
-        if ( (ret = db_env_create(&Storage, 0)) != 0 )
+        if ( (ret = db_env_create(&Storage,0)) != 0 )
         {
             fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
             return(-1);
         }
-      	(void)Storage->set_data_dir(Storage,"storage");
-        if ( (ret= Storage->open(Storage,"data",DB_CREATE|DB_INIT_LOCK|DB_INIT_LOG|DB_INIT_MPOOL|DB_INIT_TXN,0)) != 0 )
+      	//(void)Storage->set_data_dir(Storage,"storage");
+        if ( (ret= Storage->open(Storage,"storage",DB_CREATE,0)) != 0 )
         {
             printf("error.%d opening Storage environment\n",ret);
             exit(ret);
