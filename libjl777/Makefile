@@ -43,8 +43,8 @@ onetime: doesntexist; \
     cd db-6.1.19/build_unix; \
     ../dist/configure; \
     make; \
-    cp libdb.a ../libs; \
-    cp *.h ../includes; \
+    cp libdb.a ../../libs; \
+    cp *.h ../../includes; \
     cd ../..; \
     cd libuv; \
     sh autogen.sh; \
