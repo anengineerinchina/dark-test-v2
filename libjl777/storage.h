@@ -33,12 +33,25 @@ int32_t init_storage()
 {
     int ret;
     ensure_directory("storage");
+    ensure_directory("storage/data");
     if ( (ret = db_env_create(&Storage, 0)) != 0 )
     {
         fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
         return(-1);
     }
-    if ( (ret= Storage->open(Storage,0,DB_CREATE | DB_INIT_TXN | DB_INIT_LOG | DB_INIT_MPOOL | DB_RECOVER | DB_THREAD | DB_USE_ENVIRON,0)) != 0 )
+    Storage->set_errfile(Storage,stderr);
+    Storage->set_errpfx(Storage,"SuperNET");
+    /*
+     * We want to specify the shared memory buffer pool cachesize,
+     * but everything else is the default.
+     */
+    //if ((ret = dbenv->set_cachesize(dbenv, 0, 64 * 1024, 0)) != 0) {
+    //    dbenv->err(dbenv, ret, "set_cachesize");
+    //    dbenv->close(dbenv, 0);
+    //    return (1);
+    //}
+    (void)Storage->set_data_dir(Storage,"data");
+    if ( (ret= Storage->open(Storage,"storage",DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN,0644)) != 0 )
     {
         printf("error.%d opening Storage environment\n",ret);
         exit(ret);
