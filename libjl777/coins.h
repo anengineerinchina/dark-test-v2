@@ -556,7 +556,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
     return(cp);
 }
 
-void init_MGWconf(char *JSON_or_fname,char *myipaddr)
+char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
 {
     //int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxtbits,char *pubBTC);
     //struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer);
@@ -588,6 +588,13 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
         MGWconf = cJSON_Parse(jsonstr);
         if ( MGWconf != 0 )
         {
+            if ( myipaddr == 0 )
+            {
+                static char ipbuf[64];
+                myipaddr = ipbuf;
+                if ( extract_cJSON_str(myipaddr,sizeof(ipbuf),MGWconf,"myipaddr") <= 0 )
+                    strcpy(myipaddr,"127.0.0.1");
+            }
             if ( extract_cJSON_str(Global_mp->myhandle,sizeof(Global_mp->myhandle),MGWconf,"myhandle") <= 0 )
                 strcpy(Global_mp->myhandle,"myhandle");
             printf("parsed\n");
@@ -789,5 +796,6 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
         }
         else printf("ORIGBLOCK.(%s)\n",ORIGBLOCK);
     }
+    return(myipaddr);
 }
 #endif
