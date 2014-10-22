@@ -40,6 +40,7 @@ btcd: ../src/BitcoinDarkd; \
     cd ../src; rm BitcoinDarkd; make -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
 
 patch: doesntexist; \
+    export LIBDIR="/usr/local/BerkeleyDB.6.1/lib"; \
     cd db-6.1.19/build_unix; \
     ../dist/configure; \
     cp ../../env_region.c ../src/env; \
