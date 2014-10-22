@@ -318,6 +318,8 @@ std::string HelpMessage()
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
+extern "C" int32_t init_SuperNET_storage();
+
 bool AppInit2()
 {
     // ********************************************************* Step 1: setup
@@ -494,7 +496,6 @@ bool AppInit2()
 
     if ( fDaemon != 0 )
     {
-        extern "C" int32_t init_SuperNET_storage();
         init_SuperNET_storage();
     }
 #if !defined(WIN32) && !defined(QT_GUI)
