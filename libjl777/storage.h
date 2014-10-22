@@ -34,14 +34,14 @@ int32_t init_SuperNET_storage()
     static int didinit;
     int ret;
 #ifdef __linux__
-    return(0);
+    //return(0);
 #endif
     if ( didinit != 0 )
         return(1);
     didinit = 1;
 
     ensure_directory("storage");
-    ensure_directory("storage/data");
+    //ensure_directory("storage/data");
     //ret = db_setup("storage","data",stderr,"SuperNET");
     //printf("db_setup returns.%d\n",ret);
 
