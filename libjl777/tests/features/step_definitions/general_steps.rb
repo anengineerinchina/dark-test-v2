@@ -28,6 +28,13 @@ When /^I send a ping request to one random peer$/ do
     SuperNETTest.requestSuperNET($rpcuser, $rpcpassword, request)
 end
 
+When /^I send a ping request to "(.*)" peer$/ do |peer_ip|
+    raise 'Not enough peers found on the network' unless $peers.size > 2
+    $ping_requested_ip_address = peer_ip
+    request = "{\"requestType\":\"ping\",\"destip\":\"#{peer_ip}\"}"
+    SuperNETTest.requestSuperNET($rpcuser, $rpcpassword, request)
+end
+
 Then /^I receive a pong answer( in less than (\d+) seconds)?$/ do |with_timeout, seconds|
     timeout = with_timeout ? Integer(seconds) : 50
     raise 'Missing ping IP before pong response' if $ping_requested_ip_address.nil?
