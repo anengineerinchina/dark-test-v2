@@ -23,6 +23,9 @@ class App
         puts "Completely finished starting BitcoinDarkd"
     end
 
+    # Search for the given text in the BitcoinDarkd execution log.
+    # The strict search restricts the search to the exact text found
+    # somewhere in the log. When it's false a regular experssion is admitted.
     def self.searchLog(text, strict_search = true, timeout = 10)
         old_timeout = timeout
         while timeout > 0
