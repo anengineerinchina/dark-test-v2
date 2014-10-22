@@ -26,8 +26,7 @@ long Total_stored,Storage_maxitems[2];
 DB_ENV *Storage;
 DB *Public_dbp,*Private_dbp;
 
-union _storage_type { uint64_t destbits; int32_t selector; };
-struct storage_queue_entry { struct kademlia_storage *sp; union _storage_type U; };
+struct storage_queue_entry { uint64_t keyhash,destbits; int32_t selector; };
 int db_setup(const char *home,const char *data_dir,FILE *errfp,const char *progname);
 
 int32_t init_SuperNET_storage()
@@ -35,7 +34,7 @@ int32_t init_SuperNET_storage()
     static int didinit;
     int ret;
 #ifdef __linux__
-    return(0);
+    //return(0);
 #endif
     if ( didinit != 0 )
         return(1);
@@ -70,14 +69,12 @@ int32_t init_SuperNET_storage()
         printf("error.%d creating Private_dbp database\n",ret);
         return(ret);
     } else printf("Private_dbp created\n");
-  	//(void)Public_dbp->set_create_dir(Public_dbp,"storage");
-	//(void)Private_dbp->set_create_dir(Private_dbp,"storage");
-    if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
+    if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
     {
         printf("error.%d opening Public_dbp database\n",ret);
         return(ret);
     } else printf("Public_dbp opened\n");
-    if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
+    if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
     {
         printf("error.%d opening Private_dbp database\n",ret);
         return(ret);
@@ -218,7 +215,7 @@ struct kademlia_storage **find_closer_Kstored(int32_t selector,uint64_t refbits,
     DBC *cursorp = 0;
     if ( dbp == 0 )
         return(0);
-    printf("find_closer_Kstored\n");
+    printf("find_closer_Kstored max.%d\n",num_in_db(selector));
     dbp->cursor(dbp,NULL,&cursorp,0);
     if ( cursorp != 0 )
     {
@@ -231,6 +228,7 @@ struct kademlia_storage **find_closer_Kstored(int32_t selector,uint64_t refbits,
             dist = bitweight(newbits ^ sp->keyhash);
             if ( dist < refdist )
                 sps[n++] = sp;
+            clear_pair(&key,&data);
         }
         cursorp->close(cursorp);
     }
@@ -248,10 +246,11 @@ int32_t kademlia_pushstore(int32_t selector,uint64_t refbits,uint64_t newbits)
     {
         while ( (sp= sps[n++]) != 0 )
         {
-            printf("queue.%d to %llu\n",n,(long long)newbits);
             ptr = calloc(1,sizeof(*ptr));
-            ptr->U.destbits = newbits;
-            ptr->sp = sp;
+            ptr->destbits = newbits;
+            ptr->selector = selector;
+            ptr->keyhash = sp->keyhash;
+            printf("%p queue.%d to %llu\n",ptr,n,(long long)newbits);
             queue_enqueue(&storageQ,ptr);
         }
         free(sps);
@@ -266,18 +265,21 @@ uint64_t process_storageQ()
     uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char *kadcmd,char *NXTACCTSECRET,char *key,char *datastr);
     struct storage_queue_entry *ptr;
     char key[64],datastr[8193];
-    struct kademlia_storage *sp;
     uint64_t txid = 0;
+    struct kademlia_storage *sp;
     struct coin_info *cp = get_coin_info("BTCD");
     if ( (ptr= queue_dequeue(&storageQ)) != 0 )
     {
-        printf("dequeued storageQ %p\n",ptr);
-        sp = ptr->sp;
-        init_hexbytes_noT(datastr,sp->data,sp->datalen);
-        expand_nxt64bits(key,sp->keyhash);
-        txid = send_kademlia_cmd(ptr->U.destbits,0,"store",cp->srvNXTACCTSECRET,key,datastr);
-        if ( Debuglevel > 0 )
-            printf("txid.%llu send queued push storage key.(%s) to %llu\n",(long long)txid,key,(long long)ptr->U.destbits);
+        fprintf(stderr,"dequeue StorageQ %p key.(%llu) dest.(%llu) selector.%d\n",ptr,(long long)ptr->keyhash,(long long)ptr->destbits,ptr->selector);
+        expand_nxt64bits(key,ptr->keyhash);
+        if ( (sp= find_storage(ptr->selector,key)) != 0 )
+        {
+            init_hexbytes_noT(datastr,sp->data,sp->datalen);
+            printf("dequeued storageQ %p: (%s) len.%d\n",ptr,datastr,sp->datalen);
+            txid = send_kademlia_cmd(ptr->destbits,0,"store",cp->srvNXTACCTSECRET,key,datastr);
+            if ( Debuglevel > 0 )
+                printf("txid.%llu send queued push storage key.(%s) to %llu\n",(long long)txid,key,(long long)ptr->destbits);
+        }
         free(ptr);
     }
     return(txid);
