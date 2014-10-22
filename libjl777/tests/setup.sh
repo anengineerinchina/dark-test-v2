@@ -14,8 +14,8 @@ curl -L https://get.rvm.io | bash -s stable
 rvm requirements
 rvm install ruby
 rvm use ruby --default
-[ -f $HOME/.bashrc ] && echo "[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm">>$HOME/.bashrc
-[ -f $HOME/.zshrc ] && echo "[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm">>$HOME/.zshrc
+[ -f $HOME/.bashrc ] && echo "[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm">>$HOME/.bashrc && echo "Warning: You need to open a new terminal for these changes to take effect"
+[ -f $HOME/.zshrc ] && echo "[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm">>$HOME/.zshrc && echo "Warning: You need to open a new terminal for these changes to take effect"
 rvm rubygems current
 
 echo "Installing Cucumber (behavioural testing framework) and other libraries required for testing"
