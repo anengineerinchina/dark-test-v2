@@ -14,7 +14,7 @@ class Configuration
         $btcd_binary_folder = Pathname.new( File.join(Dir.pwd, config['BitcoinDark-binary-folder']) ).expand_path
         # Load username and password from BitcoinDark.conf file
         btcd_config_file = Pathname.new( File.join( config['BitcoinDark-home-directory'], config['BitcoinDark-configuration-filename'] ) ).expand_path
-        raise ConfigurationFileMissingException unless btcd_config_file.exist?
+        raise ConfigurationFileMissingException, "I couldn't find BitcoinDarkd configuration file in #{btcd_config_file.to_s} (this path can be configured in #{config_file.to_s})" unless btcd_config_file.exist?
         btcd_config = IniFile.load(btcd_config_file)
         raise ConfigurationParameterMissingException unless btcd_config['global'].include?('rpcuser') && btcd_config['global'].include?('rpcpassword')
         return btcd_config['global']['rpcuser'], btcd_config['global']['rpcpassword']
