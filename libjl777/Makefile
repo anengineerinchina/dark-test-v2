@@ -3,7 +3,7 @@ CFLAGS=-Wall -pedantic -g -fPIC -I includes
 LIBS=-lm -lreadline 
 
 TARGET	= libjl777.a
-SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
+SRCS	= envglue.c picoc.c table.c lex.c parse.c expression.c heap.c type.c \
 	variable.c clibrary.c platform.c include.c \
 	platform/platform_unix.c platform/library_unix.c \
 	cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
@@ -22,15 +22,16 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
 	ar rcu  libs/libjl777.a  $(OBJS) gzip/*.o libtom/*.o libs/randombytes.o;\
-    gcc -shared -Wl,-soname,libjl777.so -o libs/libjl777.so $(OBJS) -lstdc++ -lc -lcurl -lm -ldl
-#g++ -shared -o ../libjl777.so $(OBJS) -lcurl -lm
-#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-
+    gcc -shared -Wl,-soname,libjl777.so -o libs/libjl777.so $(OBJS) libs/libdb.a -lstdc++ -lc -lcurl -lm -ldl
+    
 test:	all
 	(cd tests; make test)
 
 clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
+
+libtest: $(TARGET); \
+    rm libtest; gcc -o libtest libtest.c libs/libjl777.a libs/libdb.a libs/libuv.a -lpthread -lcurl -lm
 
 install: /usr/lib/libjl777.so; \
     sudo cp libs/libjl777.so /usr/lib/libjl777.so
@@ -81,7 +82,7 @@ doesntexist:
 picoc.o: picoc.c picoc.h
 libgfshare.o: libgfshare.c libgfshare.h
 libjl777.o: libjl777.c atomic.h ciphers.h feeds.h jl777hash.h libgfshare.h mofnfs.h packets.h sorts.h tradebot.h \
-            storage.h bars.h cJSON.h jl777str.h libjl777.h NXTservices.h peers.h telepathy.h transporter.h \
+            storage.h bars.h cJSON.h jl777str.h NXTservices.h peers.h telepathy.h transporter.h \
             bitcoind.h coincache.h jdatetime.h jsoncodec.h NXTutils.h sortnetworks.h telepods.h \
             bitcoinglue.h coins.h jl777.h kademlia.h mappedptr.h orders.h _sorts.h teleport.h udp.h tweetnacl.h
 table.o: table.c interpreter.h platform.h

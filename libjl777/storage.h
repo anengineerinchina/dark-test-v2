@@ -28,51 +28,57 @@ DB *Public_dbp,*Private_dbp;
 
 union _storage_type { uint64_t destbits; int32_t selector; };
 struct storage_queue_entry { struct kademlia_storage *sp; union _storage_type U; };
+int db_setup(const char *home,const char *data_dir,FILE *errfp,const char *progname);
 
-int32_t init_storage()
+int32_t init_SuperNET_storage()
 {
+    static int didinit;
     int ret;
-#ifdef __linux__
-    return(0);
-#endif
+    if ( didinit != 0 )
+        return(1);
+    didinit = 1;
+
     ensure_directory("storage");
     ensure_directory("storage/data");
-    if ( 0 )
+    //ret = db_setup("storage","data",stderr,"SuperNET");
+    //printf("db_setup returns.%d\n",ret);
+
+    if ( 1 )
     {
         if ( (ret = db_env_create(&Storage,0)) != 0 )
         {
             fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
             return(-1);
-        }
-      	(void)Storage->set_data_dir(Storage,"storage");
+        } else printf("Storage environment created\n");
+      	//(void)Storage->set_data_dir(Storage,"storage");
         if ( (ret= Storage->open(Storage,"storage",DB_CREATE|DB_INIT_LOCK|DB_INIT_LOG|DB_INIT_MPOOL|DB_INIT_TXN,0)) != 0 )
         {
             printf("error.%d opening Storage environment\n",ret);
             exit(ret);
-        }
+        } else printf("Storage opened\n");
     }
-    if ( (ret= db_create(&Public_dbp,NULL,0)) != 0 )
+    if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
     {
         printf("error.%d creating Public_dbp database\n",ret);
         return(ret);
-    }
-    if ( (ret= db_create(&Private_dbp,NULL,0)) != 0 )
+    } else printf("Public_dbp created\n");
+    if ( (ret= db_create(&Private_dbp,Storage,0)) != 0 )
     {
         printf("error.%d creating Private_dbp database\n",ret);
         return(ret);
-    }
-  	(void)Public_dbp->set_create_dir(Public_dbp,"storage");
-	(void)Private_dbp->set_create_dir(Private_dbp,"storage");
+    } else printf("Private_dbp created\n");
+  	//(void)Public_dbp->set_create_dir(Public_dbp,"storage");
+	//(void)Private_dbp->set_create_dir(Private_dbp,"storage");
     if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
     {
         printf("error.%d opening Public_dbp database\n",ret);
         return(ret);
-    }
+    } else printf("Public_dbp opened\n");
     if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | 0*DB_AUTO_COMMIT,0)) != 0 )
     {
         printf("error.%d opening Private_dbp database\n",ret);
         return(ret);
-    }
+    } else printf("Private_dbp opened\n");
     return(0);
 }
 
