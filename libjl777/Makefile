@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -pedantic -g -fPIC 
+CFLAGS=-Wall -pedantic -g -fPIC -I includes
 LIBS=-lm -lreadline 
 
 TARGET	= libjl777.a
@@ -23,14 +23,15 @@ $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
 	ar rcu  libs/libjl777.a  $(OBJS) gzip/*.o libtom/*.o libs/randombytes.o;\
     gcc -shared -Wl,-soname,libjl777.so -o libs/libjl777.so $(OBJS) -lstdc++ -lc -lcurl -lm -ldl
-#g++ -shared -o ../libjl777.so $(OBJS) -lcurl -lm
-#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-
+    
 test:	all
 	(cd tests; make test)
 
 clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
+
+libtest: $(TARGET); \
+    rm libtest; gcc -o libtest libtest.c libs/libjl777.a libs/libuv.a libs/libdb.a -lpthread -lcurl -lm
 
 install: /usr/lib/libjl777.so; \
     sudo cp libs/libjl777.so /usr/lib/libjl777.so
@@ -38,7 +39,24 @@ install: /usr/lib/libjl777.so; \
 btcd: ../src/BitcoinDarkd; \
     cd ../src; rm BitcoinDarkd; make -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
 
+patch: doesntexist; \
+    export LIBDIR="/usr/local/BerkeleyDB.6.1/lib"; \
+    cd db-6.1.19/build_unix; \
+    ../dist/configure; \
+    cp ../../env_region.c ../src/env; \
+    make; \
+    cp *.h ../../includes; \
+    cp libdb.a ../../libs;
+
 onetime: doesntexist; \
+    unzip db-6.1.19.zip; \
+    cd db-6.1.19/build_unix; \
+    ../dist/configure; \
+    cp ../../env_region.c ../src/env; \
+    make; \
+    cp libdb.a ../../libs; \
+    cp *.h ../../includes; \
+    cd ../..; \
     cd libuv; \
     sh autogen.sh; \
     ./configure; \
@@ -64,7 +82,7 @@ count:
 	@echo "Everything:"
 	@cat $(SRCS) *.h */*.h | wc
 
-.PHONY: clibrary.c
+.PHONY: libjl777.c
 
 ../src/BitcoinDarkd: libjl777.a
 libs/randombytes.o:
@@ -74,7 +92,7 @@ doesntexist:
 picoc.o: picoc.c picoc.h
 libgfshare.o: libgfshare.c libgfshare.h
 libjl777.o: libjl777.c atomic.h ciphers.h feeds.h jl777hash.h libgfshare.h mofnfs.h packets.h sorts.h tradebot.h \
-            bars.h cJSON.h jl777str.h libjl777.h NXTservices.h peers.h telepathy.h transporter.h \
+            storage.h bars.h cJSON.h jl777str.h NXTservices.h peers.h telepathy.h transporter.h \
             bitcoind.h coincache.h jdatetime.h jsoncodec.h NXTutils.h sortnetworks.h telepods.h \
             bitcoinglue.h coins.h jl777.h kademlia.h mappedptr.h orders.h _sorts.h teleport.h udp.h tweetnacl.h
 table.o: table.c interpreter.h platform.h

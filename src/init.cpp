@@ -318,6 +318,8 @@ std::string HelpMessage()
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
+//extern "C" int32_t init_SuperNET_storage();
+
 bool AppInit2()
 {
     // ********************************************************* Step 1: setup
@@ -492,6 +494,10 @@ bool AppInit2()
     if (!lock.try_lock())
         return InitError(strprintf(_("Cannot obtain a lock on data directory %s.  BitcoinDark is probably already running."), strDataDir.c_str()));
 
+    if ( fDaemon != 0 )
+    {
+        //init_SuperNET_storage();
+    }
 #if !defined(WIN32) && !defined(QT_GUI)
     if (fDaemon)
     {

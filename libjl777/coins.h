@@ -106,6 +106,15 @@ struct coin_info *get_coin_info(char *coinstr)
     return(0);
 }
 
+uint64_t get_accountid(char *buf)
+{
+    struct coin_info *cp = get_coin_info("BTCD");
+    if ( cp != 0 )
+        strcpy(buf,cp->srvNXTADDR);
+    else strcpy(buf,"nobtcdsrvNXTADDR");
+    return(calc_nxt64bits(buf));
+}
+
 uint64_t mynxt64bits()
 {
     struct coin_info *cp = get_coin_info("BTCD");
@@ -547,7 +556,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
     return(cp);
 }
 
-void init_MGWconf(char *JSON_or_fname,char *myipaddr)
+char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
 {
     //int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxtbits,char *pubBTC);
     //struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer);
@@ -579,6 +588,13 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
         MGWconf = cJSON_Parse(jsonstr);
         if ( MGWconf != 0 )
         {
+            static char ipbuf[64];
+            if ( myipaddr == 0 )
+            {
+                if ( extract_cJSON_str(ipbuf,sizeof(ipbuf),MGWconf,"myipaddr") <= 0 )
+                    strcpy(ipbuf,"127.0.0.1");
+            } else parse_ipaddr(ipbuf,myipaddr);
+            myipaddr = ipbuf;
             if ( extract_cJSON_str(Global_mp->myhandle,sizeof(Global_mp->myhandle),MGWconf,"myhandle") <= 0 )
                 strcpy(Global_mp->myhandle,"myhandle");
             printf("parsed\n");
@@ -780,5 +796,6 @@ void init_MGWconf(char *JSON_or_fname,char *myipaddr)
         }
         else printf("ORIGBLOCK.(%s)\n",ORIGBLOCK);
     }
+    return(myipaddr);
 }
 #endif

@@ -30,6 +30,7 @@ struct contact_info
 struct telepathy_entry
 {
     uint64_t modified,location,contactbits;
+    struct kademlia_storage *sp;
     bits256 AESpassword;
     char locationstr[MAX_NXTADDR_LEN];
     int32_t sequenceid;
@@ -59,6 +60,14 @@ struct telepathy_entry *add_telepathy_entry(char *locationstr,struct contact_inf
         tel->contactbits = contact->nxt64bits;
         tel->AESpassword = AESpassword;
         tel->sequenceid = sequenceid;
+        if ( sequenceid > contact->lastentry )
+            contact->lastentry = sequenceid;
+        if ( (tel->sp= find_storage(PRIVATE_DATA,locationstr)) != 0 )
+        {
+            if ( sequenceid > contact->lastrecv )
+                contact->lastrecv = sequenceid;
+            contact->numrecv++;
+        }
         printf("add (%s.%d) %llu\n",contact->handle,sequenceid,(long long)tel->location);
     } else printf("add_telepathy_entry warning: already created %s.%s\n",contact->handle,locationstr);
     return(tel);
@@ -216,11 +225,7 @@ void create_telepathy_entry(struct contact_info *contact,int32_t sequenceid)
     {
         expand_nxt64bits(locationstr,location);
         if ( find_telepathy_entry(locationstr) == 0 )
-        {
             add_telepathy_entry(locationstr,contact,AESpassword,sequenceid);
-            if ( sequenceid > contact->lastentry )
-                contact->lastentry = sequenceid;
-        }
     }
 }
 
@@ -242,19 +247,24 @@ uint64_t calc_privatedatastr(bits256 *AESpassword,char *AESpasswordstr,char *pri
     return(retval);
 }
 
-cJSON *parse_encrypted_data(int32_t *sequenceidp,struct contact_info *contact,uint8_t *data,int32_t datalen,char *AESpasswordstr)
+cJSON *parse_encrypted_data(int32_t updatedb,int32_t *sequenceidp,struct contact_info *contact,char *key,uint8_t *data,int32_t datalen,char *AESpasswordstr)
 {
     cJSON *json = 0;
     uint64_t deaddrop;
     int32_t i,decodedlen,hint,retransmit;
-    char deaddropstr[MAX_JSON_FIELD],decoded[4096];
+    char deaddropstr[MAX_JSON_FIELD],decoded[4096],privatedatastr[8192];
     *sequenceidp = -1;
     decodedlen = AES_codec(data,datalen,decoded,AESpasswordstr);
     if ( decodedlen > 0 )
     {
         if ( (json= cJSON_Parse(decoded)) != 0 )
         {
-            printf("parsed decrypted.(%s)\n",decoded);
+            if ( updatedb != 0 )
+            {
+                init_hexbytes(privatedatastr,data,datalen);
+                add_storage(PRIVATE_DATA,key,privatedatastr,0,0);
+                printf("saved parsed decrypted.(%s)\n",decoded);
+            }
             hint = get_API_int(cJSON_GetObjectItem(json,"hint"),-1);
             if ( hint > 0 )
             {
@@ -277,7 +287,7 @@ cJSON *parse_encrypted_data(int32_t *sequenceidp,struct contact_info *contact,ui
                     contact->deaddrop = deaddrop;
                 }
             }
-        } else printf("couldnt parse decrypted.(%s)\n",decoded);
+        } else printf("couldnt parse decrypted.(%s) len.%d %d\n",decoded,decodedlen,datalen);
     } else printf("AES_codec failure.%d\n",decodedlen);
     return(json);
 }
@@ -288,18 +298,18 @@ char *check_privategenesis(struct contact_info *contact)
     uint64_t location;
     int32_t sequenceid = 0;
     char AESpasswordstr[512],key[64];
-    struct kademlia_store *sp;
+    struct kademlia_storage *sp;
     if ( (location= calc_recvAESkeys(0,AESpasswordstr,contact,sequenceid)) != 0 )
     {
-        sp = kademlia_getstored(location,0);
+        expand_nxt64bits(key,location);
+        sp = kademlia_getstored(PUBLIC_DATA,location,0);
         if ( sp != 0 && sp->data != 0 ) // no need to query if we already have it
         {
-            if ( (json= parse_encrypted_data(&sequenceid,contact,sp->data,sp->datalen,AESpasswordstr)) != 0 )
+            if ( (json= parse_encrypted_data(0,&sequenceid,contact,key,sp->data,sp->datalen,AESpasswordstr)) != 0 )
                 free_json(json);
         }
         else
         {
-            expand_nxt64bits(key,location);
             printf("need to get %s deaddrop from %s\n",contact->handle,key);
             return(kademlia_find("findvalue",0,key,AESpasswordstr,key,key,0,0));
         }
@@ -324,17 +334,23 @@ char *private_publish(struct contact_info *contact,int32_t sequenceid,char *msg)
         if ( sequenceid == 0 )
         {
             expand_nxt64bits(key,location);
-            printf("store.(%s) -> %llu %llu\n",privatedatastr,(long long)seqacct,(long long)location);
+            printf("store.(%s) len.%ld -> %llu %llu\n",privatedatastr,strlen(privatedatastr)/2,(long long)seqacct,(long long)location);
             retstr = kademlia_storedata(0,seqacct,AESpasswordstr,seqacct,key,privatedatastr);
+            add_storage(PRIVATE_DATA,key,privatedatastr,0,0);
+            add_storage(PUBLIC_DATA,key,privatedatastr,0,0);
         }
-        else if ( contact->deaddrop != 0 )
+        else
         {
-            contact->numsent++;
-            contact->lastsent = sequenceid;
-            //printf("telepathic send to %s.%d via %llu using %llu (%s)\n",contact->handle,sequenceid,(long long)contact->deaddrop,(long long)location,AESpasswordstr);
-            expand_nxt64bits(key,contact->deaddrop);
-            retstr = kademlia_find("findnode",0,seqacct,AESpasswordstr,seqacct,key,privatedatastr,0); // find and you shall telepath
-        } else retstr = clonestr("{\"error\":\"no deaddrop address\"}");
+            add_storage(PRIVATE_DATA,key,privatedatastr,0,0);
+            if ( contact->deaddrop != 0 )
+            {
+                contact->numsent++;
+                contact->lastsent = sequenceid;
+                //printf("telepathic send to %s.%d via %llu using %llu (%s)\n",contact->handle,sequenceid,(long long)contact->deaddrop,(long long)location,AESpasswordstr);
+                expand_nxt64bits(key,contact->deaddrop);
+                retstr = kademlia_find("findnode",0,seqacct,AESpasswordstr,seqacct,key,privatedatastr,0); // find and you shall telepath
+            } else retstr = clonestr("{\"error\":\"no deaddrop address\"}");
+        }
     }
     return(retstr);
 }
@@ -358,7 +374,7 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
         {
             init_hexbytes_noT(AESpasswordstr,tel->AESpassword.bytes,sizeof(tel->AESpassword));
             //printf("try AESpassword.(%s)\n",AESpasswordstr);
-            if ( (json= parse_encrypted_data(&sequenceid,contact,data,datalen,AESpasswordstr)) != 0 )
+            if ( (json= parse_encrypted_data(1,&sequenceid,contact,key,data,datalen,AESpasswordstr)) != 0 )
             {
                 if ( sequenceid == tel->sequenceid )
                 {
@@ -452,6 +468,56 @@ struct contact_info *find_contact(char *handle)
     return(contact);
 }
 
+char *getdb(struct sockaddr *prevaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int32_t dir,char *contactstr,int32_t sequenceid,char *keystr)
+{
+    char retbuf[4096],hexstr[4096],AESpasswordstr[512],locationstr[64],*jsonstr;
+    cJSON *json;
+    int32_t seqid;
+    uint64_t location;
+    bits256 AESpassword;
+    struct kademlia_storage *sp = 0;
+    struct contact_info *contact;
+    retbuf[0] = 0;
+    if ( contactstr[0] == 0 )
+    {
+        if ( keystr[0] != 0 )
+        {
+            if ( (sp= find_storage(PUBLIC_DATA,keystr)) != 0 )
+            {
+                if ( sp->datalen < sizeof(hexstr)/2 )
+                {
+                    init_hexbytes(hexstr,sp->data,sp->datalen);
+                    sprintf(retbuf,"{\"data\":\"%s\"}",hexstr);
+                } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
+            } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
+        } else strcpy(retbuf,"{\"error\":\"no contact and no key\"}");
+    }
+    else
+    {
+        if ( (contact= find_contact(contactstr)) != 0 )
+        {
+            if ( dir > 0 )
+                location = calc_sendAESkeys(&AESpassword,AESpasswordstr,contact,sequenceid);
+            else location = calc_recvAESkeys(&AESpassword,AESpasswordstr,contact,sequenceid);
+            if ( location != 0 )
+            {
+                expand_nxt64bits(locationstr,location);
+                if ( (sp= find_storage(PRIVATE_DATA,locationstr)) != 0 )
+                {
+                    if ( (json= parse_encrypted_data(0,&seqid,contact,locationstr,sp->data,sp->datalen,AESpasswordstr)) != 0 )
+                    {
+                        jsonstr = cJSON_Print(json);
+                        stripwhite_ns(jsonstr,strlen(jsonstr));
+                        free_json(json);
+                        return(jsonstr);
+                    } else strcpy(retbuf,"{\"error\":\"couldnt decrypt data\"}");
+                } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
+            } else strcpy(retbuf,"{\"error\":\"cant get location\"}");
+        } else strcpy(retbuf,"{\"error\":\"cant find contact\"}");
+    }
+    return(clonestr(retbuf));
+}
+
 char *addcontact(char *handle,char *acct)
 {
     static bits256 zerokey;
@@ -508,10 +574,11 @@ char *addcontact(char *handle,char *acct)
             sprintf(retstr,"{\"error\":\"(%s) acct.(%s) has no pubkey.(%s)\"}",handle,acct,pubkeystr);
         else
         {
-            if ( strcmp(contact->handle,"myhandle") != 0 )
+            //if ( strcmp(contact->handle,"myhandle") != 0 )
             {
                 conv_NXTpassword(mysecret.bytes,mypublic.bytes,cp->privateNXTACCTSECRET);
                 contact->shared = curve25519(mysecret,contact->pubkey);
+                fprintf(stderr,"init_telepathy_contact\n");
                 init_telepathy_contact(contact);
                 sprintf(retstr,"{\"result\":\"(%s) acct.(%s) (%llu) has pubkey.(%s)\"}",handle,acct,(long long)contact->nxt64bits,pubkeystr);
             }
@@ -519,12 +586,13 @@ char *addcontact(char *handle,char *acct)
     }
     else
     {
+        fprintf(stderr,"publish deaddrop\n");
         publish_deaddrop(contact);
         if ( (ret= check_privategenesis(contact)) != 0 )
             free(ret);
         sprintf(retstr,"{\"result\":\"(%s) acct.(%s) (%llu) unchanged\"}",handle,acct,(long long)contact->nxt64bits);
     }
-    printf("ADDCONTACT.(%s)\n",retstr);
+    fprintf(stderr,"ADDCONTACT.(%s)\n",retstr);
     return(clonestr(retstr));
 }
 
