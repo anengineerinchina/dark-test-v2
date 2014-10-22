@@ -150,7 +150,7 @@ void SuperNET_idler(uv_idle_t *handle)
             every_minute(counter/60);
         }
         counter++;
-        process_pingpong_queue(&PeerQ,0);
+        //process_pingpong_queue(&PeerQ,0);
         process_pingpong_queue(&Transporter_sendQ,0);
         process_pingpong_queue(&Transporter_recvQ,0);
         process_pingpong_queue(&CloneQ,0);
