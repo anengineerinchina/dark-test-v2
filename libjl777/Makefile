@@ -3,7 +3,7 @@ CFLAGS=-Wall -pedantic -g -fPIC -I includes
 LIBS=-lm -lreadline 
 
 TARGET	= libjl777.a
-SRCS	= envglue.c picoc.c table.c lex.c parse.c expression.c heap.c type.c \
+SRCS	= picoc.c table.c lex.c parse.c expression.c heap.c type.c \
 	variable.c clibrary.c platform.c include.c \
 	platform/platform_unix.c platform/library_unix.c \
 	cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
@@ -44,6 +44,7 @@ patch: doesntexist; \
     ../dist/configure; \
     cp ../../env_region.c ../src/env; \
     make; \
+    cp *.h ../../includes; \
     cp libdb.a ../../libs;
 
 onetime: doesntexist; \
