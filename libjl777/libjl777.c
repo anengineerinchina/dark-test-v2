@@ -108,7 +108,7 @@ void SuperNET_idler(uv_idle_t *handle)
     if ( Finished_init == 0 )
         return;
     millis = ((double)uv_hrtime() / 1000000);
-    if ( millis > (lastattempt + 10) && (wr= queue_dequeue(&sendQ)) != 0 )
+   /* if ( millis > (lastattempt + 10) && (wr= queue_dequeue(&sendQ)) != 0 )
     {
         if ( ((rand()>>8) % 100) < 50 )
         {
@@ -158,7 +158,7 @@ void SuperNET_idler(uv_idle_t *handle)
         process_pingpong_queue(&CloneQ,0);
         lastattempt = millis;
     }
-    else if ( (jsonstr= queue_dequeue(&JSON_Q)) != 0 )
+    else*/ if ( (jsonstr= queue_dequeue(&JSON_Q)) != 0 )
     {
         char *call_SuperNET_JSON(char *JSONstr);
         if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )

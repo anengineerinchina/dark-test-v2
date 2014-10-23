@@ -587,9 +587,12 @@ int32_t teleport_telepod(char *mypubaddr,char *NXTaddr,char *NXTACCTSECRET,char 
     init_hexbytes_noT(hexstr,buffer,pod->len_plus1);
     cJSON_AddItemToObject(json,"k",cJSON_CreateString(hexstr));
     cJSON_AddItemToObject(json,"L",cJSON_CreateNumber(totalcrc));
-    cJSON_AddItemToObject(json,"s",cJSON_CreateNumber(sharei));
-    cJSON_AddItemToObject(json,"M",cJSON_CreateNumber(M));
     cJSON_AddItemToObject(json,"N",cJSON_CreateNumber(N));
+    if ( N > 1 )
+    {
+        cJSON_AddItemToObject(json,"s",cJSON_CreateNumber(sharei));
+        cJSON_AddItemToObject(json,"M",cJSON_CreateNumber(M));
+    }
     cJSON_AddItemToObject(json,"D",cJSON_CreateString(mypubaddr));
     return(sendandfree_jsoncmd(Global_mp->Lfactor,NXTaddr,NXTACCTSECRET,json,destNXTaddr));
 }
