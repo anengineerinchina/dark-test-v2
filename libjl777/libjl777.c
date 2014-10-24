@@ -323,13 +323,21 @@ void process_pNXT_typematch(struct pNXT_info *dp,struct NXT_protocol_parms *parm
 
 char *call_SuperNET_JSON(char *JSONstr)
 {
+    static portable_mutex_t mutex;
+    static int didinit;
     cJSON *json,*array;
     int32_t valid;
     char NXTaddr[64],_tokbuf[2*MAX_JSON_FIELD],encoded[NXT_TOKEN_LEN+1],*cmdstr,*retstr = 0;
     struct coin_info *cp = get_coin_info("BTCD");
+    if ( didinit == 0 )
+    {
+        portable_mutex_init(&mutex);
+        didinit = 1;
+    }
     if ( Finished_init == 0 )
         return(0);
     //printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
+    portable_mutex_lock(&mutex);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
         expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
@@ -356,6 +364,7 @@ char *call_SuperNET_JSON(char *JSONstr)
     } else printf("couldnt parse (%s)\n",JSONstr);
     if ( retstr == 0 )
         retstr = clonestr("{\"result\":null}");
+    portable_mutex_unlock(&mutex);
     return(retstr);
 }
 
@@ -387,7 +396,7 @@ char *SuperNET_JSON(char *JSONstr)
         printf("got JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
-        if ( 1 || is_BTCD_command(json) != 0 ) // deadlocks as the SuperNET API came from locked BTCD RPC
+        if ( is_BTCD_command(json) != 0 ) // deadlocks as the SuperNET API came from locked BTCD RPC
         {
             if ( Debuglevel > 1 )
                 printf("is_BTCD_command\n");
