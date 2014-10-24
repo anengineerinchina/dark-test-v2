@@ -387,7 +387,7 @@ char *SuperNET_JSON(char *JSONstr)
         printf("got JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
-        if ( is_BTCD_command(json) != 0 ) // deadlocks as the SuperNET API came from locked BTCD RPC
+        if ( 1 || is_BTCD_command(json) != 0 ) // deadlocks as the SuperNET API came from locked BTCD RPC
         {
             if ( Debuglevel > 1 )
                 printf("is_BTCD_command\n");
