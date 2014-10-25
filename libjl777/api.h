@@ -27,6 +27,36 @@ struct per_session_data__http
 	int fd;
 };
 
+static const char *err400[] = {
+	"Bad Request",
+	"Unauthorized",
+	"Payment Required",
+	"Forbidden",
+	"Not Found",
+	"Method Not Allowed",
+	"Not Acceptable",
+	"Proxy Auth Required",
+	"Request Timeout",
+	"Conflict",
+	"Gone",
+	"Length Required",
+	"Precondition Failed",
+	"Request Entity Too Large",
+	"Request URI too Long",
+	"Unsupported Media Type",
+	"Requested Range Not Satisfiable",
+	"Expectation Failed"
+};
+
+static const char *err500[] = {
+	"Internal Server Error",
+	"Not Implemented",
+	"Bad Gateway",
+	"Service Unavailable",
+	"Gateway Timeout",
+	"HTTP Version Not Supported"
+};
+
 const char * get_mimetype(const char *file)
 {
 	int n = (int)strlen(file);
@@ -63,10 +93,38 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
     libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);
 }
 
+LWS_VISIBLE int libwebsockets_return_http_status(struct libwebsocket_context *context, struct libwebsocket *wsi,
+                                                 unsigned int code, const char *html_body)
+{
+	int n, m;
+	const char *description = "";
+    unsigned char buffer[4096];
+	if (!html_body)
+		html_body = "";
+    
+	if (code >= 400 && code < (400 + ARRAY_SIZE(err400)))
+		description = err400[code - 400];
+	if (code >= 500 && code < (500 + ARRAY_SIZE(err500)))
+		description = err500[code - 500];
+    
+	n = sprintf((char *)buffer,
+                "HTTP/1.0 %u %s\x0d\x0a"
+                "Server: libwebsockets\x0d\x0a"
+                "Content-Type: text/html\x0d\x0a\x0d\x0a"
+                "<h1>%u %s</h1>%s",
+                code, description, code, description, html_body);
+    
+	lwsl_info((const char *)buffer);
+    
+	m = libwebsocket_write(wsi, buffer, n, LWS_WRITE_HTTP);
+    
+	return m;
+}
+
 // this protocol server (always the first one) just knows how to do HTTP
 static int callback_http(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user,void *in,size_t len)
 {
-	char buf[MAX_JSON_FIELD],*retstr,*jsonstr;
+	char buf[MAX_JSON_FIELD],*retstr;
 	int n,m;
     cJSON *json,*array;
     unsigned char buffer[MAX_JSON_FIELD];
