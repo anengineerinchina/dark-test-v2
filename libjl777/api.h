@@ -1109,16 +1109,22 @@ char *gotnewpeer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
 
 char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char *SuperNET_JSON(char *JSONstr);
-    char jsonstr[MAX_JSON_FIELD];
+    char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr);
+    char jsonstr[MAX_JSON_FIELD],*retstr = 0;
+    cJSON *array;
     copy_cJSON(jsonstr,objs[0]);
     if ( jsonstr[0] != 0 )
     {
         printf("got jsonstr.(%s)\n",jsonstr);
         replace_backslashquotes(jsonstr);
-        return(SuperNET_JSON(jsonstr));
+        array = cJSON_Parse(jsonstr);
+        if ( array != 0 )
+        {
+            retstr = SuperNET_json_commands(Global_mp,prevaddr,array,sender,valid,origargstr);
+            free_json(array);
+        }
     }
-    return(0);
+    return(retstr);
 }
 
 char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
