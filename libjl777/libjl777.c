@@ -105,7 +105,7 @@ void SuperNET_idler(uv_idle_t *handle)
     struct udp_queuecmd *qp;
     struct write_req_t *wr,*firstwr = 0;
     int32_t r;
-    char *jsonstr,*retstr;
+    char *jsonstr,*retstr,**ptrs;
     if ( Finished_init == 0 )
         return;
     millis = ((double)uv_hrtime() / 1000000);
@@ -142,14 +142,15 @@ void SuperNET_idler(uv_idle_t *handle)
             free(qp);
             lastattempt = millis;
         }
-        else if ( (jsonstr= queue_dequeue(&JSON_Q)) != 0 )
+        else if ( (ptrs= queue_dequeue(&JSON_Q)) != 0 )
         {
             char *call_SuperNET_JSON(char *JSONstr);
+            jsonstr = ptrs[0];
             if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
             {
                 printf("(%s) -> (%s)\n",jsonstr,retstr);
-                free(retstr);
-            }
+                ptrs[1] = retstr;
+            } else ptrs[1] = clonestr("{\"result\":null}");
             free(jsonstr);
             lastattempt = millis;
         }
@@ -388,7 +389,21 @@ int32_t is_BTCD_command(cJSON *json)
     }
     return(0);
 }
-    
+
+char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
+{
+    char **ptrs;
+    ptrs = calloc(2,sizeof(*ptrs));
+    ptrs[0] = clonestr(JSONstr);
+    queue_enqueue(&JSON_Q,ptrs);
+    if ( blockflag != 0 )
+    {
+        while ( ptrs[1] == 0 )
+            usleep(1000);
+    } else ptrs[1] = clonestr("{\"result\":\"pending SuperNET API call\"}");
+    return(ptrs[1]);
+}
+
 char *SuperNET_JSON(char *JSONstr)
 {
     char *retstr = 0;
@@ -404,9 +419,8 @@ char *SuperNET_JSON(char *JSONstr)
         {
             //if ( Debuglevel > 1 )
             //    printf("is_BTCD_command\n");
-            queue_enqueue(&JSON_Q,clonestr(JSONstr));
-            return(clonestr("{\"result\":\"SuperNET BTCD command queued\"}"));
-        } else retstr = call_SuperNET_JSON(JSONstr);
+            return(block_on_SuperNET(0,JSONstr));
+        } else retstr = block_on_SuperNET(1,JSONstr);
         free_json(json);
     } else printf("couldnt parse (%s)\n",JSONstr);
     if ( retstr == 0 )
@@ -519,7 +533,7 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
         if ( is_hexstr(msg) == 0 )
         {
             printf("QUEUE.(%s)\n",msg);
-            queue_enqueue(&JSON_Q,clonestr(msg));
+            return(block_on_SuperNET(0,clonestr(msg)));
         }
         return(clonestr(retjsonstr));
     }
