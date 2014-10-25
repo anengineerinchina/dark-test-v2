@@ -188,11 +188,11 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
     if ( in == 0 )
         in = "<null>";
     printf("reason.%d len.%ld (%s)\n",reason,len,in);
-    if ( wsi != 0 )
-        dump_handshake_info(wsi);
     switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
+            if ( wsi != 0 )
+                dump_handshake_info(wsi);
             printf("a GOT.(%s)\n",(char *)in);
             if ( len < 1 )
             {
