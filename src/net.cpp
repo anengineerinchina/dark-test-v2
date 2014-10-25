@@ -11,7 +11,7 @@
 #include "addrman.h"
 #include "ui_interface.h"
 //#include "SuperNET.h"
-int32_t got_newpeer(char *ip_port);
+int32_t got_newpeer(const char *ip_port);
 
 #ifdef WIN32
 #include <string.h>
