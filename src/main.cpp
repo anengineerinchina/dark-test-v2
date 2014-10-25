@@ -3954,7 +3954,8 @@ char *SuperNET_JSON(char *JSONstr)
 {
     char *retstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
-    sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDjson\\\",\\\"json\\\":\\\"%s\\\"}\\\"]",JSONstr);
+    memset(params,0,sizeof(params));
+    sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDjson\\\",\\\"json\\\":\\\"%s\\\"}\"]",JSONstr);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr != 0 )
     {
@@ -3967,7 +3968,8 @@ int32_t got_newpeer(const char *ip_port)
 {
     char *retstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
-    sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\\\"]",ip_port);
+    memset(params,0,sizeof(params));
+    sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",ip_port);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr != 0 )
     {
@@ -3990,9 +3992,10 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 		printf("no point to process null msg.%p\n",msg);
 		return((char *)"{\"result\":null}");
 	}
+    memset(params,0,sizeof(params));
 	//retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
    // static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
-    sprintf(params,"[\\\"{\\\"requestType\\\":\\\"gotpacket\\\",\\\"msg\\\":\\\"%s\\\",\\\"dur\\\":%d,\\\"ip_port\\\":\\\"%s\\\"}\\\"]",msg,duration,(char *)from->addr.ToString().c_str());
+    sprintf(params,"[\\\"{\\\"requestType\\\":\\\"gotpacket\\\",\\\"msg\\\":\\\"%s\\\",\\\"dur\\\":%d,\\\"ip_port\\\":\\\"%s\\\"}\"]",msg,duration,(char *)from->addr.ToString().c_str());
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr == 0 )
     {
