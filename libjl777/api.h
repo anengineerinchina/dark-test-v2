@@ -9,7 +9,11 @@
 #ifndef API_H
 #define API_H
 
+#ifdef __APPLE__
 #include "libwebsockets.h"
+#else
+#include <libwebsockets.h>
+#endif
 
 char *block_on_SuperNET(int32_t blockflag,char *JSONstr);
 
@@ -71,6 +75,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
     cJSON *json,*array;
     unsigned char buffer[MAX_JSON_FIELD];
 	struct per_session_data__http *pss = (struct per_session_data__http *)user;
+    printf("reason.%d len.%ld\n",reason,len);
 	switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
