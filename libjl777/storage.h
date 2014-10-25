@@ -9,7 +9,11 @@
 #ifndef libjl777_storage_h
 #define libjl777_storage_h
 
+#ifdef __APPLE__
 #include "db.h"
+#else
+#include <db.h>
+#endif
 
 #define MAX_KADEMLIA_STORAGE (1024L * 1024L * 1024L)
 #define PUBLIC_DATA 0

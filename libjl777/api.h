@@ -864,14 +864,14 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
     char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],**cmdinfo,*retstr=0;
-    static int didinit;
-    static portable_mutex_t mutex;
-    if ( didinit == 0 )
-    {
-        portable_mutex_init(&mutex);
-        didinit = 1;
-    }
-    portable_mutex_lock(&mutex);
+    //static int didinit;
+    //static portable_mutex_t mutex;
+    //if ( didinit == 0 )
+    //{
+    //    portable_mutex_init(&mutex);
+    //    didinit = 1;
+    //}
+    //portable_mutex_lock(&mutex);
     memset(objs,0,sizeof(objs));
     command[0] = 0;
     memset(NXTaddr,0,sizeof(NXTaddr));
@@ -926,7 +926,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
             break;
         }
     }
-    portable_mutex_unlock(&mutex);
+    //portable_mutex_unlock(&mutex);
     return(retstr);
 }
 
