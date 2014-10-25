@@ -99,6 +99,7 @@ xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wfo
 xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 OBJS= \
+    obj/glue.o \
     obj/alert.o \
     obj/pubaddr.o \
     obj/version.o \

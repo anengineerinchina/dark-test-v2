@@ -4064,11 +4064,13 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
 	return(retflag);
 }
 
+extern "C" void launch_SuperNET();
+
 void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
-    system("./SuperNET &");
+    launch_SuperNET();
     std::cout << "back from start" << std::endl;
 }
 
