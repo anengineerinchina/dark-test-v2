@@ -3949,6 +3949,21 @@ void broadcastPubAddr(char *msg,int32_t duration)
     delete pubaddr;
 }
 
+char *SuperNET_JSON(char *JSONstr)
+{
+    char *retstr,params[MAX_JSON_FIELD];
+    // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDjson\\\",\\\"json\\\":\\\"%s\\\"}\\\"]",JSONstr);
+    retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
+    if ( retstr != 0 )
+    {
+        printf("RET.(%s) for (%s)\n",retstr,ip_port);
+        free(retstr);
+        return(0);
+    }
+    return(-1);
+}
+
 int32_t got_newpeer(const char *ip_port)
 {
     char *retstr,params[MAX_JSON_FIELD];
