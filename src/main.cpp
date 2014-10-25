@@ -3950,13 +3950,36 @@ void broadcastPubAddr(char *msg,int32_t duration)
     delete pubaddr;
 }
 
+char *replacequotes(char *str)
+{
+    char *newstr;
+    int32_t i,j,n;
+    for (i=n=0; str[i]!=0; i++)
+        n += (str[i] == '"') ? 3 : 1;
+    newstr = (char *)malloc(n + 1);
+    for (i=j=0; str[i]!=0; i++)
+    {
+        if ( str[i] == '"' )
+        {
+            newstr[j++] = '%';
+            newstr[j++] = '2';
+            newstr[j++] = '2';
+        }
+        else newstr[j++] = str[i];
+    }
+    newstr[j] = 0;
+    return(newstr);
+}
+
 char *SuperNET_JSON(char *JSONstr)
 {
-    char *retstr,params[MAX_JSON_FIELD];
+    char *retstr,*jsonstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     memset(params,0,sizeof(params));
-    sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDjson\\\",\\\"json\\\":\\\"%s\\\"}\"]",JSONstr);
+    jsonstr = replacequotes(JSONstr);
+    sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDjson\\\",\\\"json\\\":\\\"%s\\\"}\"]",jsonstr);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
+    free(jsonstr);
     if ( retstr != 0 )
     {
         printf("SuperNET_JSON RET.(%s) for (%s)\n",retstr,JSONstr);

@@ -113,7 +113,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY:
-            printf("RPC.(%s)\n",(char *)in);
+            //printf("RPC.(%s)\n",(char *)in);
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse((char *)in)) != 0 )
             {
@@ -1099,10 +1099,21 @@ char *gotnewpeer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
     return(0);
 }
 
+char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char *SuperNET_JSON(char *JSONstr);
+    char jsonstr[MAX_JSON_FIELD];
+    copy_cJSON(jsonstr,objs[0]);
+    if ( jsonstr[0] != 0 )
+        SuperNET_JSON(JSONstr);
+    return(0);
+}
+
 char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
     
     // glue
+    static char *gotjson[] = { (char *)gotjson_func, "BTCDjson", "", "json", 0 };
     static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
     static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
   
@@ -1156,7 +1167,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     // Tradebot
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
 
-     static char **commands[] = { gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
+     static char **commands[] = { gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];

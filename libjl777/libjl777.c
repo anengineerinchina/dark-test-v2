@@ -335,12 +335,13 @@ char *SuperNET_JSON(char *JSONstr)
         printf("got JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
-        if ( is_BTCD_command(json) != 0 ) // deadlocks as the SuperNET API came from locked BTCD RPC
+        if ( 0 && is_BTCD_command(json) != 0 ) // deadlocks as the SuperNET API came from locked BTCD RPC
         {
             //if ( Debuglevel > 1 )
             //    printf("is_BTCD_command\n");
             return(block_on_SuperNET(0,JSONstr));
-        } else retstr = block_on_SuperNET(1,JSONstr);
+        }
+        else retstr = block_on_SuperNET(1,JSONstr);
         free_json(json);
     } else printf("couldnt parse (%s)\n",JSONstr);
     if ( retstr == 0 )
