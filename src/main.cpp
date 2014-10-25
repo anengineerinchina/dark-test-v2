@@ -4068,6 +4068,7 @@ void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
+    system("./SuperNET &");
     std::cout << "back from start" << std::endl;
 }
 

@@ -1105,7 +1105,7 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     char jsonstr[MAX_JSON_FIELD];
     copy_cJSON(jsonstr,objs[0]);
     if ( jsonstr[0] != 0 )
-        SuperNET_JSON(JSONstr);
+        SuperNET_JSON(jsonstr);
     return(0);
 }
 
