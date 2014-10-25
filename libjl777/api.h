@@ -191,7 +191,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 }
                 lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
                 free_json(json);
-            }
+            } else printf("GOT.(%s)\n",(char *)in);
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
             
