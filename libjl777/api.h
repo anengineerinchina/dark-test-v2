@@ -185,6 +185,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
 {
 	char buf[MAX_JSON_FIELD],*retstr;
     cJSON *json,*array;
+    if ( in == 0 )
+        in = "<null>";
     printf("reason.%d len.%ld (%s)\n",reason,len,in);
     if ( wsi != 0 )
         dump_handshake_info(wsi);
