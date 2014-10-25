@@ -3958,11 +3958,9 @@ char *SuperNET_JSON(char *JSONstr)
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr != 0 )
     {
-        printf("RET.(%s) for (%s)\n",retstr,JSONstr);
-        free(retstr);
-        return(0);
+        printf("SuperNET_JSON RET.(%s) for (%s)\n",retstr,JSONstr);
     }
-    return(-1);
+    free(retstr);
 }
 
 int32_t got_newpeer(const char *ip_port)
