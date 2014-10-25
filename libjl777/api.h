@@ -9,7 +9,7 @@
 #ifndef API_H
 #define API_H
 
-#include <libwebsockets.h>
+#include "libwebsockets.h"
 
 char *block_on_SuperNET(int32_t blockflag,char *JSONstr);
 
@@ -25,36 +25,6 @@ struct serveable
 struct per_session_data__http
 {
 	int fd;
-};
-
-static const char *err400[] = {
-	"Bad Request",
-	"Unauthorized",
-	"Payment Required",
-	"Forbidden",
-	"Not Found",
-	"Method Not Allowed",
-	"Not Acceptable",
-	"Proxy Auth Required",
-	"Request Timeout",
-	"Conflict",
-	"Gone",
-	"Length Required",
-	"Precondition Failed",
-	"Request Entity Too Large",
-	"Request URI too Long",
-	"Unsupported Media Type",
-	"Requested Range Not Satisfiable",
-	"Expectation Failed"
-};
-
-static const char *err500[] = {
-	"Internal Server Error",
-	"Not Implemented",
-	"Bad Gateway",
-	"Service Unavailable",
-	"Gateway Timeout",
-	"HTTP Version Not Supported"
 };
 
 const char * get_mimetype(const char *file)
@@ -93,120 +63,31 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
     libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);
 }
 
-LWS_VISIBLE int libwebsockets_return_http_status(struct libwebsocket_context *context, struct libwebsocket *wsi,
-                                                 unsigned int code, const char *html_body)
-{
-	int n, m;
-	const char *description = "";
-    unsigned char buffer[4096];
-	if (!html_body)
-		html_body = "";
-    
-	if (code >= 400 && code < (400 + ARRAY_SIZE(err400)))
-		description = err400[code - 400];
-	if (code >= 500 && code < (500 + ARRAY_SIZE(err500)))
-		description = err500[code - 500];
-    
-	n = sprintf((char *)buffer,
-                "HTTP/1.0 %u %s\x0d\x0a"
-                "Server: libwebsockets\x0d\x0a"
-                "Content-Type: text/html\x0d\x0a\x0d\x0a"
-                "<h1>%u %s</h1>%s",
-                code, description, code, description, html_body);
-    
-	lwsl_info((const char *)buffer);
-    
-	m = libwebsocket_write(wsi, buffer, n, LWS_WRITE_HTTP);
-    
-	return m;
-}
-static void
-dump_handshake_info(struct libwebsocket *wsi)
-{
-	int n;
-	static const char *token_names[] = {
-		/*[WSI_TOKEN_GET_URI]		=*/ "GET URI",
-		/*[WSI_TOKEN_POST_URI]		=*/ "POST URI",
-		/*[WSI_TOKEN_HOST]		=*/ "Host",
-		/*[WSI_TOKEN_CONNECTION]	=*/ "Connection",
-		/*[WSI_TOKEN_KEY1]		=*/ "key 1",
-		/*[WSI_TOKEN_KEY2]		=*/ "key 2",
-		/*[WSI_TOKEN_PROTOCOL]		=*/ "Protocol",
-		/*[WSI_TOKEN_UPGRADE]		=*/ "Upgrade",
-		/*[WSI_TOKEN_ORIGIN]		=*/ "Origin",
-		/*[WSI_TOKEN_DRAFT]		=*/ "Draft",
-		/*[WSI_TOKEN_CHALLENGE]		=*/ "Challenge",
-        
-		/* new for 04 */
-		/*[WSI_TOKEN_KEY]		=*/ "Key",
-		/*[WSI_TOKEN_VERSION]		=*/ "Version",
-		/*[WSI_TOKEN_SWORIGIN]		=*/ "Sworigin",
-        
-		/* new for 05 */
-		/*[WSI_TOKEN_EXTENSIONS]	=*/ "Extensions",
-        
-		/* client receives these */
-		/*[WSI_TOKEN_ACCEPT]		=*/ "Accept",
-		/*[WSI_TOKEN_NONCE]		=*/ "Nonce",
-		/*[WSI_TOKEN_HTTP]		=*/ "Http",
-        
-		"Accept:",
-		"If-Modified-Since:",
-		"Accept-Encoding:",
-		"Accept-Language:",
-		"Pragma:",
-		"Cache-Control:",
-		"Authorization:",
-		"Cookie:",
-		"Content-Length:",
-		"Content-Type:",
-		"Date:",
-		"Range:",
-		"Referer:",
-		"Uri-Args:",
-        
-		/*[WSI_TOKEN_MUXURL]	=*/ "MuxURL",
-	};
-	char buf[4096];
-    
-	for (n = 0; n < sizeof(token_names) / sizeof(token_names[0]); n++) {
-		if (!lws_hdr_total_length(wsi, n))
-			continue;
-        
-		lws_hdr_copy(wsi, buf, sizeof buf, n);
-        //if ( strcmp(token_names[n],"Uri-Args:") == 0 )
-        //    strcpy((char *)NXTprotocol_parms,buf);
-		fprintf(stderr, "    %s = %s n.%d\n", token_names[n], buf,n);
-	}
-}
-
 // this protocol server (always the first one) just knows how to do HTTP
 static int callback_http(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user,void *in,size_t len)
 {
-	char buf[MAX_JSON_FIELD],*retstr;
+	char buf[MAX_JSON_FIELD],*retstr,*jsonstr;
+	int n,m;
     cJSON *json,*array;
-    if ( in == 0 )
-        in = "<null>";
-    printf("reason.%d len.%ld (%s)\n",reason,len,in);
-    switch ( reason )
+    unsigned char buffer[MAX_JSON_FIELD];
+	struct per_session_data__http *pss = (struct per_session_data__http *)user;
+	switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
-            if ( wsi != 0 )
-                dump_handshake_info(wsi);
-            printf("a GOT.(%s)\n",(char *)in);
             if ( len < 1 )
             {
-                libwebsockets_return_http_status(context, wsi,HTTP_STATUS_BAD_REQUEST, NULL);
+                //libwebsockets_return_http_status(context, wsi,HTTP_STATUS_BAD_REQUEST, NULL);
                 return -1;
             }
             if ( strchr((const char *)in + 1, '/') != 0 ) // this server has no concept of directories
             {
-                libwebsockets_return_http_status(context, wsi,HTTP_STATUS_FORBIDDEN, NULL);
+                //libwebsockets_return_http_status(context, wsi,HTTP_STATUS_FORBIDDEN, NULL);
                 return -1;
             }
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
+            printf("GOT.(%s)\n",(char *)in);
             retstr = block_on_SuperNET(1,(char *)in+1);
             if ( retstr != 0 )
             {
@@ -227,7 +108,6 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY:
-            printf("b GOT.(%s)\n",(char *)in);
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse((char *)in)) != 0 )
             {
@@ -253,21 +133,19 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 }
                 lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
                 free_json(json);
-            } else printf("GOT.(%s)\n",(char *)in);
+            }
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
-            printf("c GOT.(%s)\n",(char *)in);
+            
             lwsl_notice("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
-            libwebsockets_return_http_status(context, wsi,HTTP_STATUS_OK, NULL);
+            //libwebsockets_return_http_status(context, wsi,HTTP_STATUS_OK, NULL);
             return -1;
         case LWS_CALLBACK_HTTP_FILE_COMPLETION:     // kill the connection after we sent one file
-            printf("d GOT.(%s)\n",(char *)in);
             //		lwsl_info("LWS_CALLBACK_HTTP_FILE_COMPLETION seen\n");
             
             return -1;
         case LWS_CALLBACK_HTTP_WRITEABLE:           // we can send more of whatever it is we were sending
-            printf("writable.(%s)\n",in);
-            /*do
+            do
             {
                 n = (int)read(pss->fd,buffer,sizeof buffer);
                 if ( n < 0 ) // problem reading, close conn
@@ -300,7 +178,6 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
              * connection continue.
              */
         case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-            printf("f GOT.(%s)\n",(char *)in);
 #if 0
             libwebsockets_get_peer_addresses(context, wsi, (int)(long)in, client_name,sizeof(client_name), client_ip, sizeof(client_ip));
             fprintf(stderr, "Received network connect from %s (%s)\n",client_name, client_ip);
@@ -308,7 +185,6 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if we returned non-zero from here, we kill the connection
             break;
         case LWS_CALLBACK_GET_THREAD_ID:
-            printf("g GOT.(%s)\n",(char *)in);
             /*
              * if you will call "libwebsocket_callback_on_writable"
              * from a different thread, return the caller thread ID
@@ -318,8 +194,6 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             /* return pthread_getthreadid_np(); */
             break;
         default:
-            printf("z GOT.(%s)\n",(char *)in);
-            return(-1);
             break;
 	}
 	return 0;
@@ -341,7 +215,7 @@ static struct libwebsocket_protocols protocols[] =
 void sighandler(int sig)
 {
 	force_exit = 1;
-	//libwebsocket_cancel_service(context);
+	libwebsocket_cancel_service(context);
 }
 
 int32_t init_API_port(uint16_t port,uint32_t millis)
