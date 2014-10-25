@@ -125,14 +125,12 @@ LWS_VISIBLE int libwebsockets_return_http_status(struct libwebsocket_context *co
 static int callback_http(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user,void *in,size_t len)
 {
 	char buf[MAX_JSON_FIELD],*retstr;
-	int n,m;
     cJSON *json,*array;
-    unsigned char buffer[MAX_JSON_FIELD];
-	struct per_session_data__http *pss = (struct per_session_data__http *)user;
     printf("reason.%d len.%ld (%s)\n",reason,len,in);
 	switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
+            printf("a GOT.(%s)\n",(char *)in);
             if ( len < 1 )
             {
                 libwebsockets_return_http_status(context, wsi,HTTP_STATUS_BAD_REQUEST, NULL);
@@ -146,7 +144,6 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
-            printf("GOT.(%s)\n",(char *)in);
             retstr = block_on_SuperNET(1,(char *)in+1);
             if ( retstr != 0 )
             {
@@ -167,6 +164,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY:
+            printf("b GOT.(%s)\n",(char *)in);
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse((char *)in)) != 0 )
             {
@@ -195,11 +193,12 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             } else printf("GOT.(%s)\n",(char *)in);
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
-            
+            printf("c GOT.(%s)\n",(char *)in);
             lwsl_notice("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
             libwebsockets_return_http_status(context, wsi,HTTP_STATUS_OK, NULL);
             return -1;
         case LWS_CALLBACK_HTTP_FILE_COMPLETION:     // kill the connection after we sent one file
+            printf("d GOT.(%s)\n",(char *)in);
             //		lwsl_info("LWS_CALLBACK_HTTP_FILE_COMPLETION seen\n");
             
             return -1;
@@ -238,6 +237,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
              * connection continue.
              */
         case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
+            printf("f GOT.(%s)\n",(char *)in);
 #if 0
             libwebsockets_get_peer_addresses(context, wsi, (int)(long)in, client_name,sizeof(client_name), client_ip, sizeof(client_ip));
             fprintf(stderr, "Received network connect from %s (%s)\n",client_name, client_ip);
@@ -245,6 +245,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if we returned non-zero from here, we kill the connection
             break;
         case LWS_CALLBACK_GET_THREAD_ID:
+            printf("g GOT.(%s)\n",(char *)in);
             /*
              * if you will call "libwebsocket_callback_on_writable"
              * from a different thread, return the caller thread ID
@@ -254,6 +255,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             /* return pthread_getthreadid_np(); */
             break;
         default:
+            printf("z GOT.(%s)\n",(char *)in);
             break;
 	}
 	return 0;
