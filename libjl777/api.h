@@ -1123,7 +1123,6 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
 
 char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
-    
     // glue
     static char *gotjson[] = { (char *)gotjson_func, "BTCDjson", "", "json", 0 };
     static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
@@ -1218,22 +1217,22 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
             }
         }
         //printf("(%s) command.(%s) NXT.(%s)\n",cJSON_Print(argjson),command,NXTaddr);
-    }
-    //printf("SuperNET_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
-    for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
-    {
-        cmdinfo = commands[i];
-        //printf("needvalid.(%c) sender.(%s) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],sender,valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
-        if ( strcmp(cmdinfo[1],command) == 0 )
+        //printf("SuperNET_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
+        for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
         {
-            if ( cmdinfo[2][0] != 0 && valid <= 0 )
-                return(0);
-            for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
-                objs[j-3] = cJSON_GetObjectItem(argjson,cmdinfo[j]);
-            retstr = (*(json_handler)cmdinfo[0])(NXTaddr,NXTACCTSECRET,prevaddr,sender,valid,objs,j-3,origargstr);
-            break;
+            cmdinfo = commands[i];
+            //printf("needvalid.(%c) sender.(%s) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],sender,valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
+            if ( strcmp(cmdinfo[1],command) == 0 )
+            {
+                if ( cmdinfo[2][0] != 0 && valid <= 0 )
+                    return(0);
+                for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
+                    objs[j-3] = cJSON_GetObjectItem(argjson,cmdinfo[j]);
+                retstr = (*(json_handler)cmdinfo[0])(NXTaddr,NXTACCTSECRET,prevaddr,sender,valid,objs,j-3,origargstr);
+                break;
+            }
         }
-    }
+    } else printf("not JSON to parse?\n");
     return(retstr);
 }
 

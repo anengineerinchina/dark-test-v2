@@ -286,11 +286,13 @@ char *call_SuperNET_JSON(char *JSONstr)
             if ( array != 0 )
             {
                 cmdstr = verify_tokenized_json(0,NXTaddr,&valid,array);
+                printf("cmdstr.%s valid.%d\n",cmdstr,valid);
                 retstr = SuperNET_json_commands(Global_mp,0,array,NXTaddr,valid,_tokbuf);
+                printf("json command return.(%s)\n",retstr);
                 if ( cmdstr != 0 )
                     free(cmdstr);
                 free_json(array);
-            }
+            } else printf("couldnt parse tokbuf.(%s)\n",_tokbuf);
         }
         free_json(json);
     } else printf("couldnt parse (%s)\n",JSONstr);
