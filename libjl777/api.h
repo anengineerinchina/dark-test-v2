@@ -74,8 +74,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
 {
 	char buf[MAX_JSON_FIELD],*retstr;
     cJSON *json,*array;
-    if ( len != 0 )
-    printf("reason.%d len.%ld\n",reason,len);
+    //if ( len != 0 )
+    //printf("reason.%d len.%ld\n",reason,len);
 	switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
@@ -92,7 +92,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
-            printf("GOT.(%s)\n",(char *)in);
+            //printf("GOT.(%s)\n",(char *)in);
             retstr = block_on_SuperNET(1,(char *)in+1);
             if ( retstr != 0 )
             {
@@ -137,13 +137,13 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     //if ( len < 20 )
                     //    buf[len] = '\0';
                 }
-                lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
+                //lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
                 free_json(json);
             }
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
             
-            lwsl_notice("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
+            //lwsl_notice("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
             //libwebsockets_return_http_status(context, wsi,HTTP_STATUS_OK, NULL);
             return -1;
         case LWS_CALLBACK_HTTP_FILE_COMPLETION:     // kill the connection after we sent one file
