@@ -136,7 +136,7 @@ void SuperNET_idler(uv_idle_t *handle)
             //printf("dequeue JSON_Q.(%s)\n",jsonstr);
             if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
             {
-                printf("(%s) -> (%s)\n",jsonstr,retstr);
+                //printf("(%s) -> (%s)\n",jsonstr,retstr);
                 ptrs[1] = retstr;
             } else ptrs[1] = clonestr("{\"result\":null}");
             //printf("JSON_Q ret.(%s)\n",retstr);
@@ -268,7 +268,7 @@ char *call_SuperNET_JSON(char *JSONstr)
         printf("Finished_init still 0\n");
         return(clonestr("{\"result\":null}"));
     }
-    printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
+    //printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
         expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
@@ -281,14 +281,14 @@ char *call_SuperNET_JSON(char *JSONstr)
             encoded[NXT_TOKEN_LEN] = 0;
             sprintf(_tokbuf,"[%s,{\"token\":\"%s\"}]",cmdstr,encoded);
             free(cmdstr);
-            printf("made tokbuf.(%s)\n",_tokbuf);
+            //printf("made tokbuf.(%s)\n",_tokbuf);
             array = cJSON_Parse(_tokbuf);
             if ( array != 0 )
             {
                 cmdstr = verify_tokenized_json(0,NXTaddr,&valid,array);
-                printf("cmdstr.%s valid.%d\n",cmdstr,valid);
+                //printf("cmdstr.%s valid.%d\n",cmdstr,valid);
                 retstr = SuperNET_json_commands(Global_mp,0,array,NXTaddr,valid,_tokbuf);
-                printf("json command return.(%s)\n",retstr);
+                //printf("json command return.(%s)\n",retstr);
                 if ( cmdstr != 0 )
                     free(cmdstr);
                 free_json(array);
@@ -331,7 +331,7 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
     } else ptrs[1] = clonestr("{\"result\":\"pending SuperNET API call\"}");
     retstr = ptrs[1];
     free(ptrs);
-    printf("block returned.(%s)\n",retstr);
+    //printf("block returned.(%s)\n",retstr);
     return(retstr);
 }
 
