@@ -204,7 +204,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             
             return -1;
         case LWS_CALLBACK_HTTP_WRITEABLE:           // we can send more of whatever it is we were sending
-            do
+            printf("writable.(%s)\n",in);
+            /*do
             {
                 n = (int)read(pss->fd,buffer,sizeof buffer);
                 if ( n < 0 ) // problem reading, close conn
