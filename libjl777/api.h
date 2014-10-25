@@ -131,7 +131,6 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                         return_http_str(wsi,retstr);
                         free(retstr);
                     }
-                    else return(-1);
                 }
                 else
                 {
@@ -141,10 +140,10 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     //if ( len < 20 )
                     //    buf[len] = '\0';
                     lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
-                    return(-1);
                 }
             }
             else printf("couldnt parse (%s)\n",(char *)in);
+            return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
             
