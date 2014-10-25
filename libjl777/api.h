@@ -9,11 +9,7 @@
 #ifndef API_H
 #define API_H
 
-#ifdef __APPLE__
 #include "libwebsockets.h"
-#else
-#include "libwebsockets.h"
-#endif
 
 char *block_on_SuperNET(int32_t blockflag,char *JSONstr);
 
@@ -71,11 +67,8 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
 static int callback_http(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user,void *in,size_t len)
 {
 	char buf[MAX_JSON_FIELD],*retstr;
-	int n,m;
     cJSON *json,*array;
-    unsigned char buffer[MAX_JSON_FIELD];
-	struct per_session_data__http *pss = (struct per_session_data__http *)user;
-    printf("reason.%d len.%ld\n",reason,len);
+    //printf("reason.%d len.%ld\n",reason,len);
 	switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
@@ -92,7 +85,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
-            printf("GOT.(%s)\n",(char *)in);
+            //printf("GOT.(%s)\n",(char *)in);
             retstr = block_on_SuperNET(1,(char *)in+1);
             if ( retstr != 0 )
             {
@@ -150,7 +143,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             
             return -1;
         case LWS_CALLBACK_HTTP_WRITEABLE:           // we can send more of whatever it is we were sending
-            do
+            /*do
             {
                 n = (int)read(pss->fd,buffer,sizeof buffer);
                 if ( n < 0 ) // problem reading, close conn
@@ -173,7 +166,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 break;
             }
         bail:
-            close(pss->fd);
+            close(pss->fd);*/
             return -1;
             /*
              * callback for confirming to continue with client IP appear in
