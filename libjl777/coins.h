@@ -609,7 +609,9 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             extract_cJSON_str(NXTAPIURL,sizeof(NXTAPIURL),MGWconf,"NXTAPIURL");
             extract_cJSON_str(NXTISSUERACCT,sizeof(NXTISSUERACCT),MGWconf,"NXTISSUERACCT");
             IS_LIBTEST = get_API_int(cJSON_GetObjectItem(MGWconf,"LIBTEST"),0);
-            printf("IS_LIBTEST.%d\n",IS_LIBTEST);
+            APIPORT = get_API_int(cJSON_GetObjectItem(MGWconf,"APIPORT"),7777);
+            APISLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"APISLEEP"),10);
+            printf("IS_LIBTEST.%d APIPORT.%d\n",IS_LIBTEST,APIPORT);
             init_SuperNET_storage();
             ismainnet = get_API_int(cJSON_GetObjectItem(MGWconf,"MAINNET"),1);
             Debuglevel = get_API_int(cJSON_GetObjectItem(MGWconf,"debug"),Debuglevel);
@@ -686,16 +688,6 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                             if ( cp->privatebits != 0 )
                                 expand_nxt64bits(NXTADDR,cp->privatebits);
                             addcontact(Global_mp->myhandle,cp->privateNXTADDR);
-                            /*set_pubpeerinfo(cp->srvNXTADDR,cp->privacyserver,cp->srvport,&peer,BTCDaddr,cp->coinpubkey,cp->pubnxtbits,0);
-                            refpeer = update_peerinfo(&createdflag,&peer);
-                            if ( refpeer != 0 && strcmp(cp->privacyserver,"127.0.0.1") == 0 )
-                            {
-                                printf("loopback privacyServer (%s)\n",cp->myipaddr);
-                                refpeer->srv.ipbits = calc_ipbits(cp->myipaddr);
-                                set_pubpeerinfo(cp->srvNXTADDR,cp->myipaddr,cp->srvport,&peer,cp->srvpubaddr,cp->srvcoinpubkey,cp->srvpubnxtbits,0);
-                                update_peerinfo(&createdflag,&peer);
-                                printf("update_peerinfo loopback privacyServer (%s)\n",cp->myipaddr);
-                            }*/
                         }
                         else if ( strcmp(coinstr,"BTC") == 0 )
                             BTCaddr = cp->pubaddr;
@@ -703,22 +695,6 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                             pubNXT = cp->pubaddr;
                      }
                 }
-                /*if ( (cp= get_coin_info("BTCD")) != 0 )
-                {
-                    char *publishaddrs(struct sockaddr *prevaddr,uint64_t coins[4],char *NXTACCTSECRET,char *pubNXT,char *pubkey,char *BTCDaddr,char *BTCaddr,char *srvNXTaddr,char *srvipaddr,int32_t srvport,int32_t haspservers,uint32_t xorsum);
-                    init_hexbytes_noT(pubkey,Global_mp->session_pubkey,sizeof(Global_mp->session_pubkey));
-                    expand_nxt64bits(NXTADDR,cp->pubnxtbits);
-                    str = publishaddrs(0,Global_mp->coins,cp->NXTACCTSECRET,NXTADDR,pubkey,cp->pubaddr,BTCaddr,cp->srvNXTADDR,cp->myipaddr,cp->srvport,0,0);
-                    if ( str != 0 )
-                        printf("publish.(%s) privacyserver.(%s)\n",str,cp->privacyserver), free(str);
-                    if ( strcmp(cp->privacyserver,"127.0.0.1") == 0 )
-                    {
-                        init_hexbytes_noT(pubkey,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
-                        str = publishaddrs(0,Global_mp->coins,cp->srvNXTACCTSECRET,cp->srvNXTADDR,pubkey,cp->srvpubaddr,0,cp->srvNXTADDR,cp->myipaddr,cp->srvport,1,calc_ipbits(cp->myipaddr));
-                        if ( str != 0 )
-                            printf("publish loopback privacyserver.(%s)\n",str), free(str);
-                    }
-                }*/
             } else printf("no coins array.%p ?\n",array);
             if ( NXTACCTSECRET[0] == 0 )
                 gen_randomacct(0,33,NXTADDR,NXTACCTSECRET,"randvals");

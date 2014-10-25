@@ -20,19 +20,6 @@ struct task_info
     uint8_t args[];
 };
 
-void NXTservices_idler(uv_idle_t *handle)
-{
-    static int64_t nexttime;
-    //void call_handlers(struct NXThandler_info *mp,int32_t mode,int32_t height);
-    static uint64_t counter;
-    usleep(1000);
-    if ( (counter++ % 1000) == 0 && microseconds() > nexttime )
-    {
-        call_handlers(Global_mp,NXTPROTOCOL_IDLETIME,0);
-        nexttime = (microseconds() + 1000000);
-    }
-}
-
 void aftertask(uv_work_t *req,int status)
 {
     struct task_info *task = (struct task_info *)req->data;
@@ -155,7 +142,10 @@ void SuperNET_idler(uv_idle_t *handle)
             lastattempt = millis;
         }
         if ( process_storageQ() != 0 )
+        {
+            printf("processed storage\n");
             lastattempt = millis;
+        }
     }
     if ( millis > (lastclock + 1000) )
     {
@@ -173,7 +163,7 @@ void SuperNET_idler(uv_idle_t *handle)
         counter++;
         lastclock = millis;
     }
-    usleep(10);
+    usleep(APISLEEP * 1000);
 }
 
 void run_UVloop(void *arg)
@@ -182,26 +172,17 @@ void run_UVloop(void *arg)
     uv_idle_init(UV_loop,&idler);
     //uv_async_init(UV_loop,&Tasks_async,async_handler);
     uv_idle_start(&idler,SuperNET_idler);
-    //uv_idle_start(&idler,NXTservices_idler);
     uv_run(UV_loop,UV_RUN_DEFAULT);
     printf("end of uv_run\n");
 }
 
-/*void run_NXTservices(void *arg)
+void run_libwebsockets(void *arg)
 {
-    void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,void *handlerdata,int32_t height);
-    struct NXThandler_info *mp = arg;
-    printf("inside run_NXTservices %p\n",mp);
-    register_NXT_handler("pNXT",mp,2,NXTPROTOCOL_ILLEGALTYPE,pNXT_handler,pNXT_SIG,1,0,0);
-    printf("NXTloop\n");
-    NXTloop(mp);
-    printf("NXTloop done\n");
-    while ( 1 ) sleep(60);
-}*/
+    init_API_port(APIPORT,APISLEEP);
+}
 
 void init_NXThashtables(struct NXThandler_info *mp)
 {
-    struct other_addr *op = 0;
     struct NXT_acct *np = 0;
     struct NXT_asset *ap = 0;
     struct NXT_assettxid *tp = 0;
@@ -209,7 +190,7 @@ void init_NXThashtables(struct NXThandler_info *mp)
     struct pserver_info *pp = 0;
     struct telepathy_entry *tel = 0;
     //struct kademlia_storage *sp = 0;
-    static struct hashtable *NXTasset_txids,*NXTaddrs,*NXTassets,*NXTguids,*otheraddrs,*Pserver,*Telepathy_hash;
+    static struct hashtable *NXTasset_txids,*NXTaddrs,*NXTassets,*NXTguids,*Pserver,*Telepathy_hash;
     if ( NXTguids == 0 )
         NXTguids = hashtable_create("NXTguids",HASHTABLES_STARTSIZE,sizeof(struct NXT_guid),((long)&gp->guid[0] - (long)gp),sizeof(gp->guid),((long)&gp->H.modified - (long)gp));
     if ( NXTasset_txids == 0 )
@@ -218,8 +199,6 @@ void init_NXThashtables(struct NXThandler_info *mp)
         NXTassets = hashtable_create("NXTassets",HASHTABLES_STARTSIZE,sizeof(struct NXT_asset),((long)&ap->H.U.assetid[0] - (long)ap),sizeof(ap->H.U.assetid),((long)&ap->H.modified - (long)ap));
     if ( NXTaddrs == 0 )
         NXTaddrs = hashtable_create("NXTaddrs",HASHTABLES_STARTSIZE,sizeof(struct NXT_acct),((long)&np->H.U.NXTaddr[0] - (long)np),sizeof(np->H.U.NXTaddr),((long)&np->H.modified - (long)np));
-    if ( otheraddrs == 0 )
-        otheraddrs = hashtable_create("otheraddrs",HASHTABLES_STARTSIZE,sizeof(struct other_addr),((long)&op->addr[0] - (long)op),sizeof(op->addr),((long)&op->modified - (long)op));
     if ( Telepathy_hash == 0 )
         Telepathy_hash = hashtable_create("Telepath_hash",HASHTABLES_STARTSIZE,sizeof(struct telepathy_entry),((long)&tel->locationstr[0] - (long)tel),sizeof(tel->locationstr),((long)&tel->modified - (long)tel));
     if ( Pserver == 0 )
@@ -230,16 +209,14 @@ void init_NXThashtables(struct NXThandler_info *mp)
         mp->Pservers_tablep = &Pserver;
         mp->NXTguid_tablep = &NXTguids;
         mp->NXTaccts_tablep = &NXTaddrs;
-        mp->otheraddrs_tablep = &otheraddrs;
         mp->NXTassets_tablep = &NXTassets;
         mp->NXTasset_txids_tablep = &NXTasset_txids;
-        printf("init_NXThashtables: %p %p %p %p %p\n",NXTguids,NXTaddrs,NXTassets,NXTasset_txids,otheraddrs);
+        printf("init_NXThashtables: %p %p %p %p\n",NXTguids,NXTaddrs,NXTassets,NXTasset_txids);
     }
 }
 
 char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
 {
-    //void *Coinloop(void *arg);
     struct NXThandler_info *mp = Global_mp;    // seems safest place to have main data structure
     printf("init_NXTservices.(%s)\n",myipaddr);
     UV_loop = uv_default_loop();
@@ -248,39 +225,19 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
     portable_mutex_init(&mp->hashtable_queue[1].mutex);
     
     init_NXThashtables(mp);
-    //init_NXTAPI(0);
-    //safecopy(mp->ipaddr,MY_IPADDR,sizeof(mp->ipaddr));
     mp->upollseconds = 333333 * 0;
     mp->pollseconds = POLL_SECONDS;
-    //crypto_box_keypair(Global_mp->loopback_pubkey,Global_mp->loopback_privkey);
-    //crypto_box_keypair(Global_mp->session_pubkey,Global_mp->session_privkey);
     if ( portable_thread_create((void *)process_hashtablequeues,mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
     mp->udp = start_libuv_udpserver(4,SUPERNET_PORT,(void *)on_udprecv);
     myipaddr = init_MGWconf(JSON_or_fname,myipaddr);
     if ( myipaddr != 0 )
-    {
-        //strcpy(MY_IPADDR,get_ipaddr());
         strcpy(mp->ipaddr,myipaddr);
-    }
-    //printf("start getNXTblocks.(%s)\n",myipaddr);
-    //if ( 0 && portable_thread_create((void *)getNXTblocks,mp) == 0 )
-    //    printf("ERROR start_Histloop\n");
-    //mp->udp = start_libuv_udpserver(4,NXT_PUNCH_PORT,(void *)on_udprecv);
-    //init_pingpong_queue(&PeerQ,"PeerQ",process_PeerQ,0,0);
-
-    //printf("run_NXTservices >>>>>>>>>>>>>>> %p %s: %s\n",mp,mp->dispname,mp->ipaddr);
-    //void run_NXTservices(void *arg);
-    //if ( 0 && portable_thread_create((void *)run_NXTservices,mp) == 0 )
-    //    printf("ERROR hist process_hashtablequeues\n");
     Finished_loading = 1;
-	//while ( Finished_loading == 0 )
-    //    sleep(1);
-    //printf("start Coinloop\n");
-    //if ( portable_thread_create((void *)Coinloop,Global_mp) == 0 )
-    //    printf("ERROR Coin_genaddrloop\n");
     printf("run_UVloop\n");
     if ( portable_thread_create((void *)run_UVloop,Global_mp) == 0 )
+        printf("ERROR hist process_hashtablequeues\n");
+    if ( portable_thread_create((void *)run_libwebsockets,Global_mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
     sleep(3);
     {
@@ -295,54 +252,18 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         pserver = get_pserver(0,myipaddr,0,0);
         pserver->nxt64bits = cp->srvpubnxtbits;
     }
-
     return(myipaddr);
 }
 
-/*void process_pNXT_AM(struct pNXT_info *dp,struct NXT_protocol_parms *parms)
-{
-    cJSON *argjson;
-    struct json_AM *ap;
-    char NXTaddr[64],*sender,*receiver;
-    sender = parms->sender; receiver = parms->receiver; ap = parms->AMptr;
-    expand_nxt64bits(NXTaddr,ap->H.nxt64bits);
-    if ( strcmp(NXTaddr,sender) != 0 )
-    {
-        printf("unexpected NXTaddr %s != sender.%s when receiver.%s\n",NXTaddr,sender,receiver);
-        return;
-    }
-    if ( (argjson = parse_json_AM(ap)) != 0 )
-    {
-        printf("process_pNXT_AM got jsontxt.(%s)\n",ap->U.jsonstr);
-        free_json(argjson);
-    }
-}
-
-void process_pNXT_typematch(struct pNXT_info *dp,struct NXT_protocol_parms *parms)
-{
-    char NXTaddr[64],*sender,*receiver,*txid;
-    sender = parms->sender; receiver = parms->receiver; txid = parms->txid;
-    safecopy(NXTaddr,sender,sizeof(NXTaddr));
-    printf("got txid.(%s) type.%d subtype.%d sender.(%s) -> (%s)\n",txid,parms->type,parms->subtype,sender,receiver);
-}*/
-
 char *call_SuperNET_JSON(char *JSONstr)
 {
-    //static portable_mutex_t mutex;
-    //static int didinit;
     cJSON *json,*array;
     int32_t valid;
     char NXTaddr[64],_tokbuf[2*MAX_JSON_FIELD],encoded[NXT_TOKEN_LEN+1],*cmdstr,*retstr = 0;
     struct coin_info *cp = get_coin_info("BTCD");
-    //if ( didinit == 0 )
-    //{
-    //    portable_mutex_init(&mutex);
-    //    didinit = 1;
-    //}
     if ( Finished_init == 0 )
         return(0);
     //printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
-    //portable_mutex_lock(&mutex);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
         expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
@@ -369,7 +290,6 @@ char *call_SuperNET_JSON(char *JSONstr)
     } else printf("couldnt parse (%s)\n",JSONstr);
     if ( retstr == 0 )
         retstr = clonestr("{\"result\":null}");
-    //portable_mutex_unlock(&mutex);
     return(retstr);
 }
 
@@ -427,42 +347,6 @@ char *SuperNET_JSON(char *JSONstr)
         retstr = clonestr("{\"result\":null}");
     return(retstr);
 }
-
-/*void *pNXT_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *parms,void *handlerdata,int32_t height)
-{
-    struct pNXT_info *gp = handlerdata;
-    if ( parms->txid == 0 )     // indicates non-transaction event
-    {
-        //if ( parms->mode == NXTPROTOCOL_WEBJSON )
-        //{
-           // printf(":7777 interface deprecated\n");
-            //return(pNXT_jsonhandler(&parms->argjson,parms->argstr,0));
-        //}
-        //else
-        if ( parms->mode == NXTPROTOCOL_NEWBLOCK )
-        {
-            //printf("pNXT new RTblock %d time %ld microseconds %lld\n",mp->RTflag,time(0),(long long)microseconds());
-        }
-        else if ( parms->mode == NXTPROTOCOL_IDLETIME )
-        {
-            //printf("pNXT new idletime %d time %ld microseconds %lld \n",mp->RTflag,time(0),(long long)microseconds());
-        }
-        else if ( parms->mode == NXTPROTOCOL_INIT )
-        {
-            printf("pNXT NXThandler_info init %d\n",mp->RTflag);
-            if ( Global_pNXT == 0 )
-                fatal("pNXT_handler: NO GLOBALS!!!");
-            gp = Global_pNXT;
-            printf("return gp.%p\n",gp);
-        }
-        return(gp);
-    }
-    else if ( parms->mode == NXTPROTOCOL_AMTXID )
-        process_pNXT_AM(gp,parms);
-    else if ( parms->mode == NXTPROTOCOL_TYPEMATCH )
-        process_pNXT_typematch(gp,parms);
-    return(gp);
-}*/
 
 uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t len,int32_t duration)
 {

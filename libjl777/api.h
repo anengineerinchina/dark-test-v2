@@ -9,6 +9,252 @@
 #ifndef API_H
 #define API_H
 
+#include "libwebsockets.h"
+
+char *block_on_SuperNET(int32_t blockflag,char *JSONstr);
+
+static volatile int force_exit = 0;
+static struct libwebsocket_context *context;
+
+struct serveable
+{
+	const char *urlpath;
+	const char *mimetype;
+};
+
+struct per_session_data__http
+{
+	int fd;
+};
+
+const char * get_mimetype(const char *file)
+{
+	int n = (int)strlen(file);
+    
+	if (n < 5)
+		return NULL;
+    
+	if (!strcmp(&file[n - 4], ".ico"))
+		return "image/x-icon";
+    
+	if (!strcmp(&file[n - 4], ".png"))
+		return "image/png";
+    
+	if (!strcmp(&file[n - 5], ".html"))
+		return "text/html";
+    
+	return NULL;
+}
+
+void return_http_str(struct libwebsocket *wsi,char *retstr)
+{
+    int32_t len;
+    unsigned char buffer[1024];
+    len = (int32_t)strlen(retstr);
+    sprintf((char *)buffer,
+            "HTTP/1.0 200 OK\x0d\x0a"
+            "Server: NXTprotocol.jl777\x0d\x0a"
+            "Content-Type: text/html\x0d\x0a"
+            "Access-Control-Allow-Origin: *\x0d\x0a"
+            "Content-Length: %u\x0d\x0a\x0d\x0a",
+            (unsigned int)len);
+    printf("html hdr.(%s)\n",buffer);
+    libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
+    libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);
+}
+
+// this protocol server (always the first one) just knows how to do HTTP
+static int callback_http(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user,void *in,size_t len)
+{
+	char buf[MAX_JSON_FIELD],*retstr,*jsonstr;
+	int n,m;
+    cJSON *json,*array;
+    unsigned char buffer[MAX_JSON_FIELD];
+	struct per_session_data__http *pss = (struct per_session_data__http *)user;
+	switch ( reason )
+    {
+        case LWS_CALLBACK_HTTP:
+            if ( len < 1 )
+            {
+                libwebsockets_return_http_status(context, wsi,HTTP_STATUS_BAD_REQUEST, NULL);
+                return -1;
+            }
+            if ( strchr((const char *)in + 1, '/') != 0 ) // this server has no concept of directories
+            {
+                libwebsockets_return_http_status(context, wsi,HTTP_STATUS_FORBIDDEN, NULL);
+                return -1;
+            }
+            // if a legal POST URL, let it continue and accept data
+            if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
+                return 0;
+            printf("GOT.(%s)\n",(char *)in);
+            retstr = block_on_SuperNET(1,(char *)in+1);
+            if ( retstr != 0 )
+            {
+                return_http_str(wsi,retstr);
+                /*len = strlen(retstr);
+                sprintf((char *)buffer,
+                        "HTTP/1.0 200 OK\x0d\x0a"
+                        "Server: NXTprotocol.jl777\x0d\x0a"
+                        "Content-Type: text/html\x0d\x0a"
+                        "Access-Control-Allow-Origin: *\x0d\x0a"
+                        "Content-Length: %u\x0d\x0a\x0d\x0a",
+                        (unsigned int)len);
+                printf("html hdr.(%s)\n",buffer);
+                libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
+                libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);*/
+                free(retstr);
+            }
+            return(-1);
+            break;
+        case LWS_CALLBACK_HTTP_BODY:
+            //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
+            if ( (json= cJSON_Parse((char *)in)) != 0 )
+            {
+                if ( (array= cJSON_GetObjectItem(json,"params")) != 0 && is_cJSON_Array(array) != 0 )
+                {
+                    copy_cJSON(buf,cJSON_GetArrayItem(array,0));
+                    replace_backslashquotes(buf);
+                    retstr = block_on_SuperNET(1,buf);
+                    if ( retstr != 0 )
+                    {
+                        stripwhite_ns(retstr,strlen(retstr));
+                        strcat(retstr,"\n");
+                        return_http_str(wsi,retstr);
+                        free(retstr);
+                    }
+                }
+                else
+                {
+                    strncpy(buf,in,sizeof(buf)-1);
+                    buf[sizeof(buf)-1] = '\0';
+                    //if ( len < 20 )
+                    //    buf[len] = '\0';
+                }
+                lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
+                free_json(json);
+            }
+            break;
+        case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
+            
+            lwsl_notice("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
+            libwebsockets_return_http_status(context, wsi,HTTP_STATUS_OK, NULL);
+            return -1;
+        case LWS_CALLBACK_HTTP_FILE_COMPLETION:     // kill the connection after we sent one file
+            //		lwsl_info("LWS_CALLBACK_HTTP_FILE_COMPLETION seen\n");
+            
+            return -1;
+        case LWS_CALLBACK_HTTP_WRITEABLE:           // we can send more of whatever it is we were sending
+            do
+            {
+                n = (int)read(pss->fd,buffer,sizeof buffer);
+                if ( n < 0 ) // problem reading, close conn
+                    goto bail;
+                if ( n == 0 ) // sent it all, close conn
+                    goto flush_bail;
+                // because it's HTTP and not websocket, don't need to take care about pre and postamble
+                m = libwebsocket_write(wsi,buffer,n,LWS_WRITE_HTTP);
+                if ( m < 0 ) // write failed, close conn
+                    goto bail;
+                if ( m != n ) // partial write, adjust
+                    lseek(pss->fd,m - n,SEEK_CUR);
+            } while ( lws_send_pipe_choked(wsi) == 0 );
+            libwebsocket_callback_on_writable(context,wsi);
+            break;
+        flush_bail:
+            if ( lws_send_pipe_choked(wsi) == 0 )   // true if still partial pending
+            {
+                libwebsocket_callback_on_writable(context, wsi);
+                break;
+            }
+        bail:
+            close(pss->fd);
+            return -1;
+            /*
+             * callback for confirming to continue with client IP appear in
+             * protocol 0 callback since no websocket protocol has been agreed
+             * yet.  You can just ignore this if you won't filter on client IP
+             * since the default uhandled callback return is 0 meaning let the
+             * connection continue.
+             */
+        case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
+#if 0
+            libwebsockets_get_peer_addresses(context, wsi, (int)(long)in, client_name,sizeof(client_name), client_ip, sizeof(client_ip));
+            fprintf(stderr, "Received network connect from %s (%s)\n",client_name, client_ip);
+#endif
+            // if we returned non-zero from here, we kill the connection
+            break;
+        case LWS_CALLBACK_GET_THREAD_ID:
+            /*
+             * if you will call "libwebsocket_callback_on_writable"
+             * from a different thread, return the caller thread ID
+             * here so lws can use this information to work out if it
+             * should signal the poll() loop to exit and restart early
+             */
+            /* return pthread_getthreadid_np(); */
+            break;
+        default:
+            break;
+	}
+	return 0;
+}
+
+static struct libwebsocket_protocols protocols[] =
+{
+	// first protocol must always be HTTP handler
+    
+	{
+		"http-only",		// name
+		callback_http,		// callback
+		sizeof (struct per_session_data__http),	// per_session_data_size
+		0,			// max frame size / rx buffer
+	},
+	{ NULL, NULL, 0, 0 } // terminator
+};
+
+void sighandler(int sig)
+{
+	force_exit = 1;
+	libwebsocket_cancel_service(context);
+}
+
+int32_t init_API_port(uint16_t port,uint32_t millis)
+{
+	int n,opts = 0;
+	const char *iface = NULL;
+	struct lws_context_creation_info info;
+	memset(&info, 0, sizeof info);
+	info.port = port;
+    /*#if !defined(LWS_NO_DAEMONIZE) && !defined(WIN32)
+     if ( lws_daemonize("/tmp/.SuperNET-lock") != 0 )
+     {
+     fprintf(stderr,"Failed to daemonize\n");
+     return(-1);
+     }
+     #endif*/
+	signal(SIGINT, sighandler);
+	lwsl_notice("libwebsockets test server - (C) Copyright 2010-2013 Andy Green <andy@warmcat.com> -  licensed under LGPL2.1\n");
+	info.iface = iface;
+	info.protocols = protocols;
+ 	info.gid = -1;
+	info.uid = -1;
+	info.options = opts;
+	context = libwebsocket_create_context(&info);
+	if ( context == NULL )
+    {
+		lwsl_err("libwebsocket init failed\n");
+		return -1;
+	}
+	n = 0;
+	while ( n >= 0 && !force_exit )
+    {
+		n = libwebsocket_service(context,millis);
+	}
+	libwebsocket_context_destroy(context);
+	lwsl_notice("libwebsockets-test-server exited cleanly\n");
+	return 0;
+}
+
 char *orderbook_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     int32_t i,polarity,allflag;
@@ -864,14 +1110,6 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
     char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],**cmdinfo,*retstr=0;
-    //static int didinit;
-    //static portable_mutex_t mutex;
-    //if ( didinit == 0 )
-    //{
-    //    portable_mutex_init(&mutex);
-    //    didinit = 1;
-    //}
-    //portable_mutex_lock(&mutex);
     memset(objs,0,sizeof(objs));
     command[0] = 0;
     memset(NXTaddr,0,sizeof(NXTaddr));
@@ -919,14 +1157,9 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
             for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
                 objs[j-3] = cJSON_GetObjectItem(argjson,cmdinfo[j]);
             retstr = (*(json_handler)cmdinfo[0])(NXTaddr,NXTACCTSECRET,prevaddr,sender,valid,objs,j-3,origargstr);
-            //if ( retstr == 0 )
-            //    retstr = clonestr("{\"result\":null}");
-            //if ( 0 && retstr != 0 )
-            //    printf("json_handler returns.(%s)\n",retstr);
             break;
         }
     }
-    //portable_mutex_unlock(&mutex);
     return(retstr);
 }
 

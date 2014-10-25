@@ -606,8 +606,10 @@ static long server_xferred;
 int Servers_started;
 queue_t P2P_Q,sendQ,JSON_Q,udp_JSON,storageQ,cacheQ;
 //struct pingpong_queue PeerQ;
-int32_t Num_in_whitelist,IS_LIBTEST;
+int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP;
 uint32_t *SuperNET_whitelist;
+int32_t Historical_done;
+struct NXThandler_info *Global_mp;
 
 double picoc(int argc,char **argv,char *codestr);
 int32_t init_sharenrs(unsigned char sharenrs[255],unsigned char *orig,int32_t m,int32_t n);
@@ -716,7 +718,7 @@ double _pairave(float valA,float valB)
 #include "orders.h"
 #include "bars.h"
 #include "tradebot.h"
-#include "NXTservices.c"
+//#include "NXTservices.c"
 #include "api.h"
 
 #endif
