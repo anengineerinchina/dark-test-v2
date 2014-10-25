@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include "SuperNET.h"
+//#include "SuperNET.h"
 
 using namespace std;
 using namespace boost;
@@ -3912,38 +3912,9 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 }
 
 //bitcoindark:
-
-char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
-{
-	static long retlen;
-	static char *retbuf;
-	int32_t len;
-	char *retstr;
-    printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
-	if ( msg == 0 || msg[0] == 0 )
-	{
-		printf("no point to process null msg.%p\n",msg);
-		return((char *)"{\"result\":null}");
-	}
-	retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
-    if ( retstr == 0 )
-    {
-        retstr = (char *)malloc(16);
-        strcpy(retstr,"{\"result\":null}");
-    }
-	if ( retstr != 0 )
-	{
-		if ( (len= strlen(retstr)) >= retlen )
-		{
-			retlen = len + 1;
-			retbuf = (char *)realloc(retbuf,len+1);
-		}
-		strcpy(retbuf,retstr);
-		printf("\n\treceived message. msg: %s from %s retstr.(%s)\n", msg, from->addr.ToString().c_str(),retbuf);
-		free(retstr);
-	}
-	return(retbuf);
-}
+#include <curl/curl.h>
+#include <curl/easy.h>
+#include "../libjl777/bitcoind_RPC.c"
 
 void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
 {
@@ -3977,6 +3948,56 @@ void broadcastPubAddr(char *msg,int32_t duration)
     delete pubaddr;
 }
 
+int32_t got_newpeer(char *ip_port)
+{
+    char *retstr,params[MAX_JSON_FIELD];
+    // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\\\"]",ip_port);
+    retstr = bitcoind_RPC(0,(char *)"BTCD","https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
+    if ( retstr != 0 )
+    {
+        printf("RET.(%s) for (%s)\n",retstr,ip_port);
+        free(retstr);
+        return(0);
+    }
+    return(-1);
+}
+
+char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
+{
+	static long retlen;
+	static char *retbuf;
+	int32_t len;
+	char *retstr,params[MAX_JSON_FIELD*2];
+    printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
+	if ( msg == 0 || msg[0] == 0 )
+	{
+		printf("no point to process null msg.%p\n",msg);
+		return((char *)"{\"result\":null}");
+	}
+	//retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
+   // static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
+    sprintf(params,"[\\\"{\\\"requestType\\\":\\\"gotpacket\\\",\\\"msg\\\":\\\"%s\\\",\\\"dur\\\":%d,\\\"ip_port\\\":\\\"%s\\\"}\\\"]",msg,duration,(char *)from->addr.ToString().c_str());
+    retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
+    if ( retstr == 0 )
+    {
+        retstr = (char *)malloc(16);
+        strcpy(retstr,"{\"result\":null}");
+    }
+	if ( retstr != 0 )
+	{
+		if ( (len= strlen(retstr)) >= retlen )
+		{
+			retlen = len + 1;
+			retbuf = (char *)realloc(retbuf,len+1);
+		}
+		strcpy(retbuf,retstr);
+		printf("\n\treceived message. msg: %s from %s retstr.(%s)\n", msg, from->addr.ToString().c_str(),retbuf);
+		free(retstr);
+	}
+	return(retbuf);
+}
+
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
 	printf("SuperNET_broadcast(%s) dur.%d\n",msg,duration);
@@ -4005,7 +4026,7 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
 void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
-    SuperNET_start((char *)"SuperNET.conf",myip);
+    //SuperNET_start((char *)"SuperNET.conf",myip);
     std::cout << "back from start" << std::endl;
 }
 

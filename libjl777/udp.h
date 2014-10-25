@@ -11,6 +11,7 @@
 
 
 #include "includes/task.h"
+#undef ARRAY_SIZE
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -400,7 +401,7 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
     //int32_t direct_onionize(uint64_t nxt64bits,unsigned char *destpubkey,unsigned char *maxbuf,unsigned char *encoded,unsigned char **payloadp,int32_t len);
     static unsigned char zeropubkey[crypto_box_PUBLICKEYBYTES];
     uint64_t txid = 0;
-    int32_t port;
+    int32_t port,L;
     struct sockaddr destaddr;
     struct nodestats *stats;
     struct coin_info *cp = get_coin_info("BTCD");
@@ -416,7 +417,8 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
         char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int32_t msglen,char *destNXTaddr,unsigned char *data,int32_t datalen);
         char hopNXTaddr[64],destNXTaddr[64],*retstr;
         expand_nxt64bits(destNXTaddr,stats->nxt64bits);
-        retstr = sendmessage(hopNXTaddr,1*(encrypted>1?Global_mp->Lfactor:0),cp->srvNXTADDR,origargstr,len,destNXTaddr,data,datalen);
+        L = (encrypted>1 ? MAX(encrypted,Global_mp->Lfactor) : 0);
+        retstr = sendmessage(hopNXTaddr,L,cp->srvNXTADDR,origargstr,len,destNXTaddr,data,datalen);
         if ( retstr != 0 )
         {
             if ( Debuglevel > 0 )

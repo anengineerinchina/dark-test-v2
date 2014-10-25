@@ -178,7 +178,7 @@ void run_UVloop(void *arg)
 
 void run_libwebsockets(void *arg)
 {
-    init_API_port(APIPORT,APISLEEP);
+    init_API_port(USESSL,APIPORT,APISLEEP);
 }
 
 void init_NXThashtables(struct NXThandler_info *mp)
@@ -392,11 +392,11 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
     return(txid);
 }
 
-int32_t got_newpeer(char *ip_port)
+/*int32_t got_newpeer(char *ip_port)
 {
     queue_enqueue(&P2P_Q,clonestr(ip_port));
 	return(0);
-}
+}*/
 
 char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
 {

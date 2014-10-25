@@ -606,7 +606,7 @@ static long server_xferred;
 int Servers_started;
 queue_t P2P_Q,sendQ,JSON_Q,udp_JSON,storageQ,cacheQ;
 //struct pingpong_queue PeerQ;
-int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP;
+int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP,USESSL;
 uint32_t *SuperNET_whitelist;
 int32_t Historical_done;
 struct NXThandler_info *Global_mp;

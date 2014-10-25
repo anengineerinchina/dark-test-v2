@@ -13,6 +13,12 @@
 
 char *block_on_SuperNET(int32_t blockflag,char *JSONstr);
 
+#ifndef INSTALL_DATADIR
+#define INSTALL_DATADIR "~"
+#endif
+#define LOCAL_RESOURCE_PATH INSTALL_DATADIR
+char *resource_path = LOCAL_RESOURCE_PATH;
+
 static volatile int force_exit = 0;
 static struct libwebsocket_context *context;
 
@@ -58,7 +64,7 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
             "Access-Control-Allow-Origin: *\x0d\x0a"
             "Content-Length: %u\x0d\x0a\x0d\x0a",
             (unsigned int)len);
-    printf("html hdr.(%s)\n",buffer);
+    //printf("html hdr.(%s)\n",buffer);
     libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
     libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);
 }
@@ -216,7 +222,7 @@ void sighandler(int sig)
 	//libwebsocket_cancel_service(context);
 }
 
-int32_t init_API_port(uint16_t port,uint32_t millis)
+int32_t init_API_port(int32_t use_ssl,uint16_t port,uint32_t millis)
 {
 	int n,opts = 0;
 	const char *iface = NULL;
@@ -237,6 +243,25 @@ int32_t init_API_port(uint16_t port,uint32_t millis)
  	info.gid = -1;
 	info.uid = -1;
 	info.options = opts;
+	if ( use_ssl == 0 )
+    {
+		info.ssl_cert_filepath = NULL;
+		info.ssl_private_key_filepath = NULL;
+	}
+    else
+    {
+		char cert_path[1024];
+        char key_path[1024];
+		sprintf(cert_path,"SuperNET.pem");
+		if (strlen(resource_path) > sizeof(key_path) - 32)
+        {
+			lwsl_err("resource path too long\n");
+			return -1;
+		}
+		sprintf(key_path,"SuperNET.key.pem");
+		info.ssl_cert_filepath = cert_path;
+		info.ssl_private_key_filepath = key_path;
+	}
 	context = libwebsocket_create_context(&info);
 	if ( context == NULL )
     {
@@ -1051,8 +1076,34 @@ char *cosigned_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     return(clonestr("{\"error\":\"invalid cosigned_func arguments\"}"));
 }
 
+char *gotpacket_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port);
+    char msg[MAX_JSON_FIELD],ip_port[MAX_JSON_FIELD];
+    int32_t duration;
+    copy_cJSON(msg,objs[0]);
+    duration = (int32_t)get_API_int(objs[1],600);
+    copy_cJSON(ip_port,objs[2]);
+    return(SuperNET_gotpacket(msg,duration,ip_port));
+}
+
+char *gotnewpeer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    int32_t got_newpeer(char *ip_port);
+    char ip_port[MAX_JSON_FIELD];
+    copy_cJSON(ip_port,objs[0]);
+    if ( ip_port[0] != 0 )
+        queue_enqueue(&P2P_Q,clonestr(ip_port));
+    return(0);
+}
+
 char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
+    
+    // glue
+    static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
+    static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+  
     // multisig
     static char *cosign[] = { (char *)cosign_func, "cosign", "V", "otheracct", "seed", "text", 0 };
     static char *cosigned[] = { (char *)cosigned_func, "cosigned", "V", "seed", "result", "privacct", "pubacct", 0 };
@@ -1103,7 +1154,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     // Tradebot
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
 
-     static char **commands[] = { getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
+     static char **commands[] = { gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];

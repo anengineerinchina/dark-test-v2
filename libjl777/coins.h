@@ -529,6 +529,9 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                 cp->M = get_API_int(cJSON_GetObjectItem(json,"telepod_M"),1);
                 cp->N = get_API_int(cJSON_GetObjectItem(json,"telepod_N"),1);
                 cp->clonesmear = get_API_int(cJSON_GetObjectItem(json,"clonesmear"),3600);
+                cp->clonesmear += (((rand() >> 8) % ((3+cp->clonesmear)/2)) - (cp->clonesmear/4));
+                if ( cp->clonesmear < 600 )
+                    cp->clonesmear = 600;
                 if ( extract_cJSON_str(cp->backupdir,sizeof(cp->backupdir),json,"backupdir") <= 0 )
                     strcpy(cp->backupdir,"backups");
                 ciphersobj = cJSON_GetObjectItem(json,"ciphers");
@@ -611,7 +614,8 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             IS_LIBTEST = get_API_int(cJSON_GetObjectItem(MGWconf,"LIBTEST"),0);
             APIPORT = get_API_int(cJSON_GetObjectItem(MGWconf,"APIPORT"),7777);
             APISLEEP = get_API_int(cJSON_GetObjectItem(MGWconf,"APISLEEP"),10);
-            printf("IS_LIBTEST.%d APIPORT.%d\n",IS_LIBTEST,APIPORT);
+            USESSL = get_API_int(cJSON_GetObjectItem(MGWconf,"USESSL"),1);
+            printf("USESSL.%d IS_LIBTEST.%d APIPORT.%d APISLEEP.%d millis\n",USESSL,IS_LIBTEST,APIPORT,APISLEEP);
             init_SuperNET_storage();
             ismainnet = get_API_int(cJSON_GetObjectItem(MGWconf,"MAINNET"),1);
             Debuglevel = get_API_int(cJSON_GetObjectItem(MGWconf,"debug"),Debuglevel);

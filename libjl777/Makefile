@@ -39,7 +39,7 @@ install: /usr/lib/libjl777.so; \
 btcd: ../src/BitcoinDarkd; \
     cd ../src; rm BitcoinDarkd; make -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
 
-patch: doesntexist; \
+patch0: doesntexist; \
     export LIBDIR="/usr/local/BerkeleyDB.6.1/lib"; \
     cd db-6.1.19/build_unix; \
     ../dist/configure; \
@@ -47,6 +47,17 @@ patch: doesntexist; \
     make; \
     cp *.h ../../includes; \
     cp libdb.a ../../libs;
+
+patch: doesntexist; \
+    unzip lws.zip -d libwebsockets; \
+    cd libwebsockets/lib; \
+    cmake ..; \
+    cp libwebsockets.h lws_config.h ../../includes; \
+    cp libwebsockets-test-server.key.pem ../../SuperNET.key.pem; \
+    cp libwebsockets-test-server.pem ../../SuperNET.pem; \
+    make; \
+    cp lib/*  ../../libs; \
+    cd ../..;
 
 onetime: doesntexist; \
     unzip db-6.1.19.zip; \
