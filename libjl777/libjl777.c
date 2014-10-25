@@ -501,7 +501,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     FILE *fp = 0;
     struct coin_info *cp;
     struct NXT_str *tp = 0;
-    sleep(1);
+    //sleep(1);
     if ( myipaddr != 0 )
         myipaddr = clonestr(myipaddr);
     printf("SuperNET_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);

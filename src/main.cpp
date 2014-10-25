@@ -3987,10 +3987,16 @@ char *SuperNET_JSON(char *JSONstr)
     return(retstr);
 }
 
+int did_SuperNET_init;
 int32_t got_newpeer(const char *ip_port)
 {
     char *retstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    while ( did_SuperNET_init == 0 )
+    {
+        fprintf(stderr,".");
+        sleep(3);
+    }
     memset(params,0,sizeof(params));
     sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",ip_port);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
@@ -4071,6 +4077,7 @@ void init_jl777(char *myip)
     std::cout << "starting SuperNET" << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
     launch_SuperNET();
+    did_SuperNET_init = 1;
     std::cout << "back from start" << std::endl;
 }
 
