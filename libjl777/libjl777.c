@@ -341,7 +341,7 @@ char *call_SuperNET_JSON(char *JSONstr)
     if ( Finished_init == 0 )
         return(0);
     //printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
-    portable_mutex_lock(&mutex);
+    //portable_mutex_lock(&mutex);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
         expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
@@ -368,7 +368,7 @@ char *call_SuperNET_JSON(char *JSONstr)
     } else printf("couldnt parse (%s)\n",JSONstr);
     if ( retstr == 0 )
         retstr = clonestr("{\"result\":null}");
-    portable_mutex_unlock(&mutex);
+    //portable_mutex_unlock(&mutex);
     return(retstr);
 }
 
