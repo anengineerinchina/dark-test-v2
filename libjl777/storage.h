@@ -12,7 +12,7 @@
 #ifdef __APPLE__
 #include "db.h"
 #else
-#include <db.h>
+#include "db.h"
 #endif
 
 #define MAX_KADEMLIA_STORAGE (1024L * 1024L * 1024L)
