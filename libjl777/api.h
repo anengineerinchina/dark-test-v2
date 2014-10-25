@@ -122,7 +122,6 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 {
                     copy_cJSON(buf,cJSON_GetArrayItem(array,0));
                     replace_backslashquotes(buf);
-                    convert_percent22(buf);
                     retstr = block_on_SuperNET(1,buf);
                     if ( retstr != 0 )
                     {
@@ -1108,7 +1107,11 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     char jsonstr[MAX_JSON_FIELD];
     copy_cJSON(jsonstr,objs[0]);
     if ( jsonstr[0] != 0 )
+    {
+        printf("got jsonstr.(%s)\n",jsonstr);
+        convert_percent22(jsonstr);
         SuperNET_JSON(jsonstr);
+    }
     return(0);
 }
 
