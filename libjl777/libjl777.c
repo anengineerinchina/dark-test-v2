@@ -133,11 +133,13 @@ void SuperNET_idler(uv_idle_t *handle)
         {
             char *call_SuperNET_JSON(char *JSONstr);
             jsonstr = ptrs[0];
+            printf("dequeue JSON_Q.(%s)\n",jsonstr);
             if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
             {
                 printf("(%s) -> (%s)\n",jsonstr,retstr);
                 ptrs[1] = retstr;
             } else ptrs[1] = clonestr("{\"result\":null}");
+            printf("JSON_Q ret.(%s)\n",retstr);
             free(jsonstr);
             lastattempt = millis;
         }
@@ -262,8 +264,11 @@ char *call_SuperNET_JSON(char *JSONstr)
     char NXTaddr[64],_tokbuf[2*MAX_JSON_FIELD],encoded[NXT_TOKEN_LEN+1],*cmdstr,*retstr = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     if ( Finished_init == 0 )
-        return(0);
-    //printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
+    {
+        printf("Finished_init still 0\n");
+        return(clonestr("{\"result\":null}"));
+    }
+    printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
         expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
@@ -276,6 +281,7 @@ char *call_SuperNET_JSON(char *JSONstr)
             encoded[NXT_TOKEN_LEN] = 0;
             sprintf(_tokbuf,"[%s,{\"token\":\"%s\"}]",cmdstr,encoded);
             free(cmdstr);
+            printf("made tokbuf.(%s)\n",_tokbuf);
             array = cJSON_Parse(_tokbuf);
             if ( array != 0 )
             {
@@ -418,7 +424,7 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
         if ( is_hexstr(msg) == 0 )
         {
             printf("QUEUE.(%s)\n",msg);
-            return(block_on_SuperNET(0,clonestr(msg)));
+            return(block_on_SuperNET(0,msg));
         }
         return(clonestr(retjsonstr));
     }
