@@ -38,46 +38,48 @@ DB *Public_dbp,*Private_dbp,*Telepod_dbp;
 struct storage_queue_entry { uint64_t keyhash,destbits; int32_t selector; };
 int db_setup(const char *home,const char *data_dir,FILE *errfp,const char *progname);
 
+DB *open_database(char *fname,int32_t type,int32_t flags)
+{
+    int ret;
+    DB *dbp;
+    if ( (ret= db_create(&dbp,Storage,0)) != 0 )
+    {
+        printf("error.%d creating %s database\n",ret,fname);
+        return(0);
+    } else printf("Public_dbp created\n");
+    if ( (ret= dbp->open(dbp,NULL,fname,NULL,type,flags,0)) != 0 )
+    {
+        printf("error.%d opening %s database\n",ret,fname);
+        return(0);
+    } else printf("%s opened\n",fname);
+    return(dbp);
+}
+
 int32_t init_SuperNET_storage()
 {
     static int didinit;
     int ret;
-    printf("IS_LIBTEST.%d didinit.%d\n",IS_LIBTEST,didinit);
     if ( IS_LIBTEST == 0 )
         return(0);
     if ( didinit == 0 )
     {
         didinit = 1;
-        if ( (ret= db_create(&Public_dbp,Storage,0)) != 0 )
+        if ( (ret = db_env_create(&Storage, 0)) != 0 )
         {
-            printf("error.%d creating Public_dbp database\n",ret);
-            return(ret);
-        } else printf("Public_dbp created\n");
-        if ( (ret= db_create(&Private_dbp,Storage,0)) != 0 )
+            fprintf(stderr,"Error creating environment handle: %s\n",db_strerror(ret));
+            return(-1);
+        }
+        else if ( (ret= Storage->open(Storage,"storage",DB_CREATE|DB_INIT_LOCK|DB_INIT_LOG|DB_INIT_MPOOL|DB_INIT_TXN,0)) != 0 )
         {
-            printf("error.%d creating Private_dbp database\n",ret);
-            return(ret);
-        } else printf("Private_dbp created\n");
-        if ( (ret= db_create(&Telepod_dbp,Storage,0)) != 0 )
+            fprintf(stderr,"error opening storage\n",ret);
+            return(-2);
+        }
+        else
         {
-            printf("error.%d creating Telepod_dbp database\n",ret);
-            return(ret);
-        } else printf("Telepod_dbp created\n");
-        if ( (ret= Public_dbp->open(Public_dbp,NULL,"public.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
-        {
-            printf("error.%d opening Public_dbp database\n",ret);
-            return(ret);
-        } else printf("Public_dbp opened\n");
-        if ( (ret= Private_dbp->open(Private_dbp,NULL,"private.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
-        {
-            printf("error.%d opening Private_dbp database\n",ret);
-            return(ret);
-        } else printf("Private_dbp opened\n");
-        if ( (ret= Telepod_dbp->open(Telepod_dbp,NULL,"telepod.db",NULL,DB_HASH,DB_CREATE | DB_AUTO_COMMIT,0)) != 0 )
-        {
-            printf("error.%d opening Telepod_dbp database\n",ret);
-            return(ret);
-        } else printf("Telepod_dbp opened\n");
+            Public_dbp = open_database("public.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT);
+            Private_dbp = open_database("private.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT);
+            Telepod_dbp = open_database("telepods.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT);
+        }
     }
     return(0);
 }
