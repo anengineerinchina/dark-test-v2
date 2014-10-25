@@ -272,7 +272,7 @@ struct telepod *clone_telepod(struct coin_info *cp,struct telepod *refpod,uint64
 {
     char *change_podaddr=0,*change_privkey,*podaddr=0,*txid,*privkey = 0,*retstr,pubkey[1024],change_pubkey[1024];
     struct rawtransaction RAW;
-    struct telepod *pod = 0,*changepod,*inputpods[MAX_COIN_INPUTS],*refpods[2];
+    struct telepod *pod = 0,*changepod=0,*inputpods[MAX_COIN_INPUTS],*refpods[2];
     uint64_t fee,change,availchange = 0;
     int32_t i,didalloc = 0;
     memset(inputpods,0,sizeof(inputpods));
@@ -884,12 +884,12 @@ cJSON *telepod_dispjson(struct telepod *pod,double netamount)
         cJSON_AddItemToObject(dispjson,"type",cJSON_CreateString(_podstate(pod->podstate)));
         if ( pod->senderbits != 0 )
         {
-            sprintf(numstr,"%llu",pod->senderbits);
+            sprintf(numstr,"%llu",(long long)pod->senderbits);
             cJSON_AddItemToObject(dispjson,"sender",cJSON_CreateString(numstr));
         }
         if ( pod->destbits != 0 )
         {
-            sprintf(numstr,"%llu",pod->destbits);
+            sprintf(numstr,"%llu",(long long)pod->destbits);
             cJSON_AddItemToObject(dispjson,"dest",cJSON_CreateString(numstr));
         }
     }

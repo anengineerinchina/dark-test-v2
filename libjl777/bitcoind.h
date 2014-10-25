@@ -220,7 +220,7 @@ struct coin_txid *find_coin_txid(struct coin_info *cp,char *txid)
     else return(cp->CACHE.coin_txids->hashtable[hashval]);
 }
 
-extern int32_t is_relevant_coinvalue(int32_t spentflag,struct coin_info *cp,char *txid,int32_t vout,uint64_t value,char *asmbuf,uint32_t blocknum);
+//extern int32_t is_relevant_coinvalue(int32_t spentflag,struct coin_info *cp,char *txid,int32_t vout,uint64_t value,char *asmbuf,uint32_t blocknum);
 
 int32_t process_vins(struct coin_info *cp,uint32_t height,struct coin_txid *tp,int32_t isconfirmed,cJSON *vins)
 {
@@ -271,7 +271,7 @@ int32_t process_vins(struct coin_info *cp,uint32_t height,struct coin_txid *tp,i
                         vintp->vouts[vout]->spent = tp;
                         vintp->vouts[vout]->spent_vin = i;
                         flag = 1;
-                        if ( is_relevant_coinvalue(1,cp,vintp->txid,i,vintp->vouts[vout]->value,"",height) != 0 )
+                        if ( 0 )//is_relevant_coinvalue(1,cp,vintp->txid,i,vintp->vouts[vout]->value,"",height) != 0 )
                         {
                             if ( tp->hasinternal == 0 )
                             {
@@ -429,8 +429,8 @@ uint32_t process_vouts(int32_t height,char *debugstr,struct coin_info *cp,struct
                     if ( vp->spent == 0 && vp->pendingspend == 0 )
                         unspent += value;
                     //printf("%s vout.%d %.8f\n",tp->txid,i,dstr(value));
-                    if ( is_relevant_coinvalue(0,cp,tp->txid,i,value,script,height) != 0 )
-                        flag = 1;
+                    //if ( is_relevant_coinvalue(0,cp,tp->txid,i,value,script,height) != 0 )
+                    //    flag = 1;
                 }
                 // else if ( value > 0 )   // OP_RETURN has no value and no address
                 //     printf("unexpected error nval.%d for i.%d of %d | scriptobj %p (%s) addrobj.%p debugstr.(%s)\n",nval,i,tp->numvouts,scriptobj,tp->txid,addrobj,debugstr);
