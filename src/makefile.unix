@@ -139,7 +139,7 @@ all: BitcoinDarkd
 
 # LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a libjl777.a libuv.a libnacl.a -lcurl -lm -ldl
 #LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a -ljl777 ../libjl777/libs/libuv.a ../libjl777/libs/randombytes.o -lm
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a $(CURDIR)/../libjl777/libs/libjl777.a $(CURDIR)/../libjl777/libs/libuv.a $(CURDIR)/../libjl777/libs/libdb.a -lcurl -lm
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a $(CURDIR)/../libjl777/libs/libjl777.a $(CURDIR)/../libjl777/libs/libuv.a $(CURDIR)/../libjl777/libs/libdb.a -lwebsockets -lcurl -lm
 
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
