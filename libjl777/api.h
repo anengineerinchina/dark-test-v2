@@ -273,7 +273,7 @@ static struct libwebsocket_protocols protocols[] =
 void sighandler(int sig)
 {
 	force_exit = 1;
-	libwebsocket_cancel_service(context);
+	//libwebsocket_cancel_service(context);
 }
 
 int32_t init_API_port(uint16_t port,uint32_t millis)
