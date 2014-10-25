@@ -130,7 +130,9 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                         printf("RPC return.(%s)\n",retstr);
                         return_http_str(wsi,retstr);
                         free(retstr);
-                    }
+                        free(json);
+                        return(-1);
+                    } else printf("(%s) returned null\n",buf);
                 }
                 else
                 {
@@ -143,6 +145,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 free_json(json);
             }
             else printf("couldnt parse (%s)\n",(char *)in);
+            return_http_str(wsi,"{\"error\":\"couldnt parse JSON\"}");
             return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
