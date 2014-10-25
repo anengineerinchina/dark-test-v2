@@ -116,13 +116,13 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
         case LWS_CALLBACK_HTTP_BODY:
             //printf("RPC.(%s)\n",(char *)in);
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
-            convert_percent22((char *)in);
             if ( (json= cJSON_Parse((char *)in)) != 0 )
             {
                 if ( (array= cJSON_GetObjectItem(json,"params")) != 0 && is_cJSON_Array(array) != 0 )
                 {
                     copy_cJSON(buf,cJSON_GetArrayItem(array,0));
                     replace_backslashquotes(buf);
+                    convert_percent22((char *)in);
                     retstr = block_on_SuperNET(1,buf);
                     if ( retstr != 0 )
                     {
@@ -138,10 +138,11 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     buf[sizeof(buf)-1] = '\0';
                     //if ( len < 20 )
                     //    buf[len] = '\0';
+                    lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
                 }
-                //lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
                 free_json(json);
-            }
+            } else printf("couldnt parse (%s)\n",(char *)in);
+            return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
             
