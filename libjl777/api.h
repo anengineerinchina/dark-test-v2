@@ -123,6 +123,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     copy_cJSON(buf,cJSON_GetArrayItem(array,0));
                     replace_backslashquotes(buf);
                     retstr = block_on_SuperNET(1,buf);
+                    free_json(json);
                     if ( retstr != 0 )
                     {
                         stripwhite_ns(retstr,strlen(retstr));
@@ -130,18 +131,20 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                         return_http_str(wsi,retstr);
                         free(retstr);
                     }
+                    else return(-1);
                 }
                 else
                 {
+                    free_json(json);
                     strncpy(buf,in,sizeof(buf)-1);
                     buf[sizeof(buf)-1] = '\0';
                     //if ( len < 20 )
                     //    buf[len] = '\0';
                     lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
+                    return(-1);
                 }
-                free_json(json);
-            } else printf("couldnt parse (%s)\n",(char *)in);
-            return(-1);
+            }
+            else printf("couldnt parse (%s)\n",(char *)in);
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
             
