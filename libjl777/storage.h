@@ -71,7 +71,7 @@ int32_t init_SuperNET_storage()
         }
         else if ( (ret= Storage->open(Storage,"storage",DB_CREATE|DB_INIT_LOCK|DB_INIT_LOG|DB_INIT_MPOOL|DB_INIT_TXN,0)) != 0 )
         {
-            fprintf(stderr,"error opening storage\n",ret);
+            fprintf(stderr,"error.%d opening storage\n",ret);
             return(-2);
         }
         else
@@ -173,6 +173,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
         }
         else
         {
+            hashval = sp->H.keyhash;
             memcpy(space,sp,sizeof(*sp));
             free(sp);
         }
