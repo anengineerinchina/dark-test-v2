@@ -3967,7 +3967,6 @@ char *stringify(char *str)
         else newstr[j++] = str[i];
     }
     newstr[j] = 0;
-    free(str);
     return(newstr);
 }
 
@@ -3979,11 +3978,11 @@ char *SuperNET_JSON(char *JSONstr)
     jsonstr = stringify(JSONstr);
     sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDjson\\\",\\\"json\\\":\\\"%s\\\"}\"]",jsonstr);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-    free(jsonstr);
     if ( retstr != 0 )
     {
-        printf("SuperNET_JSON RET.(%s) for (%s)\n",retstr,JSONstr);
+        printf("SuperNET_JSON RET.(%s) for (%s)\n",retstr,jsonstr);
     }
+    free(jsonstr);
     return(retstr);
 }
 
