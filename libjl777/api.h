@@ -120,6 +120,65 @@ LWS_VISIBLE int libwebsockets_return_http_status(struct libwebsocket_context *co
     
 	return m;
 }
+static void
+dump_handshake_info(struct libwebsocket *wsi)
+{
+	int n;
+	static const char *token_names[] = {
+		/*[WSI_TOKEN_GET_URI]		=*/ "GET URI",
+		/*[WSI_TOKEN_POST_URI]		=*/ "POST URI",
+		/*[WSI_TOKEN_HOST]		=*/ "Host",
+		/*[WSI_TOKEN_CONNECTION]	=*/ "Connection",
+		/*[WSI_TOKEN_KEY1]		=*/ "key 1",
+		/*[WSI_TOKEN_KEY2]		=*/ "key 2",
+		/*[WSI_TOKEN_PROTOCOL]		=*/ "Protocol",
+		/*[WSI_TOKEN_UPGRADE]		=*/ "Upgrade",
+		/*[WSI_TOKEN_ORIGIN]		=*/ "Origin",
+		/*[WSI_TOKEN_DRAFT]		=*/ "Draft",
+		/*[WSI_TOKEN_CHALLENGE]		=*/ "Challenge",
+        
+		/* new for 04 */
+		/*[WSI_TOKEN_KEY]		=*/ "Key",
+		/*[WSI_TOKEN_VERSION]		=*/ "Version",
+		/*[WSI_TOKEN_SWORIGIN]		=*/ "Sworigin",
+        
+		/* new for 05 */
+		/*[WSI_TOKEN_EXTENSIONS]	=*/ "Extensions",
+        
+		/* client receives these */
+		/*[WSI_TOKEN_ACCEPT]		=*/ "Accept",
+		/*[WSI_TOKEN_NONCE]		=*/ "Nonce",
+		/*[WSI_TOKEN_HTTP]		=*/ "Http",
+        
+		"Accept:",
+		"If-Modified-Since:",
+		"Accept-Encoding:",
+		"Accept-Language:",
+		"Pragma:",
+		"Cache-Control:",
+		"Authorization:",
+		"Cookie:",
+		"Content-Length:",
+		"Content-Type:",
+		"Date:",
+		"Range:",
+		"Referer:",
+		"Uri-Args:",
+        
+		/*[WSI_TOKEN_MUXURL]	=*/ "MuxURL",
+	};
+	char buf[4096];
+    
+	for (n = 0; n < sizeof(token_names) / sizeof(token_names[0]); n++) {
+		if (!lws_hdr_total_length(wsi, n))
+			continue;
+        
+		lws_hdr_copy(wsi, buf, sizeof buf, n);
+        //if ( strcmp(token_names[n],"Uri-Args:") == 0 )
+        //    strcpy((char *)NXTprotocol_parms,buf);
+		fprintf(stderr, "    %s = %s n.%d\n", token_names[n], buf,n);
+	}
+}
 
 // this protocol server (always the first one) just knows how to do HTTP
 static int callback_http(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user,void *in,size_t len)
@@ -127,7 +186,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
 	char buf[MAX_JSON_FIELD],*retstr;
     cJSON *json,*array;
     printf("reason.%d len.%ld (%s)\n",reason,len,in);
-	switch ( reason )
+    dump_handshake_info(wsi);
+    switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
             printf("a GOT.(%s)\n",(char *)in);
@@ -256,6 +316,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             break;
         default:
             printf("z GOT.(%s)\n",(char *)in);
+            return(-1);
             break;
 	}
 	return 0;
