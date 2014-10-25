@@ -3915,6 +3915,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 //bitcoindark:
 #include <curl/curl.h>
 #include <curl/easy.h>
+#include "../libjl777/cJSON.c"
 #include "../libjl777/bitcoind_RPC.c"
 
 void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
