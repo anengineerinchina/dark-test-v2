@@ -12,7 +12,7 @@
 #ifdef __APPLE__
 #include "libwebsockets.h"
 #else
-#include <libwebsockets.h>
+#include "libwebsockets.h"
 #endif
 
 char *block_on_SuperNET(int32_t blockflag,char *JSONstr);
@@ -70,7 +70,7 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
 // this protocol server (always the first one) just knows how to do HTTP
 static int callback_http(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user,void *in,size_t len)
 {
-	char buf[MAX_JSON_FIELD],*retstr,*jsonstr;
+	char buf[MAX_JSON_FIELD],*retstr;
 	int n,m;
     cJSON *json,*array;
     unsigned char buffer[MAX_JSON_FIELD];
