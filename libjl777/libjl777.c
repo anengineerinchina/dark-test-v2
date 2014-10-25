@@ -133,13 +133,13 @@ void SuperNET_idler(uv_idle_t *handle)
         {
             char *call_SuperNET_JSON(char *JSONstr);
             jsonstr = ptrs[0];
-            printf("dequeue JSON_Q.(%s)\n",jsonstr);
+            //printf("dequeue JSON_Q.(%s)\n",jsonstr);
             if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
             {
                 printf("(%s) -> (%s)\n",jsonstr,retstr);
                 ptrs[1] = retstr;
             } else ptrs[1] = clonestr("{\"result\":null}");
-            printf("JSON_Q ret.(%s)\n",retstr);
+            //printf("JSON_Q ret.(%s)\n",retstr);
             free(jsonstr);
             lastattempt = millis;
         }
@@ -320,7 +320,7 @@ int32_t is_BTCD_command(cJSON *json)
 
 char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
 {
-    char **ptrs;
+    char **ptrs,*retstr;
     ptrs = calloc(2,sizeof(*ptrs));
     ptrs[0] = clonestr(JSONstr);
     queue_enqueue(&JSON_Q,ptrs);
@@ -329,7 +329,10 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
         while ( ptrs[1] == 0 )
             usleep(1000);
     } else ptrs[1] = clonestr("{\"result\":\"pending SuperNET API call\"}");
-    return(ptrs[1]);
+    retstr = ptrs[1];
+    free(ptrs);
+    printf("block returned.(%s)\n",retstr);
+    return(retstr);
 }
 
 char *SuperNET_JSON(char *JSONstr)
