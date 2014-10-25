@@ -115,7 +115,7 @@ struct storage_header *find_storage(int32_t selector,char *keystr)
 {
     DB *dbp = get_selected_database(selector);
     DBT key,data;
-    int ret,datalen;
+    int ret;
     void *ptr = 0;
     struct storage_header *hp;
     if ( dbp == 0 )
@@ -131,9 +131,8 @@ struct storage_header *find_storage(int32_t selector,char *keystr)
         else return(0);
     }
     hp = (struct storage_header *)data.data;
-    datalen = hp->datalen;
-    ptr = malloc(datalen);
-    memcpy(ptr,hp,datalen);
+    ptr = malloc(data.size);
+    memcpy(ptr,hp,data.size);
     return(ptr);
 }
 
