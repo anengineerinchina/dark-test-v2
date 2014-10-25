@@ -127,6 +127,7 @@ try_again:
     curl_easy_setopt(curl_handle,CURLOPT_NOSIGNAL,		1L);   			// supposed to fix "Alarm clock" and long jump crash
 	curl_easy_setopt(curl_handle,CURLOPT_NOPROGRESS,	1L);			// no progress callback
     curl_easy_setopt(curl_handle,CURLOPT_SSL_VERIFYPEER,0);
+    curl_easy_setopt(curl_handle,CURLOPT_SSL_VERIFYHOST,0);
     if ( userpass != 0 )
         curl_easy_setopt(curl_handle,CURLOPT_USERPWD,	userpass);
     
