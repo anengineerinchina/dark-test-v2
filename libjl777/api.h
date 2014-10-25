@@ -93,6 +93,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
             //printf("GOT.(%s)\n",(char *)in);
+            convert_percent22((char *)in);
             retstr = block_on_SuperNET(1,(char *)in+1);
             if ( retstr != 0 )
             {
@@ -115,6 +116,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
         case LWS_CALLBACK_HTTP_BODY:
             //printf("RPC.(%s)\n",(char *)in);
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
+            convert_percent22((char *)in);
             if ( (json= cJSON_Parse((char *)in)) != 0 )
             {
                 if ( (array= cJSON_GetObjectItem(json,"params")) != 0 && is_cJSON_Array(array) != 0 )
