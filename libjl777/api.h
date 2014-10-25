@@ -122,7 +122,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 {
                     copy_cJSON(buf,cJSON_GetArrayItem(array,0));
                     replace_backslashquotes(buf);
-                    convert_percent22((char *)in);
+                    convert_percent22(buf);
                     retstr = block_on_SuperNET(1,buf);
                     if ( retstr != 0 )
                     {
