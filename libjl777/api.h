@@ -1114,8 +1114,8 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     if ( jsonstr[0] != 0 )
     {
         printf("got jsonstr.(%s)\n",jsonstr);
-        convert_percent22(jsonstr);
-        SuperNET_JSON(jsonstr);
+        replace_backslashquotes(jsonstr);
+        return(SuperNET_JSON(jsonstr));
     }
     return(0);
 }
