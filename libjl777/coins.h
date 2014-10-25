@@ -607,6 +607,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             extract_cJSON_str(ORIGBLOCK,sizeof(ORIGBLOCK),MGWconf,"ORIGBLOCK");
             extract_cJSON_str(NXTAPIURL,sizeof(NXTAPIURL),MGWconf,"NXTAPIURL");
             extract_cJSON_str(NXTISSUERACCT,sizeof(NXTISSUERACCT),MGWconf,"NXTISSUERACCT");
+            IS_LIBTEST = get_API_int(cJSON_GetObjectItem(MGWconf,"LIBTEST"),0);
             ismainnet = get_API_int(cJSON_GetObjectItem(MGWconf,"MAINNET"),1);
             Debuglevel = get_API_int(cJSON_GetObjectItem(MGWconf,"debug"),Debuglevel);
             if ( ismainnet != 0 )
