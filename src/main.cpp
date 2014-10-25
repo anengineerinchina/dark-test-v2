@@ -3960,7 +3960,7 @@ char *SuperNET_JSON(char *JSONstr)
     {
         printf("SuperNET_JSON RET.(%s) for (%s)\n",retstr,JSONstr);
     }
-    free(retstr);
+    return(retstr);
 }
 
 int32_t got_newpeer(const char *ip_port)

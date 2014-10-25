@@ -74,7 +74,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
 {
 	char buf[MAX_JSON_FIELD],*retstr;
     cJSON *json,*array;
-    //printf("reason.%d len.%ld\n",reason,len);
+    printf("reason.%d len.%ld\n",reason,len);
 	switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
@@ -91,7 +91,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
-            //printf("GOT.(%s)\n",(char *)in);
+            printf("GOT.(%s)\n",(char *)in);
             retstr = block_on_SuperNET(1,(char *)in+1);
             if ( retstr != 0 )
             {
@@ -112,6 +112,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY:
+            printf("RPC.(%s)\n",(char *)in);
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse((char *)in)) != 0 )
             {
