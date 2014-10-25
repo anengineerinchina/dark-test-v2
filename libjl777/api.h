@@ -128,7 +128,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     {
                         //stripwhite_ns(retstr,strlen(retstr));
                         //strcat(retstr,"\n");
-                        printf("RPC return.(%s)\n",retstr);
+                        //printf("RPC return.(%s)\n",retstr);
                         return_http_str(wsi,retstr);
                         free(retstr);
                         free(json);
