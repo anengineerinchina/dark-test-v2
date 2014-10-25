@@ -345,7 +345,7 @@ Value dumpwallet(const Array& params, bool fHelp)
 }
 
 //bitcoindark: teleport json
-extern "C" char *SuperNET_JSON(char *JSONstr);
+//extern "C" char *SuperNET_JSON(char *JSONstr);
 Value jl777_JSON(const Array& params, bool fHelp)
 {
 
