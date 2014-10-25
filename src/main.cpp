@@ -3994,8 +3994,8 @@ int32_t got_newpeer(const char *ip_port)
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     while ( did_SuperNET_init == 0 )
     {
-        fprintf(stderr,".");
-        sleep(3);
+        fprintf(stderr,"got_newpeer(%s) before initialized\n",ip_port);
+        return(0);
     }
     memset(params,0,sizeof(params));
     sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",ip_port);
