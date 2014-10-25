@@ -2906,6 +2906,7 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
 unsigned char pchMessageStart[4] = { 0xe4, 0xc2, 0xd8, 0xe6 };
 
 //bitcoindark:
+char *process_jl777_msg(CNode *from,char *msg, int32_t duration);
 
 
 bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
@@ -3735,7 +3736,7 @@ bool ProcessMessages(CNode* pfrom)
     return fOk;
 }
 
-
+void init_jl777(char *myip);
 bool SendMessages(CNode* pto, bool fSendTrickle)
 {
     //bitcoindark: start SuperNET
