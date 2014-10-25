@@ -629,7 +629,6 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     portable_mutex_init(&Contacts_mutex);
     Global_mp = calloc(1,sizeof(*Global_mp));
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session
-    init_SuperNET_storage();
     if ( Global_pNXT == 0 )
     {
         Global_pNXT = calloc(1,sizeof(*Global_pNXT));

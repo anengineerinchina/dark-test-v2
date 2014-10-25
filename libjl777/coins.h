@@ -558,6 +558,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
 
 char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
 {
+    int32_t init_SuperNET_storage();
     //int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxtbits,char *pubBTC);
     //struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer);
     int32_t init_tradebots(cJSON *languagesobj);
@@ -609,6 +610,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             extract_cJSON_str(NXTISSUERACCT,sizeof(NXTISSUERACCT),MGWconf,"NXTISSUERACCT");
             IS_LIBTEST = get_API_int(cJSON_GetObjectItem(MGWconf,"LIBTEST"),0);
             printf("IS_LIBTEST.%d\n",IS_LIBTEST);
+            init_SuperNET_storage();
             ismainnet = get_API_int(cJSON_GetObjectItem(MGWconf,"MAINNET"),1);
             Debuglevel = get_API_int(cJSON_GetObjectItem(MGWconf,"debug"),Debuglevel);
             if ( ismainnet != 0 )
