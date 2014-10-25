@@ -528,7 +528,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                 cp->maxevolveiters = get_API_int(cJSON_GetObjectItem(json,"maxevolveiters"),100);
                 cp->M = get_API_int(cJSON_GetObjectItem(json,"telepod_M"),1);
                 cp->N = get_API_int(cJSON_GetObjectItem(json,"telepod_N"),1);
-                cp->clonesmear = get_API_int(cJSON_GetObjectItem(json,"clonesmear"),(TELEPORT_DEFAULT_SMEARTIME/cp->estblocktime) + 1);
+                cp->clonesmear = get_API_int(cJSON_GetObjectItem(json,"clonesmear"),3600);
                 if ( extract_cJSON_str(cp->backupdir,sizeof(cp->backupdir),json,"backupdir") <= 0 )
                     strcpy(cp->backupdir,"backups");
                 ciphersobj = cJSON_GetObjectItem(json,"ciphers");

@@ -607,7 +607,7 @@ struct telepod *make_traceable_telepod(struct coin_info *cp,char *refcipher,cJSO
 void *Coinloop(void *ptr)
 {
     void load_telepods(struct coin_info *cp,int32_t maxnofile);
-    int32_t i,processed,flag,maxnofile = 100, counter = 0;
+    int32_t i,processed,flag, counter = 0;//,maxnofile = 100,
     struct coin_info *cp;
     struct coin_txid *tp;
     int64_t height;
@@ -617,7 +617,7 @@ void *Coinloop(void *ptr)
         if ( (cp= Daemons[i]) != 0 )
         {
             printf("coin.%d (%s) %d\n",i,cp->name,strcmp(cp->name,"BTCD"));
-            load_telepods(cp,maxnofile);
+            //load_telepods(cp,maxnofile);
         }
     }
     while ( Historical_done == 0 ) // must process all historical msig addresses and asset transfers
@@ -626,8 +626,8 @@ void *Coinloop(void *ptr)
         continue;
     }
     printf("Start coinloop\n");
-    void init_Teleport();
-    init_Teleport();
+    //void init_Teleport();
+    //init_Teleport();
     printf("teleport initialized\n");
     while ( 1 )
     {

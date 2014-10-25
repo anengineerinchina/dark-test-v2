@@ -524,7 +524,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     {
                         struct udp_queuecmd *qp;
                         //printf("GOT.(%s)\n",parmstxt);
-                        if ( 0 )
+                        if ( 1 )
                         {
                             qp = calloc(1,sizeof(*qp));
                             qp->prevaddr = *prevaddr;

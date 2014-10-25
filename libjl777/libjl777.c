@@ -100,45 +100,63 @@ void send_async_message(char *msg)
 void SuperNET_idler(uv_idle_t *handle)
 {
     static int counter;
-    static double lastattempt;
+    static double lastattempt,lastclock;
     double millis;
     struct udp_queuecmd *qp;
-    void *wr;
+    struct write_req_t *wr,*firstwr = 0;
+    int32_t r;
     char *jsonstr,*retstr;
     if ( Finished_init == 0 )
         return;
     millis = ((double)uv_hrtime() / 1000000);
-   /* if ( millis > (lastattempt + 10) && (wr= queue_dequeue(&sendQ)) != 0 )
+    if ( millis > (lastattempt + 10) )
     {
-        if ( ((rand()>>8) % 100) < 50 )
+        r = ((rand() >> 8) % 10);
+        while ( (wr= queue_dequeue(&sendQ)) != 0 )
         {
-            //printf("skip packet\n");
+            if ( wr == firstwr )
+            {
+                queue_enqueue(&sendQ,wr);
+                break;
+            }
+            if ( (wr->queuetime % 10) == r )
+            {
+                process_sendQ_item(wr);
+                // free(wr); libuv does this
+                //lastattempt = millis;
+                break;
+            }
+            if ( firstwr == 0 )
+                firstwr = wr;
             queue_enqueue(&sendQ,wr);
-            wr = queue_dequeue(&sendQ);
         }
-        if ( wr != 0 )
+        if ( (qp= queue_dequeue(&udp_JSON)) != 0 )
         {
-            process_sendQ_item(wr);
+            //printf("process qp argjson.%p\n",qp->argjson);
+            jsonstr = SuperNET_json_commands(Global_mp,&qp->prevaddr,qp->argjson,qp->tokenized_np->H.U.NXTaddr,qp->valid,qp->decoded);
+            //printf("free qp (%s) argjson.%p\n",jsonstr,qp->argjson);
+            if ( jsonstr != 0 )
+                free(jsonstr);
+            free(qp->decoded);
+            free_json(qp->argjson);
+            free(qp);
             lastattempt = millis;
         }
-        // free(wr); libuv does this
-    }
-    if ( millis > (lastattempt + 10) && (qp= queue_dequeue(&udp_JSON)) != 0 )
-    {
-        //printf("process qp argjson.%p\n",qp->argjson);
-        jsonstr = SuperNET_json_commands(Global_mp,&qp->prevaddr,qp->argjson,qp->tokenized_np->H.U.NXTaddr,qp->valid,qp->decoded);
-        //printf("free qp (%s) argjson.%p\n",jsonstr,qp->argjson);
-        if ( jsonstr != 0 )
+        else if ( (jsonstr= queue_dequeue(&JSON_Q)) != 0 )
+        {
+            char *call_SuperNET_JSON(char *JSONstr);
+            if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
+            {
+                printf("(%s) -> (%s)\n",jsonstr,retstr);
+                free(retstr);
+            }
             free(jsonstr);
-        free(qp->decoded);
-        free_json(qp->argjson);
-        free(qp);
-        lastattempt = millis;
+            lastattempt = millis;
+        }
+        if ( process_storageQ() != 0 )
+            lastattempt = millis;
     }
-    if ( millis > (lastattempt + 100) )
-        process_storageQ();
-
-    if ( millis > (lastattempt + 1000) )
+    if ( millis > (lastclock + 1000) )
     {
         every_second(counter);
         retstr = findaddress(0,0,0,0,0,0,0,0,0,0);
@@ -147,28 +165,14 @@ void SuperNET_idler(uv_idle_t *handle)
             printf("findaddress completed (%s)\n",retstr);
             free(retstr);
         }
+        if ( (counter % 10) == 3 )
+            poll_telepods("BTCD");
         if ( (counter % 60) == 17 )
-        {
             every_minute(counter/60);
-        }
         counter++;
-        //process_pingpong_queue(&PeerQ,0);
-        process_pingpong_queue(&Transporter_sendQ,0);
-        process_pingpong_queue(&Transporter_recvQ,0);
-        process_pingpong_queue(&CloneQ,0);
-        lastattempt = millis;
+        lastclock = millis;
     }
-    else*/ if ( (jsonstr= queue_dequeue(&JSON_Q)) != 0 )
-    {
-        char *call_SuperNET_JSON(char *JSONstr);
-        if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
-        {
-            printf("(%s) -> (%s)\n",jsonstr,retstr);
-            free(retstr);
-        }
-        free(jsonstr);
-    }
-    usleep(1000);
+    usleep(10);
 }
 
 void run_UVloop(void *arg)
@@ -234,7 +238,7 @@ void init_NXThashtables(struct NXThandler_info *mp)
 
 char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
 {
-    void *Coinloop(void *arg);
+    //void *Coinloop(void *arg);
     struct NXThandler_info *mp = Global_mp;    // seems safest place to have main data structure
     printf("init_NXTservices.(%s)\n",myipaddr);
     UV_loop = uv_default_loop();
