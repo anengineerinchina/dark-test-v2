@@ -129,6 +129,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
     cJSON *json,*array;
     unsigned char buffer[MAX_JSON_FIELD];
 	struct per_session_data__http *pss = (struct per_session_data__http *)user;
+    printf("reason.%d len.%ld (%s)\n",reason,len,in);
 	switch ( reason )
     {
         case LWS_CALLBACK_HTTP:
