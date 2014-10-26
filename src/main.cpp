@@ -4166,7 +4166,6 @@ extern "C" void launch_SuperNET();
 void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
-    //SuperNET_start((char *)"SuperNET.conf",myip);
     launch_SuperNET();
     did_SuperNET_init = 1;
     std::cout << "back from start" << std::endl;

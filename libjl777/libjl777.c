@@ -96,7 +96,7 @@ void SuperNET_idler(uv_idle_t *handle)
     if ( Finished_init == 0 )
         return;
     millis = ((double)uv_hrtime() / 1000000);
-    if ( millis > (lastattempt + 1) )
+    if ( millis > (lastattempt + 10) )
     {
         r = ((rand() >> 8) % 10);
         while ( (wr= queue_dequeue(&sendQ)) != 0 )
@@ -331,7 +331,7 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
     } else ptrs[1] = clonestr("{\"result\":\"pending SuperNET API call\"}");
     retstr = ptrs[1];
     free(ptrs);
-    //printf("block returned.(%s)\n",retstr);
+    printf("block returned.(%s)\n",retstr);
     return(retstr);
 }
 
