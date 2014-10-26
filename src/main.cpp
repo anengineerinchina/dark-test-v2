@@ -3989,7 +3989,8 @@ char *SuperNET_JSON(char *JSONstr)
 int did_SuperNET_init;
 int32_t got_newpeer(const char *ip_port)
 {
-    static char earlybirds[10][64],num;
+    static int32_t num;
+    static char earlybirds[10][64];
     char *retstr,*str,params[MAX_JSON_FIELD];
     int32_t i;
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
@@ -4003,7 +4004,7 @@ int32_t got_newpeer(const char *ip_port)
     for (i=0; i<=num; i++)
     {
         if ( i < num ) str = earlybirds[i];
-        else str = ip_port;
+        else str = (char *)ip_port;
         memset(params,0,sizeof(params));
         sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",str);
         retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
