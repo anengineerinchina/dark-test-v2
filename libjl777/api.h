@@ -1127,12 +1127,54 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     return(retstr);
 }
 
+char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    static int counter;
+    int32_t duration,len;
+    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str;
+    counter++;
+    strcpy(retbuf,"{\"result\":\"nothing pending\"}");
+    if ( (counter++ & 1) == 0 )
+    {
+        if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
+        {
+            memcpy(&len,ptr,sizeof(len));
+            str = &ptr[sizeof(len) + sizeof(duration)];
+            if ( len == strlen(str) )
+            {
+                memcpy(&duration,&ptr[sizeof(len)],sizeof(duration));
+                memcpy(msg,str,len);
+                ptr[sizeof(len) + sizeof(duration) + len] = 0;
+                sprintf(retbuf,"{\"msg\":\"%s\",\"duration\":%d}",msg,duration);
+            } else printf("len mismatch %d != %ld (%s)\n",len,strlen(str),str);
+            free(ptr);
+        }
+    }
+    else
+    {
+        if ( (ptr= queue_dequeue(&NarrowQ)) != 0 )
+        {
+            memcpy(&len,ptr,sizeof(len));
+            if ( len < 4096 && len > 0 )
+            {
+                memcpy(ip_port,&ptr[sizeof(len)],64);
+                memcpy(msg,&ptr[sizeof(len) + 64],len);
+                init_hexbytes(hexstr,(unsigned char *)msg,len);
+                sprintf(retbuf,"{\"ip_port\":\"%s\",\"hex\":\"%s\",\"len\":%d}",ip_port,hexstr,len);
+            } else printf("BTCDpoll illegal len.%d\n",len);
+            free(ptr);
+        }
+    }
+    return(clonestr(retbuf));
+}
+    
 char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
     // glue
     static char *gotjson[] = { (char *)gotjson_func, "BTCDjson", "", "json", 0 };
     static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
-    static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "", "ip_port", 0 };
+    static char *BTCDpoll[] = { (char *)BTCDpoll_func, "BTCDpoll", "", 0 };
   
     // multisig
     static char *cosign[] = { (char *)cosign_func, "cosign", "V", "otheracct", "seed", "text", 0 };
@@ -1184,7 +1226,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     // Tradebot
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
 
-     static char **commands[] = { gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
+     static char **commands[] = { BTCDpoll,gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];

@@ -4079,8 +4079,44 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
 	return(retflag);
 }
 
-extern "C" void launch_SuperNET();
+void *poll_for_broadcasts(void *args)
+{
+    cJSON *json;
+    int32_t duration,len;
+    unsigned char data[4098];
+    char params[4096],buf[8192],destip[1024],*retstr;
+    while ( 1 )
+    {
+        sleep(1);
+        sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDpoll\\\"}\"]",jsonstr);
+        retstr = bitcoind_RPC(0,(char *)"BTCDpoll",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
+        if ( retstr != 0 )
+        {
+            if ( (json= cJSON_Parse(retstr)) != 0 )
+            {
+                duration = (int32_t)get_API_int(cJSON_GetObjectItem(json,"duration"),-1);
+                copy_cJSON(destip,cJSON_GetObjectItem(json,"ip_port"),0);
+                if ( destip[0] != 0 && duration < 0 )
+                {
+                    copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"),0);
+                    len = ((int32_t)strlen(buf) >> 1);
+                    decode_hex(data,buf,len);
+                    printf("narrocast %d bytes to %s\n",len,destip);
+                    SuperNET_narrowcast(destip,data,len) //Send a PubAddr message to a specific peer
+                }
+                else
+                {
+                    copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"),0);
+                    SuperNET_narrowcast(buf,duration);
+                }
+                free_json(json);
+            }
+            free(retstr);
+        }
+    }
+}
 
+extern "C" void launch_SuperNET();
 void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
