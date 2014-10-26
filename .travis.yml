@@ -6,4 +6,4 @@ compiler:
 # install: make get-deps
 # install: cd libjl777 && make onetime
 # Build and test
-script: cd libjl777 && make onetime make SuperNET && make btcd
+script: cd libjl777 && make onetime && make SuperNET && make btcd
