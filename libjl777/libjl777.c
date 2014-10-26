@@ -314,7 +314,6 @@ int32_t is_BTCD_command(cJSON *json)
             if ( strcmp(request,BTCDcmds[i]) == 0 )
                 return(1);
         }
-    
     }
     return(0);
 }

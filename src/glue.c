@@ -17,7 +17,7 @@ void *portable_thread_create(void *funcp,void *argp)
 
 void launch_SuperNET()
 {
-    //void *processptr;
+    void *processptr;
     //processptr = portable_thread_create(poll_for_broadcasts,0);
     if ( system("./SuperNET &") != 0 )
         printf("error launching SuperNET\n");
