@@ -57,7 +57,7 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
     long i,j,len;
     char *retstr = 0;
     cJSON *json,*result,*error;
-    printf("%s post_process_bitcoind_RPC.%s.[%s]\n",debugstr,command,rpcstr);
+    //printf("%s post_process_bitcoind_RPC.%s.[%s]\n",debugstr,command,rpcstr);
     if ( command == 0 || rpcstr == 0 || rpcstr[0] == 0 )
         return(rpcstr);
     json = cJSON_Parse(rpcstr);
@@ -87,7 +87,7 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
         free(rpcstr);
     } else retstr = rpcstr;
     free_json(json);
-    printf("postprocess returns.(%s)\n",retstr);
+   // printf("postprocess returns.(%s)\n",retstr);
     return(retstr);
 }
 #endif
@@ -110,7 +110,7 @@ char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char
     double starttime;
     
     numretries=0;
-    printf("debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
+    //printf("debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
     starttime = milliseconds();
     

@@ -332,7 +332,7 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
     } else ptrs[1] = clonestr("{\"result\":\"pending SuperNET API call\"}");
     retstr = ptrs[1];
     free(ptrs);
-printf("block returned.(%s)\n",retstr);
+//printf("block returned.(%s)\n",retstr);
     return(retstr);
 }
 
@@ -383,7 +383,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
             printf("%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,msg,(long long)txid,ip_port);
         ptr = calloc(1,64 + sizeof(len) + len + 1);
         memcpy(ptr,&len,sizeof(len));
-        memcpy(&ptr[sizeof(len)],ip_port,strlen(ip_port)+1);
+        memcpy(&ptr[sizeof(len)],ip_port,strlen(ip_port));
         memcpy(&ptr[sizeof(len) + 64],msg,len);
         queue_enqueue(&NarrowQ,ptr);
       //if ( SuperNET_narrowcast(ip_port,(unsigned char *)msg,len) == 0 )

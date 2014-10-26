@@ -67,7 +67,7 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
     //printf("html hdr.(%s)\n",buffer);
     libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
     libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);
-    printf("send back (%s)\n",retstr);
+    //printf("send back (%s)\n",retstr);
 }
 
 // this protocol server (always the first one) just knows how to do HTTP
@@ -1149,7 +1149,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
                 memcpy(msg,str,len);
                 ptr[sizeof(len) + sizeof(duration) + len] = 0;
                 sprintf(retbuf,"{\"msg\":\"%s\",\"duration\":%d}",msg,duration);
-                printf("send back broadcast.(%s)\n",retbuf);
+                //printf("send back broadcast.(%s)\n",retbuf);
             } else printf("len mismatch %d != %ld (%s)\n",len,strlen(str)+1,str);
             free(ptr);
         }
@@ -1166,7 +1166,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
                 memcpy(msg,&ptr[sizeof(len) + 64],len);
                 init_hexbytes(hexstr,(unsigned char *)msg,len);
                 sprintf(retbuf,"{\"ip_port\":\"%s\",\"hex\":\"%s\",\"len\":%d}",ip_port,hexstr,len);
-                printf("send back narrow.(%s)\n",retbuf);
+                //printf("send back narrow.(%s)\n",retbuf);
             } else printf("BTCDpoll NarrowQ illegal len.%d\n",len);
             free(ptr);
         }
