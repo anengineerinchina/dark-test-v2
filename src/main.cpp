@@ -3950,50 +3950,6 @@ void broadcastPubAddr(char *msg,int32_t duration)
     delete pubaddr;
 }
 
-int32_t _unhex(char c)
-{
-    if ( c >= '0' && c <= '9' )
-        return(c - '0');
-    else if ( c >= 'a' && c <= 'f' )
-        return(c - 'a' + 10);
-    return(-1);
-}
-
-int32_t unhex(char c)
-{
-    int32_t hex;
-    if ( (hex= _unhex(c)) < 0 )
-    {
-        //printf("unhex: illegal hexchar.(%c)\n",c);
-    }
-    return(hex);
-}
-
-unsigned char _decode_hex(char *hex)
-{
-    return((unhex(hex[0])<<4) | unhex(hex[1]));
-}
-
-int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex)
-{
-    int32_t i;
-    for (i=0; i<n; i++)
-        bytes[i] = _decode_hex(&hex[i*2]);
-    //bytes[i] = 0;
-    return(n);
-}
-
-int32_t get_API_int(cJSON *obj,int32_t val)
-{
-    char buf[1024];
-    if ( obj != 0 )
-    {
-        copy_cJSON(buf,obj);
-        val = atoi(buf);
-    }
-    return(val);
-}
-
 char *stringify(char *str)
 {
     char *newstr;
@@ -4033,33 +3989,23 @@ char *SuperNET_JSON(char *JSONstr)
 int did_SuperNET_init;
 int32_t got_newpeer(const char *ip_port)
 {
-    static int32_t num;
-    static char earlybirds[10][64];
-    char *retstr,*str,params[MAX_JSON_FIELD];
-    int32_t i;
+    char *retstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
-    if ( did_SuperNET_init == 0 )
+    while ( did_SuperNET_init == 0 )
     {
-        fprintf(stderr,"got_newpeer(%s) before initialized earlybird.%d\n",ip_port,num);
-        if ( strlen(ip_port) < 64 )
-            strcpy(earlybirds[num++],ip_port);
+        fprintf(stderr,"got_newpeer(%s) before initialized\n",ip_port);
         return(0);
     }
-    for (i=0; i<=num; i++)
+    memset(params,0,sizeof(params));
+    sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",ip_port);
+    retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
+    if ( retstr != 0 )
     {
-        if ( i < num ) str = earlybirds[i];
-        else str = (char *)ip_port;
-        memset(params,0,sizeof(params));
-        sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",str);
-        retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-        if ( retstr != 0 )
-        {
-            //printf("RET.(%s) for (%s)\n",retstr,str);
-            free(retstr);
-        }
+        printf("RET.(%s) for (%s)\n",retstr,ip_port);
+        free(retstr);
+        return(0);
     }
-    num = 0;
-    return(0);
+    return(-1);
 }
 
 char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
@@ -4123,49 +4069,12 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
 	return(retflag);
 }
 
-extern "C" void *poll_for_broadcasts(void *args)
-{
-    cJSON *json;
-    int32_t duration,len;
-    unsigned char data[4098];
-    char params[4096],buf[8192],destip[1024],*retstr;
-    while ( 1 )
-    {
-        sleep(1);
-        sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDpoll\\\"}\"]");
-        retstr = bitcoind_RPC(0,(char *)"BTCDpoll",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-        if ( retstr != 0 )
-        {
-            if ( (json= cJSON_Parse(retstr)) != 0 )
-            {
-                duration = (int32_t)get_API_int(cJSON_GetObjectItem(json,"duration"),-1);
-                copy_cJSON(destip,cJSON_GetObjectItem(json,"ip_port"));
-                if ( destip[0] != 0 && duration < 0 )
-                {
-                    copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"));
-                    len = ((int32_t)strlen(buf) >> 1);
-                    decode_hex(data,len,buf);
-                    printf("narrocast %d bytes to %s\n",len,destip);
-                    SuperNET_narrowcast(destip,data,len); //Send a PubAddr message to a specific peer
-                }
-                else if ( duration >= 0 )
-                {
-                    copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"));
-                    if ( buf[0] != 0 )
-                        SuperNET_broadcast(buf,duration);
-                }
-                free_json(json);
-            }
-            free(retstr);
-        }
-    }
-    return(0);
-}
-
 extern "C" void launch_SuperNET();
+
 void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
+    //SuperNET_start((char *)"SuperNET.conf",myip);
     launch_SuperNET();
     did_SuperNET_init = 1;
     std::cout << "back from start" << std::endl;

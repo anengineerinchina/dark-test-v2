@@ -97,7 +97,7 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
  *
  ************************************************************************/
 
-char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char *command,char *params)
+char *bitcoind_RPC(CURL *deprecated,char *debugstr,char *url,char *userpass,char *command,char *params)
 {
     static int numretries,count,count2;
     static double elapsedsum,elapsedsum2;//,laststart;

@@ -936,7 +936,6 @@ void every_minute(int32_t counter)
     if ( cp == 0 )
         return;
     //printf("<<<<<<<<<<<<< EVERY_MINUTE\n");
-    //p2p_publishpacket(0,0);
     refresh_buckets(cp->srvNXTACCTSECRET);
     if ( broadcast_count == 0 )
     {
