@@ -1134,8 +1134,8 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str;
     counter++;
     strcpy(retbuf,"{\"result\":\"nothing pending\"}");
-    printf("BTCDpoll.%d\n",counter);
-    if ( (counter++ & 1) == 0 )
+    //printf("BTCDpoll.%d\n",counter);
+    if ( (counter & 1) == 0 )
     {
         if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
         {
