@@ -4,6 +4,6 @@ compiler:
 #  - clang
 # Install dependencies
 # install: make get-deps
-# install: cd libjl777 && make onetime
+install: sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test && sudo apt-get -qq update && sudo apt-get -qq install g++-4.8 && sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90 && cd libjl777 && make onetime
 # Build and test
-script: cd libjl777 && echo "Start make onetime" && make onetime && echo "Start make SuperNET" && make SuperNET && echo "Start make btcd" && make btcd
+script: echo "Start make SuperNET" && make SuperNET && echo "Start make btcd" && make btcd
