@@ -4013,7 +4013,8 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	static long retlen;
 	static char *retbuf;
 	int32_t len;
-	char *retstr,params[MAX_JSON_FIELD*2];
+	
+    char *retstr,params[MAX_JSON_FIELD*2];
     printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
 	if ( msg == 0 || msg[0] == 0 )
 	{
