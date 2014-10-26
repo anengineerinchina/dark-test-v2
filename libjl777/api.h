@@ -130,7 +130,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     {
                         //stripwhite_ns(retstr,strlen(retstr));
                         //strcat(retstr,"\n");
-                        printf("RPC return.(%s)\n",retstr);
+                        //printf("RPC return.(%s)\n",retstr);
                         return_http_str(wsi,retstr);
                         free(retstr);
                         free(json);
@@ -1115,7 +1115,7 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     copy_cJSON(jsonstr,objs[0]);
     if ( jsonstr[0] != 0 )
     {
-        printf("got jsonstr.(%s)\n",jsonstr);
+        //printf("got jsonstr.(%s)\n",jsonstr);
         replace_backslashquotes(jsonstr);
         array = cJSON_Parse(jsonstr);
         if ( array != 0 )
