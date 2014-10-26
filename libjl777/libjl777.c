@@ -369,7 +369,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
     struct nodestats *stats;
     uint64_t txid = 0;
     int32_t port;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 0 )
         printf("call_SuperNET_broadcast.%p %p len.%d\n",pserver,msg,len);
     txid = calc_txid((uint8_t *)msg,(int32_t)strlen(msg));
     if ( pserver != 0 )
@@ -402,7 +402,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
                 free(cmdstr);
             free_json(array);
             if ( Debuglevel > 0 )
-                printf("BROADCAST parms.(%s) valid.%d duration.%d txid.%llu\n",msg,valid,duration,(long long)txid);
+                printf("BROADCAST parms.(%s) valid.%d duration.%d txid.%llu len.%d\n",msg,valid,duration,(long long)txid,len);
             ptr = calloc(1,sizeof(len) + sizeof(duration) + len);
             memcpy(ptr,&len,sizeof(len));
             memcpy(&ptr[sizeof(len)],&duration,sizeof(duration));
