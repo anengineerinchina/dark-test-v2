@@ -96,7 +96,7 @@ void SuperNET_idler(uv_idle_t *handle)
     if ( Finished_init == 0 )
         return;
     millis = ((double)uv_hrtime() / 1000000);
-    if ( millis > (lastattempt + 10) )
+    if ( millis > (lastattempt + 1) )
     {
         r = ((rand() >> 8) % 10);
         while ( (wr= queue_dequeue(&sendQ)) != 0 )
