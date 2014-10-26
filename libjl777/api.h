@@ -1134,10 +1134,12 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str;
     counter++;
     strcpy(retbuf,"{\"result\":\"nothing pending\"}");
+    printf("BTCDpoll.%d\n",counter);
     if ( (counter++ & 1) == 0 )
     {
         if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
         {
+            printf("Got BroadcastQ\n");
             memcpy(&len,ptr,sizeof(len));
             str = &ptr[sizeof(len) + sizeof(duration)];
             if ( len == strlen(str) )
@@ -1154,6 +1156,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     {
         if ( (ptr= queue_dequeue(&NarrowQ)) != 0 )
         {
+            printf("Got NarrowQ\n");
             memcpy(&len,ptr,sizeof(len));
             if ( len < 4096 && len > 0 )
             {

@@ -379,7 +379,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
         else port = BTCD_PORT;
         sprintf(ip_port,"%s:%d",pserver->ipaddr,port);
         txid ^= calc_ipbits(ipaddr);
-        if ( Debuglevel > 1 )
+        if ( Debuglevel > 0 )
             printf("%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,msg,(long long)txid,ip_port);
         ptr = calloc(1,64 + sizeof(len) + len + 1);
         memcpy(ptr,&len,sizeof(len));
@@ -401,7 +401,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
             if ( cmdstr != 0 )
                 free(cmdstr);
             free_json(array);
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 0 )
                 printf("BROADCAST parms.(%s) valid.%d duration.%d txid.%llu\n",msg,valid,duration,(long long)txid);
             ptr = calloc(1,sizeof(len) + sizeof(duration) + len + 1);
             memcpy(ptr,&len,sizeof(len));

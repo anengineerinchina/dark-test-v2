@@ -4125,6 +4125,7 @@ extern "C" void *poll_for_broadcasts(void *args)
         sleep(1);
         sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDpoll\\\"}\"]");
         retstr = bitcoind_RPC(0,(char *)"BTCDpoll",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
+        printf("params.(%s) retstr.(%s)\n",params,retstr);
         if ( retstr != 0 )
         {
             if ( (json= cJSON_Parse(retstr)) != 0 )
