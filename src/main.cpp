@@ -4112,7 +4112,7 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
 	return(retflag);
 }
 
-void *poll_for_broadcasts(void *args)
+extern "C" void *poll_for_broadcasts(void *args)
 {
     cJSON *json;
     int32_t duration,len;
