@@ -136,7 +136,7 @@ void SuperNET_idler(uv_idle_t *handle)
             //printf("dequeue JSON_Q.(%s)\n",jsonstr);
             if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
             {
-                printf("(%s) -> (%s)\n",jsonstr,retstr);
+                //printf("(%s) -> (%s)\n",jsonstr,retstr);
                 ptrs[1] = retstr;
             } else ptrs[1] = clonestr("{\"result\":null}");
             //printf("JSON_Q ret.(%s)\n",retstr);
@@ -440,7 +440,7 @@ char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port)
     {
         if ( is_hexstr(msg) == 0 )
         {
-            printf("QUEUE.(%s)\n",msg);
+            //printf("QUEUE.(%s)\n",msg);
             return(block_on_SuperNET(0,msg));
         }
         return(clonestr(retjsonstr));

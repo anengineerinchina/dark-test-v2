@@ -116,7 +116,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
         case LWS_CALLBACK_HTTP_BODY:
             
             ((char *)in)[len] = 0;
-            printf("RPC.(%s)\n",(char *)in);
+            //printf("RPC.(%s)\n",(char *)in);
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse((char *)in)) != 0 )
             {
