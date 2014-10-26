@@ -1148,6 +1148,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
                 memcpy(msg,str,len);
                 ptr[sizeof(len) + sizeof(duration) + len] = 0;
                 sprintf(retbuf,"{\"msg\":\"%s\",\"duration\":%d}",msg,duration);
+                printf("send back broadcast.(%s)\n",retbuf);
             } else printf("len mismatch %d != %ld (%s)\n",len,strlen(str)+1,str);
             free(ptr);
         }
