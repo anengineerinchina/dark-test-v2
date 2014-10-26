@@ -4148,10 +4148,11 @@ extern "C" void *poll_for_broadcasts(void *args)
                     printf("narrocast %d bytes to %s\n",len,destip);
                     SuperNET_narrowcast(destip,data,len); //Send a PubAddr message to a specific peer
                 }
-                else
+                else if ( duration >= 0 )
                 {
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"));
-                    SuperNET_broadcast(buf,duration);
+                    if ( buf[0] != 0 )
+                        SuperNET_broadcast(buf,duration);
                 }
                 free_json(json);
             }
