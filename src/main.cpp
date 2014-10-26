@@ -4003,7 +4003,7 @@ int32_t got_newpeer(const char *ip_port)
     for (i=0; i<=num; i++)
     {
         if ( i < num ) str = earlybirds[i];
-        else i = ip_str;
+        else str = ip_port;
         memset(params,0,sizeof(params));
         sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",str);
         retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
