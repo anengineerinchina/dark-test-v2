@@ -3949,6 +3949,16 @@ void broadcastPubAddr(char *msg,int32_t duration)
     }
     delete pubaddr;
 }
+
+int32_t _unhex(char c)
+{
+    if ( c >= '0' && c <= '9' )
+        return(c - '0');
+    else if ( c >= 'a' && c <= 'f' )
+        return(c - 'a' + 10);
+    return(-1);
+}
+
 int32_t unhex(char c)
 {
     int32_t hex;
@@ -4123,7 +4133,7 @@ void *poll_for_broadcasts(void *args)
                 {
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"));
                     len = ((int32_t)strlen(buf) >> 1);
-                    decode_hex(data,buf,len);
+                    decode_hex(data,len,buf);
                     printf("narrocast %d bytes to %s\n",len,destip);
                     SuperNET_narrowcast(destip,data,len) //Send a PubAddr message to a specific peer
                 }
