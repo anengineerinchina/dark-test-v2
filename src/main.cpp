@@ -4095,10 +4095,10 @@ void *poll_for_broadcasts(void *args)
             if ( (json= cJSON_Parse(retstr)) != 0 )
             {
                 duration = (int32_t)get_API_int(cJSON_GetObjectItem(json,"duration"),-1);
-                copy_cJSON(destip,cJSON_GetObjectItem(json,"ip_port"),0);
+                copy_cJSON(destip,cJSON_GetObjectItem(json,"ip_port"));
                 if ( destip[0] != 0 && duration < 0 )
                 {
-                    copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"),0);
+                    copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"));
                     len = ((int32_t)strlen(buf) >> 1);
                     decode_hex(data,buf,len);
                     printf("narrocast %d bytes to %s\n",len,destip);
@@ -4106,8 +4106,8 @@ void *poll_for_broadcasts(void *args)
                 }
                 else
                 {
-                    copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"),0);
-                    SuperNET_narrowcast(buf,duration);
+                    copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"));
+                    SuperNET_broadcast(buf,duration);
                 }
                 free_json(json);
             }
