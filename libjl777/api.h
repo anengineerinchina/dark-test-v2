@@ -1164,7 +1164,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
                 memcpy(msg,&ptr[sizeof(len) + 64],len);
                 init_hexbytes(hexstr,(unsigned char *)msg,len);
                 sprintf(retbuf,"{\"ip_port\":\"%s\",\"hex\":\"%s\",\"len\":%d}",ip_port,hexstr,len);
-            } else printf("BTCDpoll illegal len.%d\n",len);
+            } else printf("BTCDpoll NarrowQ illegal len.%d\n",len);
             free(ptr);
         }
     }
