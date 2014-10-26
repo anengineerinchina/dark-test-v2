@@ -3949,6 +3949,29 @@ void broadcastPubAddr(char *msg,int32_t duration)
     }
     delete pubaddr;
 }
+int32_t unhex(char c)
+{
+    int32_t hex;
+    if ( (hex= _unhex(c)) < 0 )
+    {
+        //printf("unhex: illegal hexchar.(%c)\n",c);
+    }
+    return(hex);
+}
+
+unsigned char _decode_hex(char *hex)
+{
+    return((unhex(hex[0])<<4) | unhex(hex[1]));
+}
+
+int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex)
+{
+    int32_t i;
+    for (i=0; i<n; i++)
+        bytes[i] = _decode_hex(&hex[i*2]);
+    //bytes[i] = 0;
+    return(n);
+}
 
 char *stringify(char *str)
 {
@@ -4088,7 +4111,7 @@ void *poll_for_broadcasts(void *args)
     while ( 1 )
     {
         sleep(1);
-        sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDpoll\\\"}\"]",jsonstr);
+        sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDpoll\\\"}\"]");
         retstr = bitcoind_RPC(0,(char *)"BTCDpoll",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
         if ( retstr != 0 )
         {
