@@ -57,9 +57,9 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
     long i,j,len;
     char *retstr = 0;
     cJSON *json,*result,*error;
+    printf("%s post_process_bitcoind_RPC.%s.[%s]\n",debugstr,command,rpcstr);
     if ( command == 0 || rpcstr == 0 || rpcstr[0] == 0 )
         return(rpcstr);
-    printf("%s post_process_bitcoind_RPC.%s.[%s]\n",debugstr,command,rpcstr);
     json = cJSON_Parse(rpcstr);
     if ( json == 0 )
     {
