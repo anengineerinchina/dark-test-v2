@@ -57,9 +57,9 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
     long i,j,len;
     char *retstr = 0;
     cJSON *json,*result,*error;
+    //printf("%s post_process_bitcoind_RPC.%s.[%s]\n",debugstr,command,rpcstr);
     if ( command == 0 || rpcstr == 0 || rpcstr[0] == 0 )
         return(rpcstr);
-    //printf("%s post_process_bitcoind_RPC.%s.[%s]\n",debugstr,command,rpcstr);
     json = cJSON_Parse(rpcstr);
     if ( json == 0 )
     {
@@ -84,9 +84,10 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
         }
         else if ( (error->type&0xff) != cJSON_NULL || (result->type&0xff) != cJSON_NULL )
             printf("%s post_process_bitcoind_RPC (%s) error.%s\n",debugstr,command,rpcstr);
-    }
-    free(rpcstr);
+        free(rpcstr);
+    } else retstr = rpcstr;
     free_json(json);
+   // printf("postprocess returns.(%s)\n",retstr);
     return(retstr);
 }
 #endif
@@ -97,10 +98,10 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
  *
  ************************************************************************/
 
-char *bitcoind_RPC(CURL *deprecated,char *debugstr,char *url,char *userpass,char *command,char *params)
+char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char *command,char *params)
 {
     static int numretries,count,count2;
-    static double elapsedsum,elapsedsum2,laststart;
+    static double elapsedsum,elapsedsum2;//,laststart;
     char *bracket0,*bracket1,*databuf = 0;
     struct curl_slist *headers = NULL;
     CURLcode res;
@@ -109,7 +110,7 @@ char *bitcoind_RPC(CURL *deprecated,char *debugstr,char *url,char *userpass,char
     double starttime;
     
     numretries=0;
-    
+    //printf("debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
     starttime = milliseconds();
     
@@ -126,6 +127,8 @@ try_again:
     curl_easy_setopt(curl_handle,CURLOPT_WRITEDATA,		&s); 			// we pass our 's' struct to the callback
     curl_easy_setopt(curl_handle,CURLOPT_NOSIGNAL,		1L);   			// supposed to fix "Alarm clock" and long jump crash
 	curl_easy_setopt(curl_handle,CURLOPT_NOPROGRESS,	1L);			// no progress callback
+    curl_easy_setopt(curl_handle,CURLOPT_SSL_VERIFYPEER,0);
+    curl_easy_setopt(curl_handle,CURLOPT_SSL_VERIFYHOST,0);
     if ( userpass != 0 )
         curl_easy_setopt(curl_handle,CURLOPT_USERPWD,	userpass);
     
@@ -151,7 +154,7 @@ try_again:
         else
             curl_easy_setopt(curl_handle,CURLOPT_POSTFIELDS,params);
     }
-    laststart = milliseconds();
+    //laststart = milliseconds();
     
     res = curl_easy_perform(curl_handle);
     
@@ -164,9 +167,16 @@ try_again:
         databuf = 0;
     }
     
-    if ( res != CURLE_OK ) {
+    if ( res != CURLE_OK )
+    {
         numretries++;
-        if (numretries >= 10) {
+        if ( strcmp("SuperNET",command) == 0 )
+        {
+            free(s.ptr);
+            return(0);
+        }
+        else if ( numretries >= 10 )
+        {
             fprintf(stderr,"Maximum number of retries exceeded!\n");
             free(s.ptr);
             return(0);
@@ -176,7 +186,9 @@ try_again:
         usleep(13*1000000);
         goto try_again;
         
-    } else {
+    }
+    else
+    {
         if ( command != 0 )
         {
             count++;
@@ -184,7 +196,9 @@ try_again:
             if ( (count % 10000) == 0)
                 fprintf(stderr,"%d: ave %9.6f | elapsed %.3f millis | bitcoind_RPC.(%s)\n",count,elapsedsum/count,(milliseconds() - starttime),command);
             return(post_process_bitcoind_RPC(debugstr,command,s.ptr));
-        } else {
+        }
+        else
+        {
             count2++;
             elapsedsum2 += (milliseconds() - starttime);
             ///if ( (count2 % 10000) == 0) exit(0);
@@ -209,7 +223,7 @@ try_again:
 void init_string(struct return_string *s)
 {
     s->len = 0;
-    s->ptr = malloc(s->len+1);
+    s->ptr = (char *)malloc(s->len+1);
     if (s->ptr == NULL) {
         fprintf(stderr, "malloc() failed\n");
         exit(-1);
@@ -226,7 +240,7 @@ void init_string(struct return_string *s)
 size_t accumulate(void *ptr, size_t size, size_t nmemb, struct return_string *s)
 {
     size_t new_len = s->len + size*nmemb;
-    s->ptr = realloc(s->ptr, new_len+1);
+    s->ptr = (char *)realloc(s->ptr, new_len+1);
     if (s->ptr == NULL) {
         fprintf(stderr, "realloc() failed\n");
         exit(-1);

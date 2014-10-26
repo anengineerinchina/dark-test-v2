@@ -11,6 +11,7 @@
 
 
 #include "includes/task.h"
+#undef ARRAY_SIZE
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -47,7 +48,7 @@ struct write_req_t
     struct sockaddr addr;
     uv_udp_t *udp;
     uv_buf_t buf;
-    int32_t allocflag;
+    int32_t allocflag,queuetime;
 };
 
 struct udp_queuecmd
@@ -140,14 +141,17 @@ int32_t process_sendQ_item(struct write_req_t *wr)
 
 int32_t portable_udpwrite(int32_t queueflag,const struct sockaddr *addr,uv_udp_t *handle,void *buf,long len,int32_t allocflag)
 {
-     int32_t r=0;
+    int32_t r=0;
     struct write_req_t *wr;
     wr = alloc_wr(buf,len,allocflag);
     ASSERT(wr != NULL);
     wr->addr = *addr;
     wr->udp = handle;
     if ( queueflag != 0 )
+    {
+        wr->queuetime = (uint32_t)(1000. * milliseconds());
         queue_enqueue(&sendQ,wr);
+    }
     else r = process_sendQ_item(wr);
     return(r);
 }
@@ -302,7 +306,7 @@ void send_packet(struct nodestats *peerstats,struct sockaddr *destaddr,unsigned 
             port = SUPERNET_PORT;
             uv_ip4_addr(ipaddr,port,(struct sockaddr_in *)destaddr);
         }
-        queueflag = 0*1;
+        queueflag = 1;
         if ( Debuglevel > 1 )
             printf("portable_udpwrite Q.%d %d to (%s:%d)\n",queueflag,len,ipaddr,port);
         portable_udpwrite(queueflag,destaddr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
@@ -397,7 +401,7 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
     //int32_t direct_onionize(uint64_t nxt64bits,unsigned char *destpubkey,unsigned char *maxbuf,unsigned char *encoded,unsigned char **payloadp,int32_t len);
     static unsigned char zeropubkey[crypto_box_PUBLICKEYBYTES];
     uint64_t txid = 0;
-    int32_t port;
+    int32_t port,L;
     struct sockaddr destaddr;
     struct nodestats *stats;
     struct coin_info *cp = get_coin_info("BTCD");
@@ -413,7 +417,8 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
         char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int32_t msglen,char *destNXTaddr,unsigned char *data,int32_t datalen);
         char hopNXTaddr[64],destNXTaddr[64],*retstr;
         expand_nxt64bits(destNXTaddr,stats->nxt64bits);
-        retstr = sendmessage(hopNXTaddr,1*(encrypted>1?Global_mp->Lfactor:0),cp->srvNXTADDR,origargstr,len,destNXTaddr,data,datalen);
+        L = (encrypted>1 ? MAX(encrypted,Global_mp->Lfactor) : 0);
+        retstr = sendmessage(hopNXTaddr,L,cp->srvNXTADDR,origargstr,len,destNXTaddr,data,datalen);
         if ( retstr != 0 )
         {
             if ( Debuglevel > 0 )
@@ -468,7 +473,7 @@ uint64_t p2p_publishpacket(struct pserver_info *pserver,char *cmd)
         len = construct_tokenized_req(packet,_cmd,cp->srvNXTACCTSECRET);
         //if ( Debuglevel > 1 )
             printf("len.%d (%s)\n",len,packet);
-        return(call_SuperNET_broadcast(pserver,packet,len+1,PUBADDRS_MSGDURATION));
+        return(call_SuperNET_broadcast(pserver,packet,len,PUBADDRS_MSGDURATION));
     }
     printf("ERROR: broadcast_publishpacket null cp\n");
     return(0);

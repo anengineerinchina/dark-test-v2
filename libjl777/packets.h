@@ -202,12 +202,17 @@ int32_t pserver_canhop(struct pserver_info *pserver,char *hopNXTaddr)
 int32_t add_random_onionlayers(char *hopNXTaddr,int32_t numlayers,uint8_t *maxbuf,uint8_t *final,uint8_t **srcp,int32_t len)
 {
     char ipaddr[64],NXTaddr[64];
-    int32_t origlen=0,maxlen = 0;
+    int32_t tmp,origlen=0,maxlen = 0;
     uint8_t dest[4096],srcbuf[4096],*src = srcbuf;
     struct nodestats *stats;
     struct pserver_info *pserver;
     if ( numlayers > 1 )
-        numlayers = ((rand() >> 8) % numlayers);
+    {
+        tmp = ((rand() >> 8) % numlayers);
+        if ( numlayers > 3 && tmp < 3 )
+            tmp = 3;
+        numlayers = tmp;
+    }
     if ( numlayers > 0 )
     {
         if ( numlayers > MAX_ONION_LAYERS )
@@ -524,7 +529,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     {
                         struct udp_queuecmd *qp;
                         //printf("GOT.(%s)\n",parmstxt);
-                        if ( 0 )
+                        if ( 1 )
                         {
                             qp = calloc(1,sizeof(*qp));
                             qp->prevaddr = *prevaddr;

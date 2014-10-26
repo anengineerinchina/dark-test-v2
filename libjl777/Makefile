@@ -30,8 +30,8 @@ test:	all
 clean: doesntexist
 	rm -f libjl777.a libs/libjl777.so $(OBJS) *~
 
-libtest: $(TARGET); \
-    rm libtest; gcc -o libtest libtest.c libs/libjl777.a libs/libuv.a libs/libdb.a -lpthread -lcurl -lm
+SuperNET: $(TARGET); \
+    rm SuperNET; gcc -o SuperNET SuperNET.c libs/libjl777.a libs/libwebsockets.a libs/libuv.a libs/libdb.a -lssl -lcrypto -lpthread -lcurl -lm
 
 install: /usr/lib/libjl777.so; \
     sudo cp libs/libjl777.so /usr/lib/libjl777.so
@@ -39,8 +39,9 @@ install: /usr/lib/libjl777.so; \
 btcd: ../src/BitcoinDarkd; \
     cd ../src; rm BitcoinDarkd; make -f makefile.unix; strip BitcoinDarkd; cp BitcoinDarkd ../libjl777
 
-patch: doesntexist; \
+patch0: doesntexist; \
     export LIBDIR="/usr/local/BerkeleyDB.6.1/lib"; \
+    unzip db-6.1.19.zip; \
     cd db-6.1.19/build_unix; \
     ../dist/configure; \
     cp ../../env_region.c ../src/env; \
@@ -48,7 +49,27 @@ patch: doesntexist; \
     cp *.h ../../includes; \
     cp libdb.a ../../libs;
 
+patch: doesntexist; \
+    unzip lws.zip -d libwebsockets; \
+    cd libwebsockets/lib; \
+    cmake ..; \
+    cp libwebsockets.h lws_config.h ../../includes; \
+    cp libwebsockets-test-server.key.pem ../../SuperNET.key.pem; \
+    cp libwebsockets-test-server.pem ../../SuperNET.pem; \
+    make; \
+    cp lib/*  ../../libs; \
+    cd ../..;
+
 onetime: doesntexist; \
+    unzip lws.zip -d libwebsockets; \
+    cd libwebsockets/lib; \
+    cmake ..; \
+    cp libwebsockets.h lws_config.h ../../includes; \
+    cp libwebsockets-test-server.key.pem ../../SuperNET.key.pem; \
+    cp libwebsockets-test-server.pem ../../SuperNET.pem; \
+    make; \
+    cp lib/*  ../../libs; \
+    cd ../..; \
     unzip db-6.1.19.zip; \
     cd db-6.1.19/build_unix; \
     ../dist/configure; \
@@ -92,7 +113,7 @@ doesntexist:
 picoc.o: picoc.c picoc.h
 libgfshare.o: libgfshare.c libgfshare.h
 libjl777.o: libjl777.c atomic.h ciphers.h feeds.h jl777hash.h libgfshare.h mofnfs.h packets.h sorts.h tradebot.h \
-            storage.h bars.h cJSON.h jl777str.h NXTservices.h peers.h telepathy.h transporter.h \
+            storage.h bars.h cJSON.h jl777str.h NXTservices.h telepathy.h transporter.h \
             bitcoind.h coincache.h jdatetime.h jsoncodec.h NXTutils.h sortnetworks.h telepods.h \
             bitcoinglue.h coins.h jl777.h kademlia.h mappedptr.h orders.h _sorts.h teleport.h udp.h tweetnacl.h
 table.o: table.c interpreter.h platform.h

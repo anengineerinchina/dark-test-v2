@@ -291,7 +291,7 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
     else if ( strncmp("find",kadcmd,4) == 0 ) //strcmp(kadcmd,"store") == 0 ||
     {
         static int lasti;
-        static uint64_t txids[8192];
+        static uint64_t txids[8192]; // filter out localloops, maybe not needed anymore?
         bits256 hash;
         uint64_t txid;
         keybits = calc_nxt64bits(key);
@@ -346,7 +346,14 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
             encrypted = 1;
             sprintf(cmdstr,"{\"requestType\":\"%s\",\"NXT\":\"%s\",\"time\":%ld,\"ipaddr\":\"%s\",\"pubkey\":\"%s\",\"ver\":\"%s\"",kadcmd,verifiedNXTaddr,(long)time(NULL),cp->myipaddr,pubkeystr,HARDCODED_VERSION);
         }
-        else sprintf(cmdstr,"{\"requestType\":\"%s\",\"NXT\":\"%s\",\"time\":%ld",kadcmd,verifiedNXTaddr,(long)time(NULL));
+        else
+        {
+            if ( strncmp(kadcmd,"have",4) == 0 )
+                encrypted = 1;
+            else if ( strncmp(kadcmd,"findnode",4) == 0 && datastr != 0 && datastr[0] != 0 )
+                encrypted = 4;
+            sprintf(cmdstr,"{\"requestType\":\"%s\",\"NXT\":\"%s\",\"time\":%ld",kadcmd,verifiedNXTaddr,(long)time(NULL));
+        }
     }
     if ( key != 0 && key[0] != 0 )
         sprintf(cmdstr+strlen(cmdstr),",\"key\":\"%s\"",key);
@@ -420,7 +427,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
 {
     uint64_t txid = 0;
     char retstr[1024];
-    //printf("got ping.%d\n",ismynode(prevaddr));
+    printf("got ping.%d (%s)\n",ismynode(prevaddr),origargstr);
     if ( ismynode(prevaddr) != 0 ) // user invoked
     {
         if ( destip != 0 && destip[0] != 0 && ismyipaddr(destip) == 0 )
@@ -494,6 +501,7 @@ char *kademlia_storedata(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *N
     uint64_t sortbuf[2 * KADEMLIA_NUMBUCKETS * KADEMLIA_NUMK];
     uint64_t keybits,destbits,txid = 0;
     int32_t i,n,dist,mydist;
+    struct kademlia_storage *sp = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     struct nodestats *stats;
     if ( cp == 0 || key == 0 || key[0] == 0 || datastr == 0 || datastr[0] == 0 )
@@ -522,18 +530,20 @@ char *kademlia_storedata(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *N
                     }
                     txid = send_kademlia_cmd(destbits,0,"store",NXTACCTSECRET,key,datastr);
                 }
-                else do_localstore(&txid,key,datastr,NXTACCTSECRET);
+                else sp = do_localstore(&txid,key,datastr,NXTACCTSECRET);
             }
         }
-        else do_localstore(&txid,key,datastr,NXTACCTSECRET);
+        else sp = do_localstore(&txid,key,datastr,NXTACCTSECRET);
         sprintf(retstr,"{\"result\":\"kademlia_store key.(%s) data.(%s) len.%ld -> txid.%llu\"}",key,datastr,strlen(datastr)/2,(long long)txid);
         //free(sortbuf);
     }
     else
     {
-        do_localstore(&txid,key,datastr,NXTACCTSECRET);
+        sp = do_localstore(&txid,key,datastr,NXTACCTSECRET);
         sprintf(retstr,"{\"error\":\"kademlia_store key.(%s) no peers, stored locally\"}",key);
     }
+    if ( sp != 0 )
+        free(sp);
     //if ( Debuglevel > 0 )
         printf("STORE.(%s)\n",retstr);
     return(clonestr(retstr));
@@ -632,15 +642,19 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
         if ( isvalue != 0 )
         {
             sp = kademlia_getstored(PUBLIC_DATA,keyhash,0);
-            if ( sp != 0 && sp->data != 0 )
+            if ( sp != 0 )
             {
-                init_hexbytes_noT(databuf,sp->data,sp->datalen);
-                if ( ismynode(prevaddr) == 0 && ismynxtbits(senderbits) == 0 )
+                if ( sp->data != 0 )
                 {
-                    //printf("call store\n");
-                    txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
+                    init_hexbytes_noT(databuf,sp->data,sp->H.datalen);
+                    if ( ismynode(prevaddr) == 0 && ismynxtbits(senderbits) == 0 )
+                    {
+                        //printf("call store\n");
+                        txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
+                    }
+                    sprintf(retstr,"{\"data\":\"%s\"}",databuf);
                 }
-                sprintf(retstr,"{\"data\":\"%s\"}",databuf);
+                free(sp);
                 //printf("FOUND.(%s)\n",retstr);
                 return(clonestr(retstr));
             }
@@ -666,7 +680,7 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
                 keynp->bestdist = 10000;
                 keynp->bestbits = 0;
                 int z = 0;
-                threshold = (isvalue == 0) ? KADEMLIA_MAXTHRESHOLD : KADEMLIA_MINTHRESHOLD;
+                threshold = remoteflag * ((isvalue == 0) ? KADEMLIA_MAXTHRESHOLD : KADEMLIA_MINTHRESHOLD);
                 for (i=0; i<n&&i<KADEMLIA_ALPHA; i++)
                 {
                     destbits = sortbuf[(i<<1) + 1];
@@ -850,14 +864,21 @@ uint64_t refresh_bucket(struct nodestats *buckets[],long lastcontact,char *NXTAC
 {
     uint64_t txid = 0;
     int32_t i,r;
+    char key[64];
     if ( buckets[0] != 0 && lastcontact >= KADEMLIA_BUCKET_REFRESHTIME )
     {
         for (i=0; i<KADEMLIA_NUMK; i++)
             if ( buckets[i] == 0 )
                 break;
-        r = ((rand()>>8) % i);
-        if ( ismynxtbits(buckets[r]->nxt64bits) == 0 )
-            txid = send_kademlia_cmd(buckets[r]->nxt64bits,0,"findnode",NXTACCTSECRET,0,0);
+        if ( i > 0 )
+        {
+            r = ((rand()>>8) % i);
+            if ( ismynxtbits(buckets[r]->nxt64bits) == 0 )
+            {
+                expand_nxt64bits(key,buckets[r]->nxt64bits);
+                txid = send_kademlia_cmd(buckets[r]->nxt64bits,0,"findnode",NXTACCTSECRET,key,0);
+            }
+        }
     }
     return(txid);
 }
@@ -914,7 +935,8 @@ void every_minute(int32_t counter)
     cp = get_coin_info("BTCD");
     if ( cp == 0 )
         return;
-    //printf("<<<<<<<<<<<<< EVERY_MINUTE\n");
+    printf("<<<<<<<<<<<<< EVERY_MINUTE\n");
+    p2p_publishpacket(0,0);
     refresh_buckets(cp->srvNXTACCTSECRET);
     if ( broadcast_count == 0 )
     {
