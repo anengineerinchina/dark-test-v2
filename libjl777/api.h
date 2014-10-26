@@ -67,6 +67,7 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
     //printf("html hdr.(%s)\n",buffer);
     libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
     libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);
+    printf("send back (%s)\n",retstr);
 }
 
 // this protocol server (always the first one) just knows how to do HTTP
@@ -133,7 +134,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                         //printf("RPC return.(%s)\n",retstr);
                         return_http_str(wsi,retstr);
                         free(retstr);
-                        free(json);
+                        free_json(json);
                         return(-1);
                     } else printf("(%s) returned null\n",buf);
                 }

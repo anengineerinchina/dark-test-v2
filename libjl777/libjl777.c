@@ -332,7 +332,7 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
     } else ptrs[1] = clonestr("{\"result\":\"pending SuperNET API call\"}");
     retstr = ptrs[1];
     free(ptrs);
-    //printf("block returned.(%s)\n",retstr);
+printf("block returned.(%s)\n",retstr);
     return(retstr);
 }
 

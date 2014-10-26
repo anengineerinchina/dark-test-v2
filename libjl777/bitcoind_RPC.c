@@ -110,7 +110,7 @@ char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char
     double starttime;
     
     numretries=0;
-    
+    printf("debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
     starttime = milliseconds();
     
