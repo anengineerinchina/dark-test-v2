@@ -1,9 +1,9 @@
 language: cpp
 compiler:
   - gcc
-  - clang
+#  - clang
 # Install dependencies
 # install: make get-deps
-install: cd libjl777 && make onetime
+# install: cd libjl777 && make onetime
 # Build and test
-script: make SuperNET && make btcd
+script: cd libjl777 && make onetime make SuperNET && make btcd
