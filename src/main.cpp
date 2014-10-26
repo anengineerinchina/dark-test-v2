@@ -3983,6 +3983,17 @@ int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex)
     return(n);
 }
 
+int32_t get_API_int(cJSON *obj,int32_t val)
+{
+    char buf[1024];
+    if ( obj != 0 )
+    {
+        copy_cJSON(buf,obj);
+        val = atoi(buf);
+    }
+    return(val);
+}
+
 char *stringify(char *str)
 {
     char *newstr;
