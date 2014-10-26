@@ -3989,23 +3989,32 @@ char *SuperNET_JSON(char *JSONstr)
 int did_SuperNET_init;
 int32_t got_newpeer(const char *ip_port)
 {
-    char *retstr,params[MAX_JSON_FIELD];
+    static char earlybirds[10][64],num;
+    char *retstr,*str,params[MAX_JSON_FIELD];
+    int32_t i;
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
-    while ( did_SuperNET_init == 0 )
+    if ( did_SuperNET_init == 0 )
     {
-        fprintf(stderr,"got_newpeer(%s) before initialized\n",ip_port);
+        fprintf(stderr,"got_newpeer(%s) before initialized earlybird.%d\n",ip_port,num);
+        if ( strlen(ip_port) < 64 )
+            strcpy(earlybirds[num++],ip_port);
         return(0);
     }
-    memset(params,0,sizeof(params));
-    sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",ip_port);
-    retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-    if ( retstr != 0 )
+    for (i=0; i<=num; i++)
     {
-        printf("RET.(%s) for (%s)\n",retstr,ip_port);
-        free(retstr);
-        return(0);
+        if ( i < num ) str = earlybirds[i];
+        else i = ip_str;
+        memset(params,0,sizeof(params));
+        sprintf(params,"[\"{\\\"requestType\\\":\\\"gotnewpeer\\\",\\\"ip_port\\\":\\\"%s\\\"}\"]",str);
+        retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
+        if ( retstr != 0 )
+        {
+            //printf("RET.(%s) for (%s)\n",retstr,str);
+            free(retstr);
+        }
     }
-    return(-1);
+    num = 0;
+    return(0);
 }
 
 char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
