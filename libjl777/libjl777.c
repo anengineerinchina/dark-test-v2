@@ -403,11 +403,11 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
             free_json(array);
             if ( Debuglevel > 0 )
                 printf("BROADCAST parms.(%s) valid.%d duration.%d txid.%llu\n",msg,valid,duration,(long long)txid);
-            ptr = calloc(1,sizeof(len) + sizeof(duration) + len + 1);
+            ptr = calloc(1,sizeof(len) + sizeof(duration) + len);
             memcpy(ptr,&len,sizeof(len));
             memcpy(&ptr[sizeof(len)],&duration,sizeof(duration));
             memcpy(&ptr[sizeof(len) + sizeof(duration)],msg,len);
-            ptr[sizeof(len) + sizeof(duration)+len] = 0;
+            ptr[sizeof(len) + sizeof(duration) + len] = 0;
             queue_enqueue(&BroadcastQ,ptr);
             //if ( SuperNET_broadcast(msg,duration) == 0 )
                 return(txid);

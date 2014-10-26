@@ -1142,7 +1142,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
             printf("Got BroadcastQ\n");
             memcpy(&len,ptr,sizeof(len));
             str = &ptr[sizeof(len) + sizeof(duration)];
-            if ( len == strlen(str) )
+            if ( len == (strlen(str) + 1) )
             {
                 memcpy(&duration,&ptr[sizeof(len)],sizeof(duration));
                 memcpy(msg,str,len);
