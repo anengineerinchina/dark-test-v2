@@ -364,7 +364,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
 {
     int32_t SuperNET_broadcast(char *msg,int32_t duration);
     int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len);
-    char ip_port[64],ipaddr[64];
+    char ip_port[64],ipaddr[64],*ptr;
     struct nodestats *stats;
     uint64_t txid = 0;
     int32_t port;
@@ -380,7 +380,12 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
         txid ^= calc_ipbits(ipaddr);
         if ( Debuglevel > 1 )
             printf("%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,msg,(long long)txid,ip_port);
-        if ( SuperNET_narrowcast(ip_port,(unsigned char *)msg,len) == 0 )
+        ptr = calloc(1,64 + sizeof(len) + len + 1);
+        memcpy(ptr,&len,sizeof(len));
+        memcpy(&ptr[sizeof(len)],ip_port,strlen(ip_port)+1);
+        memcpy(&ptr[sizeof(len) + 64],msg,len);
+        queue_enqueue(&NarrowQ,ptr);
+      //if ( SuperNET_narrowcast(ip_port,(unsigned char *)msg,len) == 0 )
             return(txid);
     }
     else
@@ -397,7 +402,13 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
             free_json(array);
             if ( Debuglevel > 1 )
                 printf("BROADCAST parms.(%s) valid.%d duration.%d txid.%llu\n",msg,valid,duration,(long long)txid);
-            if ( SuperNET_broadcast(msg,duration) == 0 )
+            ptr = calloc(1,sizeof(len) + sizeof(duration) + len + 1);
+            memcpy(ptr,&len,sizeof(len));
+            memcpy(&ptr[sizeof(len)],&duration,sizeof(duration));
+            memcpy(&ptr[sizeof(len) + sizeof(duration)],msg,len);
+            ptr[sizeof(len) + sizeof(duration)+len] = 0;
+            queue_enqueue(&BroadcastQ,ptr);
+            //if ( SuperNET_broadcast(msg,duration) == 0 )
                 return(txid);
         } else printf("cant broadcast non-JSON.(%s)\n",msg);
     }
