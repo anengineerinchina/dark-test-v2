@@ -4135,7 +4135,7 @@ void *poll_for_broadcasts(void *args)
                     len = ((int32_t)strlen(buf) >> 1);
                     decode_hex(data,len,buf);
                     printf("narrocast %d bytes to %s\n",len,destip);
-                    SuperNET_narrowcast(destip,data,len) //Send a PubAddr message to a specific peer
+                    SuperNET_narrowcast(destip,data,len); //Send a PubAddr message to a specific peer
                 }
                 else
                 {
@@ -4147,6 +4147,7 @@ void *poll_for_broadcasts(void *args)
             free(retstr);
         }
     }
+    return(0);
 }
 
 extern "C" void launch_SuperNET();
