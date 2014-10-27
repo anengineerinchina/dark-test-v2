@@ -4145,7 +4145,7 @@ extern "C" void *poll_for_broadcasts(void *args)
         //printf("ISSUE BTCDpoll\n");
         sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDpoll\\\"}\"]");
         retstr = bitcoind_RPC(0,(char *)"BTCDpoll",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-        //printf("params.(%s) retstr.(%s)\n",params,retstr);
+        fprintf(stderr,"BTCDgot params.(%s) retstr.(%s)\n",params,retstr);
         if ( retstr != 0 )
         {
             if ( (json= cJSON_Parse(retstr)) != 0 )
@@ -4172,7 +4172,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                 free_json(json);
             } else fprintf(stderr,"poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
             free(retstr);
-        }
+        } else fprintf(stderr,"poll_for_broadcasts: bitcoind_RPC returns null\n");
     }
     return(0);
 }
