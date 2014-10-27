@@ -7,7 +7,7 @@
 #ifndef gateway_jl777_h
 #define gateway_jl777_h
 
-#define HARDCODED_VERSION "0.007"
+#define HARDCODED_VERSION "0.077"
 
 #define NXT_GENESISTIME 1385294400
 #define SMALLVAL .000000000000001
@@ -604,7 +604,7 @@ struct hashtable *orderbook_txids;
 uv_loop_t *UV_loop;
 static long server_xferred;
 int Servers_started;
-queue_t P2P_Q,sendQ,JSON_Q,udp_JSON,storageQ,cacheQ,BroadcastQ,NarrowQ;
+queue_t P2P_Q,sendQ,JSON_Q,udp_JSON,storageQ,cacheQ,BroadcastQ,NarrowQ,ResultsQ;
 //struct pingpong_queue PeerQ;
 int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP,USESSL;
 uint32_t *SuperNET_whitelist;
