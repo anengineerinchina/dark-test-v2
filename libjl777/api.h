@@ -128,19 +128,13 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     replace_backslashquotes(buf);
                     stripwhite_ns(buf,strlen(buf));
                     retstr = block_on_SuperNET(1,buf);
-                    if ( retstr != 0 )
-                    {
-                        //stripwhite_ns(retstr,strlen(retstr));
-                        //strcat(retstr,"\n");
-                        //printf("RPC return.(%s)\n",retstr);
-                        return_http_str(wsi,retstr);
-                        free(retstr);
-                        free_json(json);
-                        free(str);
-                        return(-1);
-                    } else printf("(%s) returned null\n",buf);
                 }
-                else lwsl_notice("LWS_CALLBACK_HTTP_BODY: (%s)\n",str);
+                else retstr = block_on_SuperNET(1,str);
+                if ( retstr != 0 )
+                {
+                    return_http_str(wsi,retstr);
+                    free(retstr);
+                }
                 free_json(json);
             }
             else return_http_str(wsi,str);
