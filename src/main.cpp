@@ -4205,12 +4205,12 @@ extern "C" void *poll_for_broadcasts(void *args)
     return(0);
 }
 
-extern "C" void launch_SuperNET();
+extern "C" void launch_SuperNET(char *);
 void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
-    launch_SuperNET();
+    launch_SuperNET(myip);
     did_SuperNET_init = 1;
     std::cout << "back from start" << std::endl;
 }

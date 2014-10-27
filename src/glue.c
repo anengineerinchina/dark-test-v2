@@ -15,14 +15,16 @@ void *portable_thread_create(void *funcp,void *argp)
     } else return(ptr);
 }
 
-void launch_SuperNET()
+void launch_SuperNET(char *myip)
 {
     FILE *fp;
+    char cmd[128];
     void *processptr;
     system("rm horrible.hack");
     processptr = portable_thread_create(poll_for_broadcasts,0);
-    if ( system("./SuperNET &") != 0 )
-        printf("error launching SuperNET\n");
+    sprintf(cmd,"./SuperNET %s &",myip);
+    if ( system(cmd) != 0 )
+        printf("error launching (%s)\n",cmd);
     while ( (fp= fopen("horrible.hack","rb")) == 0 )
         sleep(1);
     fclose(fp);
