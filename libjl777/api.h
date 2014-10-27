@@ -209,7 +209,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             str[len] = 0;
             //if ( wsi != 0 )
             //dump_handshake_info(wsi);
-            //fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s) wsi.%p user.%p\n",str,wsi,user);
+            if ( 0 && strcmp("{\"requestType\":\"BTCDpoll\"}",str) != 0 )
+                fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s) wsi.%p user.%p\n",str,wsi,user);
             //>>>>>>>>>>>>>> SuperNET received RPC.({"requestType":"BTCDjson","json":{\"requestType\":\"getpeers\"}})
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse(str)) != 0 )
@@ -285,9 +286,9 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     int32_t duration,len;
     char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2,**ptrs;
     counter++;
-    strcpy(retbuf,"{\"result\":\"nothing pending\"}");
     //printf("BTCDpoll.%d\n",counter);
     //BTCDpoll post_process_bitcoind_RPC.SuperNET can't parse.({"msg":"[{"requestType":"ping","NXT":"13434315136155299987","time":1414310974,"pubkey":"34b173939544eb01515119b5e0b05880eadaae3d268439c9cc1471d8681ecb6d","ipaddr":"209.126.70.159"},{"token":"im9n7c9ka58g3qq4b2oe1d8p7mndlqk0pj4jj1163pkdgs8knb0vsreb0kf6luo1bbk097buojs1k5o5c0ldn6r6aueioj8stgel1221fq40f0cvaqq0bciuniit0isi0dikd363f3bjd9ov24iltirp6h4eua0q"}]","duration":86400})
+    retbuf[0] = 0;
     if ( (counter % 3) == 0 )
     {
         if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
@@ -325,7 +326,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
             free(ptr);
         }
     }
-    else
+    if ( retbuf[0] == 0 )
     {
         if ( (ptr= queue_dequeue(&ResultsQ)) != 0 )
         {
@@ -339,6 +340,8 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
             strcpy(retbuf,ptr+sizeof(ptrs));
         }
     }
+    if ( retbuf[0] == 0 )
+        strcpy(retbuf,"{\"result\":\"nothing pending\"}");
     return(clonestr(retbuf));
 }
 
@@ -779,11 +782,14 @@ char *maketelepods_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
     uint64_t value;
     char coinstr[MAX_JSON_FIELD],*retstr = 0;
     if ( prevaddr != 0 )
+    {
+        printf("prevaddr.%p\n",prevaddr);
         return(0);
+    }
     value = (SATOSHIDEN * get_API_float(objs[0]));
     copy_cJSON(coinstr,objs[1]);
     printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
-    if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 )
+    if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 && value > 0 )
         retstr = maketelepods(NXTACCTSECRET,sender,coinstr,value);
     else retstr = clonestr("{\"error\":\"invalid maketelepods_func arguments\"}");
     return(retstr);
@@ -1259,13 +1265,13 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
             port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)prevaddr);
         else port = 0, strcpy(ipaddr,"noprevaddr");
         unstringify(jsonstr);
-        //printf("BTCDjson jsonstr.(%s) from (%s:%d)\n",jsonstr,ipaddr,port);
+        printf("BTCDjson jsonstr.(%s) from (%s:%d)\n",jsonstr,ipaddr,port);
         json = cJSON_Parse(jsonstr);
         if ( json != 0 )
         {
             retstr = SuperNET_json_commands(Global_mp,prevaddr,json,sender,valid,origargstr);
             free_json(json);
-        }
+        } else printf("PARSE error.(%s)\n",jsonstr);
     }
     return(retstr);
 }

@@ -13,7 +13,7 @@ struct telepod
 {
     struct storage_header H;
     int32_t vout;
-    uint32_t crc,createtime,clonetime,cloneout,podstate,inhwm,podsize;
+    uint32_t crc,pad2,clonetime,cloneout,podstate,inhwm,pad;
     double evolve_amount;
     char clonetxid[MAX_COINTXID_LEN],cloneaddr[MAX_COINADDR_LEN];
     uint64_t senderbits,destbits,unspent,modified,satoshis; // everything after modified is used for crc
@@ -34,9 +34,9 @@ struct telepod
 #define TELEPOD_SPENT 6
 #define TELEPOD_WITHDRAWN 7
 
-int32_t telepod_normal_spend(struct telepod *pod)
+int32_t telepod_normal_spend(uint32_t podstate)
 {
-    if ( pod->podstate == TELEPOD_CLONED || pod->podstate == TELEPOD_SPENT || pod->podstate == TELEPOD_WITHDRAWN )
+    if ( podstate == TELEPOD_CLONED || podstate == TELEPOD_SPENT || podstate == TELEPOD_WITHDRAWN )
         return(1);
     else return(0);
 }
@@ -49,9 +49,9 @@ uint64_t calc_transporter_fee(struct coin_info *cp,uint64_t satoshis)
 }
 #include "bitcoinglue.h"
 
-void update_telepod(struct telepod *pod,char *keystr)
+void update_telepod(struct telepod *pod)
 {
-    update_storage(TELEPOD_DATA,keystr,&pod->H);
+    update_storage(TELEPOD_DATA,pod->txid,&pod->H);
 }
 
 char *_podstate(int32_t podstate)
@@ -73,8 +73,11 @@ char *_podstate(int32_t podstate)
 cJSON *coin_specific_json(struct telepod *pod)
 {
     cJSON *tpd;
+    char numstr[64];
     tpd = cJSON_CreateObject();
-    cJSON_AddItemToObject(tpd,"t",cJSON_CreateNumber(pod->createtime));
+    sprintf(numstr,"%.8f",(double)pod->satoshis/SATOSHIDEN);
+    cJSON_AddItemToObject(tpd,"v",cJSON_CreateString(numstr));
+    cJSON_AddItemToObject(tpd,"t",cJSON_CreateNumber(pod->H.createtime));
     cJSON_AddItemToObject(tpd,"c",cJSON_CreateNumber(pod->crc));
     cJSON_AddItemToObject(tpd,"x",cJSON_CreateString(pod->txid));
     cJSON_AddItemToObject(tpd,"p",cJSON_CreateString(pod->privkey));
@@ -108,11 +111,11 @@ void disp_telepod(char *msg,struct telepod *pod)
     {
         str = cJSON_Print(podjson);
         stripwhite_ns(str,strlen(str));
-        printf("%8s %s\n",msg,str);
+        fprintf(stderr,"%8s %s\n",msg,str);
         free(str);
         free_json(podjson);
     }
-    else printf("%8s %s %s %s/vout.%d\n",msg,pod->coinstr,pod->coinaddr,pod->txid,pod->vout);
+    else fprintf(stderr,"%8s %s %s %s/vout.%d\n",msg,pod->coinstr,pod->coinaddr,pod->txid,pod->vout);
     //int32_t calc_multisig_N(struct telepod *pod);
     //char hexstr[1024];
     //init_hexbytes_noT(hexstr,_get_privkeyptr(pod,calc_multisig_N(pod)),pod->len_plus1-1);
@@ -123,7 +126,7 @@ uint32_t calc_telepodcrc(struct telepod *pod)
 {
     uint32_t offset,crc = 0;
     offset = (uint32_t)((long)&pod->modified + sizeof(pod->modified) - (long)pod);
-    crc = _crc32(crc,(void *)((long)pod + offset),(pod->podsize - offset));
+    crc = _crc32(crc,(void *)((long)pod + offset),(pod->H.datalen - offset));
     return(crc);
 }
 
@@ -133,8 +136,8 @@ struct telepod *create_telepod(uint32_t createtime,char *coinstr,uint64_t satosh
     int32_t size;
     size = (int32_t)(sizeof(*pod) + (strlen(privkey) + 1));
     pod = calloc(1,size);
-    pod->createtime = createtime;
-    pod->podsize = size;
+    pod->H.createtime = createtime;
+    pod->H.datalen = size;
     pod->vout = vout;
     pod->cloneout = -1;
     pod->satoshis = satoshis;
@@ -234,7 +237,7 @@ uint64_t scan_telepods(char *coinstr)
                     {
                         item = cJSON_GetArrayItem(array,i);
                         copy_cJSON(acct,cJSON_GetObjectItem(item,"account"));
-                        printf("%s.%d acct.%s\n",coinstr,i,acct);
+                        fprintf(stderr,"%s.%d acct.%s\n",coinstr,i,acct);
                         if ( strcmp(acct,"telepods") == 0 )
                         {
                             num++;
@@ -243,10 +246,16 @@ uint64_t scan_telepods(char *coinstr)
                                 if ( (hp= find_storage(TELEPOD_DATA,pod->txid)) == 0 )
                                 {
                                     disp_telepod("new",pod);
-                                    update_telepod(pod,pod->txid);
+                                    update_telepod(pod);
                                 }
                                 else
                                 {
+                                    if ( 1 && hp->datalen != pod->H.datalen )
+                                    {
+                                        fprintf(stderr,"OVERWRITE due to datalen mismatch %d vs %d\n",hp->datalen,pod->H.datalen);
+                                        update_telepod(pod);
+                                        fprintf(stderr,"back from update_telepod\n");
+                                    }
                                     disp_telepod("inDB",pod);
                                     free(hp);
                                 }
@@ -274,7 +283,7 @@ struct telepod *conv_BBR_json(struct coin_info *cp,struct cJSON *tpd)
     if ( acctkeys[0] != 0 && basement[0] != 0 )
     {
         pod = create_telepod(0,cp->name,0,"","",acctkeys,basement,-1);
-        if ( (pod->unspent= BBR_telepodstatus(&pod->createtime,cp,pod)) != 0 )
+        if ( (pod->unspent= BBR_telepodstatus(&pod->H.createtime,cp,pod)) != 0 )
             pod->satoshis = pod->unspent;
     }
     return(pod);
@@ -398,20 +407,21 @@ struct telepod *clone_telepod(struct coin_info *cp,struct telepod *refpod,uint64
         printf("availchange %.8f refsatoshis %.8f\n",dstr(availchange),dstr(refsatoshis));
         //getchar();
     }
-    if ( withdrawaddr[0] != 0 || (privkey= get_telepod_privkey(&podaddr,pubkey,cp)) != 0 )
+    if ( (withdrawaddr != 0 && withdrawaddr[0] != 0) || (privkey= get_telepod_privkey(&podaddr,pubkey,cp)) != 0 )
     {
         if ( fee <= availchange )
         {
             change = (availchange - fee);
             memset(&RAW,0,sizeof(RAW));
+            fprintf(stderr,"calc_tx\n");
             if ( (txid= calc_telepod_transaction(cp,&RAW,refpod!=0?refpods:inputpods,refsatoshis,podaddr,fee,changepod,change,change_podaddr)) == 0 )
             {
                 if ( refpod != 0 )
                 {
                     refpod->cloneout = TELEPOD_ERROR_VOUT;
-                    update_telepod(refpod,refpod->txid);
+                    update_telepod(refpod);
                 }
-                printf("error cloning %.8f telepod.(%s) to %s\n",dstr(refsatoshis),refpod!=0?refpod->coinaddr:"transporter",podaddr);
+                fprintf(stderr,"error cloning %.8f telepod.(%s) to %s\n",dstr(refsatoshis),refpod!=0?refpod->coinaddr:"transporter",podaddr);
             }
             else
             {
@@ -420,18 +430,19 @@ struct telepod *clone_telepod(struct coin_info *cp,struct telepod *refpod,uint64
                     safecopy(refpod->cloneaddr,podaddr,sizeof(refpod->cloneaddr));
                     safecopy(refpod->clonetxid,txid,sizeof(refpod->clonetxid));
                     refpod->cloneout = TELEPOD_CONTENTS_VOUT;
-                    printf("set refpod.%p (%s).vout%d\n",refpod,refpod->clonetxid,refpod->cloneout);
-                    update_telepod(refpod,refpod->txid);
+                    fprintf(stderr,"set refpod.%p (%s).vout%d\n",refpod,refpod->clonetxid,refpod->cloneout);
+                    update_telepod(refpod);
                 }
                 pod = create_telepod((uint32_t)time(NULL),cp->name,refsatoshis,podaddr,"",privkey,txid,TELEPOD_CONTENTS_VOUT);
-                update_telepod(pod,pod->txid);
+                update_telepod(pod);
             }
             //if ( cp->enabled == 0 )
             //    cp->blockheight = (uint32_t)get_blockheight(cp), cp->enabled = 1;
             purge_rawtransaction(&RAW);
-        } else printf("clone_telepod fee %llu change %llu\n",(long long)fee,(long long)availchange);
+        } else fprintf(stderr,"clone_telepod fee %llu change %llu\n",(long long)fee,(long long)availchange);
         if ( didalloc == 0 )
         {
+            fprintf(stderr,"free privkey.%p and podaddr.%p\n",privkey,podaddr);
             if ( change_privkey != 0 )
                 free(change_privkey);
             if ( change_podaddr != 0 )
@@ -456,6 +467,7 @@ int32_t make_traceable_telepods(struct coin_info *cp,char *refcipher,cJSON *ciph
     uint64_t incr,amount;
     struct telepod *pod;
     n = 0;
+    printf("make_traceable_telepods satoshis %.8f\n",dstr(satoshis));
     while ( satoshis >= standard_denominations[(sizeof(standard_denominations)/sizeof(*standard_denominations))-1] )
     {
         amount = satoshis;
@@ -486,6 +498,7 @@ int32_t make_traceable_telepods(struct coin_info *cp,char *refcipher,cJSON *ciph
 char *maketelepods(char *NXTACCTSECRET,char *sender,char *coinstr,int64_t value)
 {
     struct coin_info *cp;
+    printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
     if ( (cp= get_coin_info(coinstr)) != 0 )
     {
         if ( make_traceable_telepods(cp,cp->name,cp->ciphersobj,value) <= 0 )
@@ -510,9 +523,8 @@ double calc_convamount(char *base,char *rel,uint64_t satoshis)
 }
 
 #define ADD_TELEPOD \
-    { pod = calloc(1,data.size + key.size);\
+    { pod = calloc(1,data.size);\
     memcpy(pod,data.data,data.size);\
-    memcpy(pod+data.size,key.data,key.size);\
     pods[n++] = pod;\
     if ( n >= max )\
     {\
@@ -522,10 +534,13 @@ double calc_convamount(char *base,char *rel,uint64_t satoshis)
 
 struct telepod **available_telepods(int32_t *nump,double *availp,double *maturingp,double *inboundp,double *outboundp,double *doublespentp,double *cancelledp,char *coinstr,int32_t minage)
 {
+    static int didinit;
+    static portable_mutex_t mutex;
     uint32_t now = (uint32_t)time(NULL);
     DB *dbp = get_selected_database(TELEPOD_DATA);
     struct telepod *pod,**pods = 0;
-    int32_t ret,max,m,n = 0;
+    int32_t podstate,ret,max,m,n = 0;
+    uint32_t createtime;
     double evolve_amount;
     DBT key,data;
     DBC *cursorp = 0;
@@ -536,6 +551,12 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
     max = num_in_db(TELEPOD_DATA);
     max += 100;
     m = 0;
+    if ( didinit == 0 )
+    {
+        portable_mutex_init(&mutex);
+        didinit = 1;
+    }
+    portable_mutex_lock(&mutex);
     dbp->cursor(dbp,NULL,&cursorp,0);
     if ( cursorp != 0 )
     {
@@ -545,7 +566,9 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         {
             m++;
             pod = data.data;
-            //disp_telepod("DB",pod);
+            //fprintf(stderr,"%s %p minage.%d found.%d %s size.%d/%d podstate.%d createtime.%d\n",coinstr,pod,minage,m,key.data,pod->H.datalen,data.size,pod->podstate,pod->H.createtime);
+            podstate = pod->podstate;
+            createtime = pod->H.createtime;
             if ( minage < 0 )
                 ADD_TELEPOD
             evolve_amount = calc_convamount(pod->coinstr,coinstr,pod->satoshis);
@@ -554,35 +577,37 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
                 clear_pair(&key,&data);
                 continue;
             }
-            if ( pod->podstate == TELEPOD_AVAIL )
+            if ( podstate == TELEPOD_AVAIL )
             {
-                if ( pod->createtime > (now - minage) )
+                if ( createtime > (now - minage) )
                 {
                     (*availp) += evolve_amount;
                     if ( minage >= 0 )
                         ADD_TELEPOD
                 } else (*maturingp) += evolve_amount;
             }
-            else if ( pod->podstate == TELEPOD_OUTBOUND ) // telepod is waiting to be cloned by destination
+            else if ( podstate == TELEPOD_OUTBOUND ) // telepod is waiting to be cloned by destination
                 (*outboundp) += evolve_amount;
-            else if ( pod->podstate == TELEPOD_INBOUND ) // we are going to clone this within clonesmear timewindow
+            else if ( podstate == TELEPOD_INBOUND ) // we are going to clone this within clonesmear timewindow
                 (*inboundp) += evolve_amount;
-            else if ( telepod_normal_spend(pod) == 0 ) // inbound -> cloned, outbound->spent
+            else if ( telepod_normal_spend(podstate) == 0 ) // inbound -> cloned, outbound->spent
             {
-                if ( pod->podstate == TELEPOD_DOUBLESPENT ) // sender of inbound telepod cashed in telepod before us
+                if ( podstate == TELEPOD_DOUBLESPENT ) // sender of inbound telepod cashed in telepod before us
                     (*doublespentp) += evolve_amount;
-                else if ( pod->podstate == TELEPOD_CANCELLED ) // we cashed the telepod before destination cloned
+                else if ( podstate == TELEPOD_CANCELLED ) // we cashed the telepod before destination cloned
                     (*cancelledp) += evolve_amount;
             }
             clear_pair(&key,&data);
         }
         cursorp->close(cursorp);
     }
+    portable_mutex_unlock(&mutex);
     //printf("find_closer_Kstored returns n.%d %p\n",n,sps);
     if ( m > num_in_db(TELEPOD_DATA) )
         set_num_in_db(TELEPOD_DATA,m);
     if ( pods != 0 )
         pods[n] = 0;
+   // printf("set nump.%d\n",n);
     *nump = n;
     return(pods);
 }
@@ -602,7 +627,7 @@ struct telepod *process_telepathic_teleport(struct coin_info *cp,struct contact_
         extract_cJSON_str(script,sizeof(script),tpd,"s");
     } else coinaddr[0] = script[0] = 0;
     pod = create_telepod(createtime,cp->name,0,podaddr,script,privkey,txid,vout);
-    if ( get_telepod_info(&pod->unspent,&pod->createtime,cp->name,pod) < 0 )
+    if ( get_telepod_info(&pod->unspent,&pod->H.createtime,cp->name,pod) < 0 )
     {
         printf("Invalid pod (%s) received from %s\n",pod->txid,contact->handle);
         free(pod);
@@ -631,7 +656,7 @@ void telepathic_teleport(struct contact_info *contact,cJSON *attachjson)
         {
             pod = process_telepathic_teleport(cp,contact,tpd);
             if ( pod != 0 )
-                update_telepod(pod,pod->txid);
+                update_telepod(pod);
         }
     }
 }
@@ -698,7 +723,7 @@ int32_t poll_telepods(char *relstr)
                     if ( flag != 0 )
                     {
                         pod->podstate = flag;
-                        update_telepod(pod,(char *)((long)pod + pod->H.datalen));
+                        update_telepod(pod);
                     }
                 }
                 free(pod);
@@ -718,7 +743,7 @@ double calc_telepod_metric(struct telepod **pods,int32_t n,double target,uint32_
     youngest = -1;
     for (i=0; i<n; i++)
     {
-        age = (now - pods[i]->createtime);
+        age = (now - pods[i]->H.createtime);
         agesum += age;
         if ( youngest < 0 || age < youngest )
             youngest = age;
@@ -884,13 +909,13 @@ char *teleport(char *contactstr,char *coinstr,uint64_t satoshis,int32_t minage,c
                     if ( withdrawaddr[0] != 0 )
                     {
                         pod->podstate = TELEPOD_WITHDRAWN;
-                        update_telepod(pod,(char *)((long)pod + pod->H.datalen));
+                        update_telepod(pod);
                     }
                     else
                     {
                         attachmentjson = telepathic_transmit(buf,contact,-1,"teleport",attachmentjson);
                         pod->podstate = TELEPOD_OUTBOUND;
-                        update_telepod(pod,(char *)((long)pod + pod->H.datalen));
+                        update_telepod(pod);
                         if ( attachmentjson != 0 )
                             free_json(attachmentjson);
                     }
@@ -909,13 +934,14 @@ char *teleport(char *contactstr,char *coinstr,uint64_t satoshis,int32_t minage,c
 double filter_telepod(struct telepod *pod,struct contact_info *contact,char *coinstr,char *withdrawaddr)
 {
     double net = 0.;
+    //printf("filter contact.%p coinstr.%p withdraw.%p\n",contact,coinstr,withdrawaddr);
     if ( contact != 0 && pod->destbits != contact->nxt64bits && pod->senderbits != contact->nxt64bits )
         return(0.);
-    if ( coinstr != 0 && strcmp(coinstr,pod->coinstr) != 0 )
+    if ( coinstr != 0 && coinstr[0] != 0 && strcmp(coinstr,pod->coinstr) != 0 )
         return(0.);
-    if ( withdrawaddr != 0 && strcmp(withdrawaddr,pod->coinaddr) != 0 )
+    if ( withdrawaddr != 0 && withdrawaddr[0] != 0 && strcmp(withdrawaddr,pod->coinaddr) != 0 )
         return(0.);
-    net = calc_convamount(pod->coinstr,(coinstr!=0&&coinstr[0]!=0)?coinstr:"BTC",pod->satoshis);
+    net = calc_convamount(pod->coinstr,(coinstr!=0&&coinstr[0]!=0)?coinstr:"BTCD",pod->satoshis);
     return(net);
 }
 
@@ -960,17 +986,22 @@ cJSON *telepod_dispjson(struct telepod *pod,double netamount)
     }
     cJSON_AddItemToObject(dispjson,"txid",cJSON_CreateString(pod->txid));
     cJSON_AddItemToObject(dispjson,"coin",cJSON_CreateString(pod->coinstr));
-    cJSON_AddItemToObject(dispjson,"amount",cJSON_CreateNumber(dir * (double)pod->satoshis/SATOSHIDEN));
+    sprintf(numstr,"%.8f",(double)pod->satoshis/SATOSHIDEN);
+    cJSON_AddItemToObject(dispjson,"amount",cJSON_CreateString(numstr));
     return(dispjson);
 }
 
 char *telepodacct(char *contactstr,char *coinstr,uint64_t amount,char *withdrawaddr,char *comment,char *cmd)
 {
-    char retbuf[MAX_JSON_FIELD],txidstr[MAX_JSON_FIELD],str[MAX_JSON_FIELD],NXTaddr[64],*retstr;
+    char retbuf[MAX_JSON_FIELD],txidstr[MAX_JSON_FIELD],str[MAX_JSON_FIELD],NXTaddr[64];
+    char transporteraddr[128],changeaddr[128],numstr[64];
+    char *addr,*retstr;
     int32_t i,n,dir,numpos,numneg;
+    uint64_t availsend,change;
     struct contact_info *contact = 0;
     cJSON *json,*array,*item;
     struct telepod **pods,*pod;
+    struct coin_info *cp = 0;
     double avail,inbound,outbound,maturing,doublespent,cancelled,credits,debits,net;
     if ( IS_LIBTEST == 0 )
         return(0);
@@ -984,7 +1015,7 @@ char *telepodacct(char *contactstr,char *coinstr,uint64_t amount,char *withdrawa
         if ( contactstr != 0 && contactstr[0] != 0 && amount != 0 && coinstr[0] != 0 && withdrawaddr[0] == 0 )
         {
             pod = create_debitcredit(txidstr,cmd,contactstr,coinstr,amount,comment);
-            update_telepod(pod,txidstr);
+            update_telepod(pod);
             item = telepod_dispjson(pod,((double)dir * amount) / SATOSHIDEN);
             free(pod);
             retstr = cJSON_Print(item);
@@ -1009,6 +1040,7 @@ char *telepodacct(char *contactstr,char *coinstr,uint64_t amount,char *withdrawa
         }
     } else scan_telepods(coinstr);
     pods = available_telepods(&n,&avail,&maturing,&inbound,&outbound,&doublespent,&cancelled,coinstr,-1);
+    printf("numtelepods.%d\n",n);
     sprintf(retbuf,"{\"result\":\"telepodacct %.8f %s \",\"avail\":%.8f,\"inbound\":%.8f,\"outbound\":%.8f,\"maturing\":%.8f,\"doublespent\":%.8f,\"cancelled\":%.8f}",dstr(amount),coinstr,avail,inbound,outbound,maturing,doublespent,cancelled);
     if ( pods != 0 )
     {
@@ -1024,9 +1056,27 @@ char *telepodacct(char *contactstr,char *coinstr,uint64_t amount,char *withdrawa
         if ( withdrawaddr[0] != 0 )
             cJSON_AddItemToObject(json,"withdrawaddr",cJSON_CreateString(withdrawaddr));
         if ( coinstr[0] != 0 )
-            cJSON_AddItemToObject(json,"coin",cJSON_CreateString(coinstr));
+            cp = get_coin_info(coinstr);
+        if ( cp == 0 )
+            cp = get_coin_info("BTCD");
+        cJSON_AddItemToObject(json,"coin",cJSON_CreateString(cp->name));
         credits = debits = 0.;
         numpos = numneg = 0;
+        transporteraddr[0] = changeaddr[0] = 0;
+        if ( (addr= get_account_unspent(0,&availsend,cp,"transporter")) == 0 )
+            addr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"getnewaddress","[\"transporter\"]");
+        if ( addr != 0 )
+        {
+            strcpy(transporteraddr,addr);
+            free(addr);
+        }
+        if ( (addr= get_account_unspent(0,&change,cp,"changepods")) == 0 )
+            addr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"getnewaddress","[\"changepods\"]");
+        if ( addr != 0 )
+        {
+            strcpy(changeaddr,addr);
+            free(addr);
+        }
         for (i=0; i<n; i++)
         {
             if ( (pod= pods[i]) != 0 )
@@ -1054,6 +1104,15 @@ char *telepodacct(char *contactstr,char *coinstr,uint64_t amount,char *withdrawa
         cJSON_AddItemToObject(json,"debits",cJSON_CreateNumber(debits));
         cJSON_AddItemToObject(json,"numcredits",cJSON_CreateNumber(numpos));
         cJSON_AddItemToObject(json,"credits",cJSON_CreateNumber(credits));
+        if ( transporteraddr[0] != 0 )
+        {
+            cJSON_AddItemToObject(json,"transporter",cJSON_CreateString(transporteraddr));
+            sprintf(numstr,"%.8f",dstr(availsend));
+            cJSON_AddItemToObject(json,"avail",cJSON_CreateString(numstr));
+        }
+        cJSON_AddItemToObject(json,"changeaddr",cJSON_CreateString(changeaddr));
+        sprintf(numstr,"%.8f",dstr(change));
+        cJSON_AddItemToObject(json,"change",cJSON_CreateString(numstr));
         retstr = cJSON_Print(json);
         stripwhite_ns(retstr,strlen(retstr));
         return(retstr);

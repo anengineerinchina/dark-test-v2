@@ -105,6 +105,7 @@ void SuperNET_idler(uv_idle_t *handle)
             if ( wr == firstwr )
             {
                 queue_enqueue(&sendQ,wr);
+                //printf("reached firstwr.%p\n",firstwr);
                 break;
             }
             if ( (wr->queuetime % 10) == r )
@@ -333,7 +334,7 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
         txid = calc_txid((uint8_t *)JSONstr,(int32_t)strlen(JSONstr));
         ptrs[2] = (char *)txid;
     }
-   // printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
+    //printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
     queue_enqueue(&JSON_Q,ptrs);
     if ( blockflag != 0 )
     {
