@@ -33,6 +33,64 @@ struct per_session_data__http
 	int fd;
 };
 
+static void dump_handshake_info(struct libwebsocket *wsi)
+{
+	int n;
+	static const char *token_names[] = {
+		/*[WSI_TOKEN_GET_URI]		=*/ "GET URI",
+		/*[WSI_TOKEN_POST_URI]		=*/ "POST URI",
+		/*[WSI_TOKEN_HOST]		=*/ "Host",
+		/*[WSI_TOKEN_CONNECTION]	=*/ "Connection",
+		/*[WSI_TOKEN_KEY1]		=*/ "key 1",
+		/*[WSI_TOKEN_KEY2]		=*/ "key 2",
+		/*[WSI_TOKEN_PROTOCOL]		=*/ "Protocol",
+		/*[WSI_TOKEN_UPGRADE]		=*/ "Upgrade",
+		/*[WSI_TOKEN_ORIGIN]		=*/ "Origin",
+		/*[WSI_TOKEN_DRAFT]		=*/ "Draft",
+		/*[WSI_TOKEN_CHALLENGE]		=*/ "Challenge",
+        
+		/* new for 04 */
+		/*[WSI_TOKEN_KEY]		=*/ "Key",
+		/*[WSI_TOKEN_VERSION]		=*/ "Version",
+		/*[WSI_TOKEN_SWORIGIN]		=*/ "Sworigin",
+        
+		/* new for 05 */
+		/*[WSI_TOKEN_EXTENSIONS]	=*/ "Extensions",
+        
+		/* client receives these */
+		/*[WSI_TOKEN_ACCEPT]		=*/ "Accept",
+		/*[WSI_TOKEN_NONCE]		=*/ "Nonce",
+		/*[WSI_TOKEN_HTTP]		=*/ "Http",
+        
+		"Accept:",
+		"If-Modified-Since:",
+		"Accept-Encoding:",
+		"Accept-Language:",
+		"Pragma:",
+		"Cache-Control:",
+		"Authorization:",
+		"Cookie:",
+		"Content-Length:",
+		"Content-Type:",
+		"Date:",
+		"Range:",
+		"Referer:",
+		"Uri-Args:",
+        
+		/*[WSI_TOKEN_MUXURL]	=*/ "MuxURL",
+	};
+	char buf[256];
+    
+	for (n = 0; n < sizeof(token_names) / sizeof(token_names[0]); n++) {
+		if (!lws_hdr_total_length(wsi, n))
+			continue;
+        
+		lws_hdr_copy(wsi, buf, sizeof buf, n);
+        
+		fprintf(stderr, "    %s = %s\n", token_names[n], buf);
+	}
+}
+
 const char * get_mimetype(const char *file)
 {
 	int n = (int)strlen(file);
@@ -118,7 +176,9 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             str = malloc(len+1);
             memcpy(str,in,len);
             str[len] = 0;
+            dump_handshake_info(wsi);
             fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s)\n",str);
+            //>>>>>>>>>>>>>> SuperNET received RPC.({"requestType":"BTCDjson","json":{\"requestType\":\"getpeers\"}})
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse(str)) != 0 )
             {
@@ -211,8 +271,8 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
                 msg2 = stringifyM(msg);
                 sprintf(retbuf,"{\"msg\":%s,\"duration\":%d}",msg2,duration);
                 free(msg2);
-                printf("send back broadcast.(%s)\n",retbuf);
-            } else printf("len mismatch %d != %ld (%s)\n",len,strlen(str)+1,str);
+                //printf("send back broadcast.(%s)\n",retbuf);
+            } else printf("BTCDpoll BroadcastQ len mismatch %d != %ld (%s)\n",len,strlen(str)+1,str);
             free(ptr);
         }
     }

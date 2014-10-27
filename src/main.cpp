@@ -4141,7 +4141,7 @@ extern "C" void *poll_for_broadcasts(void *args)
     char params[4096],buf[8192],destip[1024],*retstr;
     while ( 1 )
     {
-        sleep(1) + sleep((rand() % 10) + 1);
+        sleep((rand() % 10) + 1);
         //printf("ISSUE BTCDpoll\n");
         sprintf(params,"{\"requestType\":\"BTCDpoll\"}");
         retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);

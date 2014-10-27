@@ -117,7 +117,7 @@ char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char
     if ( debugstr != 0 && strcmp(debugstr,"BTCD") == 0 && command != 0 && strcmp(command,"SuperNET") ==  0 )
         specialcase = 1;
     else specialcase = 0;
-    if ( specialcase != 0 )
+    if ( specialcase != 0 && 0 )
         fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
     starttime = milliseconds();
@@ -199,7 +199,7 @@ try_again:
         }
         else
         {
-            if ( specialcase != 0 )
+            if ( 0 && specialcase != 0 )
                 fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: BTCD.(%s) -> (%s)\n",params,s.ptr);
             count2++;
             elapsedsum2 += (milliseconds() - starttime);
