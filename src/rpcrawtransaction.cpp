@@ -565,7 +565,7 @@ Value sendrawtransaction(const Array& params, bool fHelp)
     vector<unsigned char> txData(ParseHex(params[0].get_str()));
     CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);
     CTransaction tx;
-    fprintf(stderr,"sending.(%s)\n",HexStr(ssTx.begin(), ssTx.end()).c_str());
+    fprintf(stderr,"sending.(%s)\n",HexStr(ssData.begin(), ssData.end()).c_str());
 
     // deserialize binary data stream
     try {
