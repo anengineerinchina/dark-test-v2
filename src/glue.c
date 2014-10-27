@@ -21,7 +21,6 @@ void launch_SuperNET(char *myip)
     char cmd[128];
     void *processptr;
     system("rm horrible.hack");
-    processptr = portable_thread_create(poll_for_broadcasts,0);
     sprintf(cmd,"./SuperNET %s &",myip);
     if ( system(cmd) != 0 )
         printf("error launching (%s)\n",cmd);
@@ -29,4 +28,5 @@ void launch_SuperNET(char *myip)
         sleep(1);
     fclose(fp);
     printf("SuperNET file found!\n");
+    processptr = portable_thread_create(poll_for_broadcasts,0);
 }
