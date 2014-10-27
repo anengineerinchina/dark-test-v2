@@ -110,10 +110,14 @@ char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char
     CURLcode res;
     CURL *curl_handle;
     long len;
+    int32_t specialcase;
     double starttime;
     
     numretries=0;
-    if ( debugstr != 0 && strcmp(debugstr,"BTCD") == 0 )
+    if ( debugstr != 0 && strcmp(debugstr,"BTCD") == 0 && command != 0 && strcmp(command,"SuperNET") ==  0 )
+        specialcase = 1;
+    else specialcase = 0;
+    if ( specialcase != 0 )
         fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
     starttime = milliseconds();
@@ -135,7 +139,7 @@ try_again:
     databuf = 0;
     if ( params != 0 )
     {
-        if ( debugstr == 0 || strcmp(debugstr,"BTCD") != 0 )
+        if ( specialcase == 0 )
         {
             len = strlen(params);
             if ( len > 0 && params[0] == '[' && params[len-1] == ']' ) {
@@ -165,7 +169,7 @@ try_again:
     if ( res != CURLE_OK )
     {
         numretries++;
-        if ( debugstr != 0 && strcmp("BTCD",debugstr) != 0 )
+        if ( specialcase != 0 )
         {
             fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: BTCD.%s timeout params.(%s) s.ptr.(%s) err.%d\n",command,params,s.ptr,res);
             free(s.ptr);
@@ -185,7 +189,7 @@ try_again:
     }
     else
     {
-        if ( command != 0 && (debugstr == 0 || (debugstr != 0 && strcmp("BTCD",debugstr) != 0)) )
+        if ( command != 0 && specialcase == 0 )
         {
             count++;
             elapsedsum += (milliseconds() - starttime);
