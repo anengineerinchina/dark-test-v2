@@ -143,8 +143,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 else lwsl_notice("LWS_CALLBACK_HTTP_BODY: (%s)\n",str);
                 free_json(json);
             }
-            else printf("couldnt parse (%s)\n",(char *)in);
-            return_http_str(wsi,"{\"error\":\"couldnt parse JSON\"}");
+            else return_http_str(wsi,str);
             free(str);
             return(-1);
             break;
@@ -192,6 +191,55 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             break;
 	}
 	return 0;
+}
+
+char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    static int counter;
+    int32_t duration,len;
+    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2;
+    counter++;
+    strcpy(retbuf,"{\"result\":\"nothing pending\"}");
+    //printf("BTCDpoll.%d\n",counter);
+    //BTCDpoll post_process_bitcoind_RPC.SuperNET can't parse.({"msg":"[{"requestType":"ping","NXT":"13434315136155299987","time":1414310974,"pubkey":"34b173939544eb01515119b5e0b05880eadaae3d268439c9cc1471d8681ecb6d","ipaddr":"209.126.70.159"},{"token":"im9n7c9ka58g3qq4b2oe1d8p7mndlqk0pj4jj1163pkdgs8knb0vsreb0kf6luo1bbk097buojs1k5o5c0ldn6r6aueioj8stgel1221fq40f0cvaqq0bciuniit0isi0dikd363f3bjd9ov24iltirp6h4eua0q"}]","duration":86400})
+    if ( (counter & 1) == 0 )
+    {
+        if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
+        {
+            printf("Got BroadcastQ\n");
+            memcpy(&len,ptr,sizeof(len));
+            str = &ptr[sizeof(len) + sizeof(duration)];
+            if ( len == (strlen(str) + 1) )
+            {
+                memcpy(&duration,&ptr[sizeof(len)],sizeof(duration));
+                memcpy(msg,str,len);
+                ptr[sizeof(len) + sizeof(duration) + len] = 0;
+                msg2 = stringifyM(msg);
+                sprintf(retbuf,"{\"msg\":%s,\"duration\":%d}",msg2,duration);
+                free(msg2);
+                printf("send back broadcast.(%s)\n",retbuf);
+            } else printf("len mismatch %d != %ld (%s)\n",len,strlen(str)+1,str);
+            free(ptr);
+        }
+    }
+    else
+    {
+        if ( (ptr= queue_dequeue(&NarrowQ)) != 0 )
+        {
+            printf("Got NarrowQ\n");
+            memcpy(&len,ptr,sizeof(len));
+            if ( len < 4096 && len > 0 )
+            {
+                memcpy(ip_port,&ptr[sizeof(len)],64);
+                memcpy(msg,&ptr[sizeof(len) + 64],len);
+                init_hexbytes(hexstr,(unsigned char *)msg,len);
+                sprintf(retbuf,"{\"ip_port\":\"%s\",\"hex\":\"%s\",\"len\":%d}",ip_port,hexstr,len);
+                //printf("send back narrow.(%s)\n",retbuf);
+            } else printf("BTCDpoll NarrowQ illegal len.%d\n",len);
+            free(ptr);
+        }
+    }
+    return(clonestr(retbuf));
 }
 
 static struct libwebsocket_protocols protocols[] =
@@ -1106,55 +1154,6 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
         }
     }
     return(retstr);
-}
-
-char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    static int counter;
-    int32_t duration,len;
-    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2;
-    counter++;
-    strcpy(retbuf,"{\"result\":\"nothing pending\"}");
-    //printf("BTCDpoll.%d\n",counter);
-    //BTCDpoll post_process_bitcoind_RPC.SuperNET can't parse.({"msg":"[{"requestType":"ping","NXT":"13434315136155299987","time":1414310974,"pubkey":"34b173939544eb01515119b5e0b05880eadaae3d268439c9cc1471d8681ecb6d","ipaddr":"209.126.70.159"},{"token":"im9n7c9ka58g3qq4b2oe1d8p7mndlqk0pj4jj1163pkdgs8knb0vsreb0kf6luo1bbk097buojs1k5o5c0ldn6r6aueioj8stgel1221fq40f0cvaqq0bciuniit0isi0dikd363f3bjd9ov24iltirp6h4eua0q"}]","duration":86400})
-    if ( (counter & 1) == 0 )
-    {
-        if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
-        {
-            printf("Got BroadcastQ\n");
-            memcpy(&len,ptr,sizeof(len));
-            str = &ptr[sizeof(len) + sizeof(duration)];
-            if ( len == (strlen(str) + 1) )
-            {
-                memcpy(&duration,&ptr[sizeof(len)],sizeof(duration));
-                memcpy(msg,str,len);
-                ptr[sizeof(len) + sizeof(duration) + len] = 0;
-                msg2 = stringifyM(msg);
-                sprintf(retbuf,"{\"msg\":%s,\"duration\":%d}",msg2,duration);
-                free(msg2);
-                printf("send back broadcast.(%s)\n",retbuf);
-            } else printf("len mismatch %d != %ld (%s)\n",len,strlen(str)+1,str);
-            free(ptr);
-        }
-    }
-    else
-    {
-        if ( (ptr= queue_dequeue(&NarrowQ)) != 0 )
-        {
-            printf("Got NarrowQ\n");
-            memcpy(&len,ptr,sizeof(len));
-            if ( len < 4096 && len > 0 )
-            {
-                memcpy(ip_port,&ptr[sizeof(len)],64);
-                memcpy(msg,&ptr[sizeof(len) + 64],len);
-                init_hexbytes(hexstr,(unsigned char *)msg,len);
-                sprintf(retbuf,"{\"ip_port\":\"%s\",\"hex\":\"%s\",\"len\":%d}",ip_port,hexstr,len);
-                //printf("send back narrow.(%s)\n",retbuf);
-            } else printf("BTCDpoll NarrowQ illegal len.%d\n",len);
-            free(ptr);
-        }
-    }
-    return(clonestr(retbuf));
 }
     
 char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
