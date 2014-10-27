@@ -427,13 +427,18 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
 {
     uint64_t txid = 0;
     char retstr[1024];
+    struct pserver_info *pserver;
     printf("got ping.%d (%s)\n",ismynode(prevaddr),origargstr);
     if ( ismynode(prevaddr) != 0 ) // user invoked
     {
         if ( destip != 0 && destip[0] != 0 && ismyipaddr(destip) == 0 )
         {
             if ( ismyipaddr(destip) == 0 )
-                txid = send_kademlia_cmd(0,get_pserver(0,destip,0,0),"ping",NXTACCTSECRET,0,0);
+            {
+                pserver = get_pserver(0,destip,0,0);
+                p2p_publishpacket(pserver,0);
+                txid = send_kademlia_cmd(0,pserver,"ping",NXTACCTSECRET,0,0);
+            }
             sprintf(retstr,"{\"result\":\"kademlia_ping to %s\",\"txid\":\"%llu\"}",destip,(long long)txid);
         }
         else sprintf(retstr,"{\"error\":\"kademlia_ping no destip\"}");

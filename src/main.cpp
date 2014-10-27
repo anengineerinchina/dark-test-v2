@@ -4050,16 +4050,9 @@ char *SuperNET_JSON(char *JSONstr)
     return(retstr);
 }
 
-int did_SuperNET_init;
-int32_t got_newpeer(const char *ip_port)
+int32_t issue_gotnewpeer(char *ip_port)
 {
     char *retstr,params[MAX_JSON_FIELD];
-    // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
-    while ( did_SuperNET_init == 0 )
-    {
-        fprintf(stderr,"got_newpeer(%s) before initialized\n",ip_port);
-        return(0);
-    }
     memset(params,0,sizeof(params));
     sprintf(params,"{\"requestType\":\"gotnewpeer\",\"ip_port\":\"%s\"}",ip_port);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
@@ -4070,6 +4063,39 @@ int32_t got_newpeer(const char *ip_port)
         return(0);
     }
     return(-1);
+}
+
+int did_SuperNET_init;
+int32_t got_newpeer(const char *ip_port)
+{
+    static int numearly;
+    static char **earlybirds;
+    int32_t i;
+    // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    while ( did_SuperNET_init == 0 )
+    {
+        fprintf(stderr,"got_newpeer(%s) %d before initialized\n",numearly,ip_port);
+        numearly++;
+        earlybirds = realloc(earlybirds,(numearly+1) * sizeof(*earlybirds));
+        earlybirds[numearly] = 0;
+        earlybirds[numearly-1] = malloc(strlen(ip_port)+1);
+        strcpy(earlybirds[numearly-1],ip_port);
+        return(0);
+    }
+    if ( earlybirds != 0 )
+    {
+        for (i=0; i<numearly; i++)
+            if ( earlybirds[i] != 0 )
+            {
+                issue_gotnewpeer(earlybirds[i]);
+                free(earlybirds[i]);
+            }
+        free(earlybirds);
+        earlybirds = 0;
+        numearly = 0;
+    }
+    issue_gotnewpeer(ip_port);
+    return(0);
 }
 
 char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
@@ -4088,7 +4114,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	//retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
    // static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
     str = stringifyM(msg);
-    sprintf(params,"{\"requestType\":\"gotpacket\",\"msg\":\"%s\",\"dur\":%d,\"ip_port\":\"%s\"}",str,duration,(char *)from->addr.ToString().c_str());
+    sprintf(params,"{\"requestType\":\"gotpacket\",\"msg\":%s,\"dur\":%d,\"ip_port\":\"%s\"}",str,duration,(char *)from->addr.ToString().c_str());
     free(str);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr == 0 )
