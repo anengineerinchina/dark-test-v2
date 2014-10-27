@@ -556,6 +556,8 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
         fprintf(stderr,"need to have BTCD active and also srvpubaddr\n");
         exit(-1);
     }
+    if ( (fp= fopen("horrible.hack","wb")) != 0 )
+        fclose(fp);
     Finished_init = 1;
     return(0);
 }
