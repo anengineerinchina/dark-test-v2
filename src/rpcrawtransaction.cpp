@@ -306,7 +306,9 @@ Value decoderawtransaction(const Array& params, bool fHelp)
         ssData >> tx;
     }
     catch (std::exception &e) {
-        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+        PrintException(&e, "decoderawtransaction");
+
+        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed std::exception");
     }
 
     Object result;
@@ -368,7 +370,8 @@ Value signrawtransaction(const Array& params, bool fHelp)
             txVariants.push_back(tx);
         }
         catch (std::exception &e) {
-            throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+            PrintException(&e, "signrawtransaction");
+            throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed std::exception");
         }
     }
 
@@ -561,7 +564,8 @@ Value sendrawtransaction(const Array& params, bool fHelp)
         ssData >> tx;
     }
     catch (std::exception &e) {
-        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+        PrintException(&e, "sendrawtransaction");
+        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed std::exception");
     }
     uint256 hashTx = tx.GetHash();
 
@@ -581,7 +585,7 @@ Value sendrawtransaction(const Array& params, bool fHelp)
         // push to local node
         CTxDB txdb("r");
         if (!tx.AcceptToMemoryPool(txdb))
-            throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX rejected");
+            throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX rejected by mempool");
 
         SyncWithWallets(tx, NULL, true);
     }
