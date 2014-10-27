@@ -4074,11 +4074,11 @@ int32_t got_newpeer(const char *ip_port)
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     while ( did_SuperNET_init == 0 )
     {
-        fprintf(stderr,"got_newpeer(%s) %d before initialized\n",numearly,ip_port);
+        fprintf(stderr,"got_newpeer(%s) %d before initialized\n",ip_port,numearly);
         numearly++;
-        earlybirds = realloc(earlybirds,(numearly+1) * sizeof(*earlybirds));
+        earlybirds = (char **)realloc(earlybirds,(numearly+1) * sizeof(*earlybirds));
         earlybirds[numearly] = 0;
-        earlybirds[numearly-1] = malloc(strlen(ip_port)+1);
+        earlybirds[numearly-1] = (char *)malloc(strlen(ip_port)+1);
         strcpy(earlybirds[numearly-1],ip_port);
         return(0);
     }
@@ -4094,7 +4094,7 @@ int32_t got_newpeer(const char *ip_port)
         earlybirds = 0;
         numearly = 0;
     }
-    issue_gotnewpeer(ip_port);
+    issue_gotnewpeer((char *)ip_port);
     return(0);
 }
 
