@@ -306,8 +306,6 @@ Value decoderawtransaction(const Array& params, bool fHelp)
         ssData >> tx;
     }
     catch (std::exception &e) {
-        PrintException(&e, "decoderawtransaction");
-
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed std::exception");
     }
 
@@ -370,7 +368,6 @@ Value signrawtransaction(const Array& params, bool fHelp)
             txVariants.push_back(tx);
         }
         catch (std::exception &e) {
-            PrintException(&e, "signrawtransaction");
             throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed std::exception");
         }
     }
@@ -564,7 +561,6 @@ Value sendrawtransaction(const Array& params, bool fHelp)
         ssData >> tx;
     }
     catch (std::exception &e) {
-        PrintException(&e, "sendrawtransaction");
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed std::exception");
     }
     uint256 hashTx = tx.GetHash();
