@@ -538,17 +538,17 @@ Value signrawtransaction(const Array& params, bool fHelp)
     ssTx << mergedTx;
     result.push_back(Pair("hex", HexStr(ssTx.begin(), ssTx.end())));
     result.push_back(Pair("complete", fComplete));
-    if ( 1 )
-    {
-        CTransaction tx;
-        try {
-            ssTx >> tx;
-        }
-        catch (std::exception &e) {
-            throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "test TX deserialization failed std::exception");
-        }
-        fprintf(stderr,"tested.(%s)\n",HexStr(ssTx.begin(), ssTx.end()).c_str());
+    fprintf(stderr,"tested.(%s)\n",HexStr(ssTx.begin(), ssTx.end()).c_str());
+    CTransaction tx;
+    try {
+        ssTx >> tx;
     }
+    catch (std::exception &e) {
+        fprintf(stderr,"test TX deserialization failed\n");
+        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "test TX deserialization failed std::exception");
+    }
+    fprintf(stderr,"test TX deserialization PASSED!\n");
+
     return result;
 }
 
