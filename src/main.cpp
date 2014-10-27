@@ -4044,8 +4044,8 @@ char *SuperNET_JSON(char *JSONstr)
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-    if ( retstr != 0 )
-        fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s)\n",retstr,jsonstr);
+    //if ( retstr != 0 )
+    //    fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s)\n",retstr,jsonstr);
     free(jsonstr);
     return(retstr);
 }
@@ -4165,10 +4165,10 @@ extern "C" void *poll_for_broadcasts(void *args)
     cJSON *json;
     int32_t duration,len;
     unsigned char data[4098];
-    char params[4096],buf[8192],destip[1024],ptrstr[64],*retstr;
+    char params[4096],buf[8192],destip[1024],txidstr[64],*retstr;
     while ( 1 )
     {
-        sleep((rand() % 10) + 1);
+        sleep(1);
         //printf("ISSUE BTCDpoll\n");
         sprintf(params,"{\"requestType\":\"BTCDpoll\"}");
         retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
@@ -4203,8 +4203,9 @@ extern "C" void *poll_for_broadcasts(void *args)
                     if ( buf[0] != 0 )
                     {
                         unstringify(buf);
-                        copy_cJSON(ptrstr,cJSON_GetObjectItem(json,"ptr"));
-                        fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: (%s) for %s\n",buf,ptrstr);
+                        copy_cJSON(txidstr,cJSON_GetObjectItem(json,"txid"));
+                        if ( txidstr[0] != 0 )
+                            fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: (%s) for [%s]\n",buf,txidstr);
                     }
                     //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: unrecognised case duration.%d destip.(%s)\n",duration,destip);
                 }

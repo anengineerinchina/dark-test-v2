@@ -35,18 +35,40 @@ struct per_session_data__http
 
 int32_t is_BTCD_command(cJSON *json)
 {
+    // RPC.({"requestType":"BTCDjson","json":"{\"requestType\":\"telepodacct\"}"}) wsi.0x7f3650035cc0 user.0x7f3650037920
     char *BTCDcmds[] = { "maketelepods", "teleport", "telepodacct" };
-    char request[MAX_JSON_FIELD];
-    long i;
+    char request[MAX_JSON_FIELD],jsonstr[MAX_JSON_FIELD];
+    long i,iter;
+    cJSON *json2 = 0;
     if ( extract_cJSON_str(request,sizeof(request),json,"requestType") > 0 )
     {
-        for (i=0; i<(sizeof(BTCDcmds)/sizeof(*BTCDcmds)); i++)
+        for (iter=0; iter<2; iter++)
         {
-            //printf("(%s vs %s) ",request,BTCDcmds[i]);
-            if ( strcmp(request,BTCDcmds[i]) == 0 )
-                return(1);
+            for (i=0; i<(sizeof(BTCDcmds)/sizeof(*BTCDcmds)); i++)
+            {
+                //printf("(%s vs %s) ",request,BTCDcmds[i]);
+                if ( strcmp(request,BTCDcmds[i]) == 0 )
+                {
+                    //printf("%s is BTCD command\n",request);
+                    return(1);
+                }
+            }
+            if ( iter == 0 )
+            {
+                if ( (json= cJSON_GetObjectItem(json,"json")) != 0 )
+                {
+                    copy_cJSON(jsonstr,json);
+                    unstringify(jsonstr);
+                    if ( (json2= cJSON_Parse(jsonstr)) != 0 )
+                    {
+                        if ( extract_cJSON_str(request,sizeof(request),json2,"requestType") <= 0 )
+                            break;
+                    }
+                } else break;
+            } else if ( json2 != 0 ) free_json(json2);
         }
     }
+    //printf("not BTCD command requestType.(%s)\n",request);
     return(0);
 }
 
@@ -261,7 +283,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 {
     static int counter;
     int32_t duration,len;
-    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2;
+    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2,**ptrs;
     counter++;
     strcpy(retbuf,"{\"result\":\"nothing pending\"}");
     //printf("BTCDpoll.%d\n",counter);
@@ -307,8 +329,14 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     {
         if ( (ptr= queue_dequeue(&ResultsQ)) != 0 )
         {
-            printf("Got ResultsQ.(%s)\n",ptr);
-            return(ptr);
+            memcpy(&ptrs,ptr,sizeof(ptrs));
+            fprintf(stderr,"Got ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
+            if ( ptrs[0] != 0 )
+                free(ptrs[0]);
+            if ( ptrs[1] != 0 )
+                free(ptrs[1]);
+            free(ptrs);
+            strcpy(retbuf,ptr+sizeof(ptrs));
         }
     }
     return(clonestr(retbuf));

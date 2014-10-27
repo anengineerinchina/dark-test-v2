@@ -92,6 +92,7 @@ void SuperNET_idler(uv_idle_t *handle)
     struct udp_queuecmd *qp;
     struct write_req_t *wr,*firstwr = 0;
     int32_t r;
+    long len;
     char *jsonstr,*retstr,**ptrs,*str,*str2,retbuf[MAX_JSON_FIELD*4];
     if ( Finished_init == 0 )
         return;
@@ -134,22 +135,32 @@ void SuperNET_idler(uv_idle_t *handle)
             char *call_SuperNET_JSON(char *JSONstr);
             jsonstr = ptrs[0];
             //printf("dequeue JSON_Q.(%s)\n",jsonstr);
-            /*if ( (retstr= call_SuperNET_JSON(jsonstr)) == 0 )
+            if ( (retstr= call_SuperNET_JSON(jsonstr)) == 0 )
                 retstr = clonestr("{\"result\":null}");
-            str = stringifyM(retstr);
-            str2 = stringifyM(jsonstr);
-            sprintf(retbuf,"{\"result\":\"%s\",\"ptr\":\"%p\",\"arg\":\"%s\"}",str,ptrs,str2);
-            queue_enqueue(&ResultsQ,clonestr(retbuf));
-            free(str); free(str2); free(ptrs[0]); free(ptrs[1]); free(ptrs);*/
+            if ( ptrs[2] != 0 )
+            {
+                str = stringifyM(retstr);
+                str2 = stringifyM(jsonstr);
+                memcpy(retbuf,&ptrs,sizeof(ptrs));
+                sprintf(retbuf+sizeof(ptrs),"{\"result\":%s,\"txid\":\"%llu\"}",str,(long long)ptrs[2]);
+                free(str); free(str2);
+                len = sizeof(ptrs) + strlen(retbuf+sizeof(ptrs)) + 1;
+                str = malloc(len);
+                memcpy(str,retbuf,len);
+                queue_enqueue(&ResultsQ,str);
+            }
+            ptrs[1] = retstr;
+
+            //free(ptrs[0]); free(ptrs[1]); free(ptrs);
             
-            //printf("dequeue JSON_Q.(%s)\n",jsonstr);
+            /*printf("dequeue JSON_Q.(%s)\n",jsonstr);
             if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
             {
                 //printf("(%s) -> (%s)\n",jsonstr,retstr);
                 ptrs[1] = retstr;
             } else ptrs[1] = clonestr("{\"result\":null}");
             //printf("JSON_Q ret.(%s)\n",retstr);
-            free(jsonstr);
+            free(jsonstr);*/
 
             lastattempt = millis;
         }
@@ -278,7 +289,7 @@ char *call_SuperNET_JSON(char *JSONstr)
         printf("Finished_init still 0\n");
         return(clonestr("{\"result\":null}"));
     }
-printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
+//printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
         expand_nxt64bits(NXTaddr,cp->srvpubnxtbits);
@@ -314,22 +325,30 @@ printf("got call_SuperNET_JSON.(%s)\n",JSONstr);
 char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
 {
     char **ptrs,*retstr,retbuf[1024];
-    ptrs = calloc(2,sizeof(*ptrs));
+    uint64_t txid;
+    ptrs = calloc(3,sizeof(*ptrs));
     ptrs[0] = clonestr(JSONstr);
+    if ( blockflag == 0 )
+    {
+        txid = calc_txid((uint8_t *)JSONstr,(int32_t)strlen(JSONstr));
+        ptrs[2] = (char *)txid;
+    }
    // printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
     queue_enqueue(&JSON_Q,ptrs);
     if ( blockflag != 0 )
     {
         while ( (retstr= ptrs[1]) == 0 )
             usleep(1000);
+        if ( ptrs[0] != 0 )
+            free(ptrs[0]);
         free(ptrs);
         //printf("block.%d returned.(%s)\n",blockflag,retstr);
         return(retstr);
     }
     else
     {
-        sprintf(retbuf,"{\"result\":\"pending SuperNET API call\",\"ptr\":\"%p\"}",ptrs);
-        //printf("block.%d returned.(%s)\n",blockflag,retbuf);
+        sprintf(retbuf,"{\"result\":\"pending SuperNET API call\",\"txid\":\"%lld\"}",(long long)txid);
+        //printf("queue.%d returned.(%s)\n",blockflag,retbuf);
         return(clonestr(retbuf));
     }
 }
