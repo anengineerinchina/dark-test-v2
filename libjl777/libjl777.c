@@ -413,7 +413,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
         if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
             port = (stats->p2pport == 0) ? BTCD_PORT : stats->p2pport;
         else port = BTCD_PORT;
-        fprintf(stderr,"port.%d\n",port);
+        //fprintf(stderr,"port.%d\n",port);
         sprintf(ip_port,"%s:%d",pserver->ipaddr,port);
         txid ^= calc_ipbits(pserver->ipaddr);
         if ( Debuglevel > 0 )
