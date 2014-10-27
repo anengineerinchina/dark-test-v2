@@ -4077,8 +4077,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	static long retlen;
 	static char *retbuf;
 	int32_t len;
-	
-    char *retstr,params[MAX_JSON_FIELD*2];
+    char *retstr,params[MAX_JSON_FIELD*2],*str;
     //printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
 	if ( msg == 0 || msg[0] == 0 )
 	{
@@ -4088,7 +4087,9 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
     memset(params,0,sizeof(params));
 	//retstr = SuperNET_gotpacket(msg,duration,(char *)from->addr.ToString().c_str());
    // static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip", 0 };
-    sprintf(params,"{\"requestType\":\"gotpacket\",\"msg\":\"%s\",\"dur\":%d,\"ip_port\":\"%s\"}",msg,duration,(char *)from->addr.ToString().c_str());
+    str = stringifyM(msg);
+    sprintf(params,"{\"requestType\":\"gotpacket\",\"msg\":\"%s\",\"dur\":%d,\"ip_port\":\"%s\"}",str,duration,(char *)from->addr.ToString().c_str());
+    free(str);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr == 0 )
     {
@@ -4103,7 +4104,7 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 			retbuf = (char *)realloc(retbuf,len+1);
 		}
 		strcpy(retbuf,retstr);
-		fprintf(stderr,"\n<<<<<<<<<<<<< received message. msg: %s from %s retstr.(%s)\n",msg,from->addr.ToString().c_str(),retbuf);
+		fprintf(stderr,"\n<<<<<<<<<<<<< BTCD received message. msg: %s from %s retstr.(%s)\n",msg,from->addr.ToString().c_str(),retbuf);
 		free(retstr);
 	}
 	return(retbuf);

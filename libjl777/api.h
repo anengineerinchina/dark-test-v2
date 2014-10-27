@@ -33,7 +33,7 @@ struct per_session_data__http
 	int fd;
 };
 
-static void dump_handshake_info(struct libwebsocket *wsi)
+void dump_handshake_info(struct libwebsocket *wsi)
 {
 	int n;
 	static const char *token_names[] = {
@@ -178,7 +178,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             str[len] = 0;
             //if ( wsi != 0 )
             //dump_handshake_info(wsi);
-            fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s) wsi.%p user.%p\n",str,wsi,user);
+            //fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s) wsi.%p user.%p\n",str,wsi,user);
             //>>>>>>>>>>>>>> SuperNET received RPC.({"requestType":"BTCDjson","json":{\"requestType\":\"getpeers\"}})
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse(str)) != 0 )
@@ -1175,6 +1175,8 @@ char *gotpacket_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr
     char *SuperNET_gotpacket(char *msg,int32_t duration,char *ip_port);
     char msg[MAX_JSON_FIELD],ip_port[MAX_JSON_FIELD];
     int32_t duration;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(msg,objs[0]);
     duration = (int32_t)get_API_int(objs[1],600);
     copy_cJSON(ip_port,objs[2]);
@@ -1185,6 +1187,8 @@ char *gotnewpeer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
 {
     int32_t got_newpeer(char *ip_port);
     char ip_port[MAX_JSON_FIELD];
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(ip_port,objs[0]);
     if ( ip_port[0] != 0 )
     {
@@ -1200,6 +1204,8 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     char jsonstr[MAX_JSON_FIELD],ipaddr[64],*retstr = 0;
     cJSON *json;
     int32_t port;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(jsonstr,objs[0]);
     if ( jsonstr[0] != 0 )
     {
