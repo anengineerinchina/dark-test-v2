@@ -110,7 +110,8 @@ char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char
     double starttime;
     
     numretries=0;
-    //printf("debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
+    if ( strcmp(command,"SuperNET") != 0 )
+    fprintf(stderr,"debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
     starttime = milliseconds();
     
@@ -189,7 +190,7 @@ try_again:
     }
     else
     {
-        if ( command != 0 )
+        if ( command != 0 && strcmp("SuperNET",command) != 0 )
         {
             count++;
             elapsedsum += (milliseconds() - starttime);
@@ -199,6 +200,7 @@ try_again:
         }
         else
         {
+            fprintf(stderr,"SuperNET.(%s) -> (%s)\n",params,s.ptr);
             count2++;
             elapsedsum2 += (milliseconds() - starttime);
             ///if ( (count2 % 10000) == 0) exit(0);
