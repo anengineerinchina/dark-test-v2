@@ -59,7 +59,7 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
     cJSON *json,*result,*error;
     if ( command == 0 || rpcstr == 0 || rpcstr[0] == 0 )
     {
-        fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: %s post_process_bitcoind_RPC.%s.[%s]\n",debugstr,command,rpcstr);
+        //fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: %s post_process_bitcoind_RPC.%s.[%s]\n",debugstr,command,rpcstr);
         return(rpcstr);
     }
     json = cJSON_Parse(rpcstr);
@@ -85,11 +85,11 @@ char *post_process_bitcoind_RPC(char *debugstr,char *command,char *rpcstr)
             }
         }
         else if ( (error->type&0xff) != cJSON_NULL || (result->type&0xff) != cJSON_NULL )
-            printf("%s post_process_bitcoind_RPC (%s) error.%s\n",debugstr,command,rpcstr);
+            fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: %s post_process_bitcoind_RPC (%s) error.%s\n",debugstr,command,rpcstr);
         free(rpcstr);
     } else retstr = rpcstr;
     free_json(json);
-    fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: postprocess returns.(%s)\n",retstr);
+    //fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: postprocess returns.(%s)\n",retstr);
     return(retstr);
 }
 #endif
@@ -113,7 +113,8 @@ char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char
     double starttime;
     
     numretries=0;
-    fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
+    if ( debugstr != 0 && strcmp(debugstr,"BTCD") == 0 )
+        fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
     starttime = milliseconds();
     curl_handle = curl_easy_init();
@@ -134,7 +135,7 @@ try_again:
     databuf = 0;
     if ( params != 0 )
     {
-        if ( command != 0 && strcmp(command,"SuperNET") != 0 )
+        if ( debugstr == 0 || strcmp(debugstr,"BTCD") != 0 )
         {
             len = strlen(params);
             if ( len > 0 && params[0] == '[' && params[len-1] == ']' ) {
@@ -164,9 +165,9 @@ try_again:
     if ( res != CURLE_OK )
     {
         numretries++;
-        if ( strcmp("SuperNET",command) == 0 )
+        if ( debugstr != 0 && strcmp("BTCD",debugstr) != 0 )
         {
-            fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: SuperNET timeout params.(%s) s.ptr.(%s)\n",params,s.ptr);
+            fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: BTCD.%s timeout params.(%s) s.ptr.(%s) err.%d\n",command,params,s.ptr,res);
             free(s.ptr);
             return(0);
         }
@@ -184,7 +185,7 @@ try_again:
     }
     else
     {
-        if ( command != 0 && (debugstr == 0 || (debugstr != 0 && strcmp("BTCDpoll",debugstr) != 0)) )
+        if ( command != 0 && (debugstr == 0 || (debugstr != 0 && strcmp("BTCD",debugstr) != 0)) )
         {
             count++;
             elapsedsum += (milliseconds() - starttime);
@@ -194,7 +195,7 @@ try_again:
         }
         else
         {
-            fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: BTCDpoll SuperNET.(%s) -> (%s)\n",params,s.ptr);
+            fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: BTCD.(%s) -> (%s)\n",params,s.ptr);
             count2++;
             elapsedsum2 += (milliseconds() - starttime);
             ///if ( (count2 % 10000) == 0) exit(0);
