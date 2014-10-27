@@ -332,7 +332,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
         if ( (ptr= queue_dequeue(&ResultsQ)) != 0 )
         {
             memcpy(&ptrs,ptr,sizeof(ptrs));
-            fprintf(stderr,"Got ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
+            //fprintf(stderr,"Got ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
             if ( ptrs[0] != 0 )
                 free(ptrs[0]);
             if ( ptrs[1] != 0 )
@@ -783,13 +783,10 @@ char *maketelepods_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
     uint64_t value;
     char coinstr[MAX_JSON_FIELD],*retstr = 0;
     if ( prevaddr != 0 )
-    {
-        printf("prevaddr.%p\n",prevaddr);
         return(0);
-    }
     value = (SATOSHIDEN * get_API_float(objs[0]));
     copy_cJSON(coinstr,objs[1]);
-    printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
+    //printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
     if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 && value > 0 )
         retstr = maketelepods(NXTACCTSECRET,sender,coinstr,value);
     else retstr = clonestr("{\"error\":\"invalid maketelepods_func arguments\"}");
@@ -1319,11 +1316,11 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     static char *maketelepods[] = { (char *)maketelepods_func, "maketelepods", "V", "amount", "coin", 0 };
     static char *teleport[] = { (char *)teleport_func, "teleport", "V", "amount", "contact", "coin", "minage", "withdraw", 0 };
     static char *telepodacct[] = { (char *)telepodacct_func, "telepodacct", "V", "amount", "contact", "coin", "comment", "cmd", "withdraw", 0 };
-   //static char *telepod[] = { (char *)telepod_func, "telepod", "V", "crc", "i", "h", "c", "v", "a", "t", "o", "p", "k", "L", "s", "M", "N", "D", 0 };
+    //static char *telepod[] = { (char *)telepod_func, "telepod", "V", "crc", "i", "h", "c", "v", "a", "t", "o", "p", "k", "L", "s", "M", "N", "D", 0 };
     //static char *transporter[] = { (char *)transporter_func, "transporter", "V", "coin", "height", "minage", "value", "totalcrc", "telepods", "M", "N", "sharenrs", "pubaddr", 0 };
     //static char *transporterstatus[] = { (char *)transporterstatus_func, "transporter_status", "V", "status", "coin", "totalcrc", "value", "num", "minage", "height", "crcs", "sharei", "M", "N", "sharenrs", "ind", "pubaddr", 0 };
     
-   // InstantDEX
+    // InstantDEX
     static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "signedtx", 0 };
     static char *processutx[] = { (char *)processutx_func, "processutx", "V", "utx", "sig", "full", 0 };
     static char *orderbook[] = { (char *)orderbook_func, "orderbook", "V", "obookid", "polarity", "allfields", 0 };

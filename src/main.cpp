@@ -4036,16 +4036,25 @@ char *unstringify(char *str)
     return(str);
 }
 
+int Pending_RPC;
 char *SuperNET_JSON(char *JSONstr)
 {
     char *retstr,*jsonstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    while ( Pending_RPC != 0 )
+    {
+        fprint(stderr,".");
+        sleep(1);
+    }
     memset(params,0,sizeof(params));
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-    //if ( retstr != 0 )
-    //    fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s)\n",retstr,jsonstr);
+    if ( retstr != 0 )
+    {
+        Pending_RPC++;
+        //    fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s)\n",retstr,jsonstr);
+    }
     free(jsonstr);
     return(retstr);
 }
@@ -4199,6 +4208,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                 }
                 else
                 {
+                    Pending_RPC--;
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"result"));
                     if ( buf[0] != 0 )
                     {

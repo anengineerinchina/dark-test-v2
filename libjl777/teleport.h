@@ -51,7 +51,9 @@ uint64_t calc_transporter_fee(struct coin_info *cp,uint64_t satoshis)
 
 void update_telepod(struct telepod *pod)
 {
+    fprintf(stderr,"call update_telepod\n");
     update_storage(TELEPOD_DATA,pod->txid,&pod->H);
+    fprintf(stderr,"back update_telepod\n");
 }
 
 char *_podstate(int32_t podstate)
@@ -148,7 +150,7 @@ struct telepod *create_telepod(uint32_t createtime,char *coinstr,uint64_t satosh
     if ( privkey != 0 )
         strcpy((void *)pod->privkey,privkey);
     pod->crc = calc_telepodcrc(pod);
-    disp_telepod("create",pod);
+    //disp_telepod("create",pod);
     return(pod);
 }
 
@@ -208,6 +210,8 @@ int32_t get_telepod_info(uint64_t *unspentp,uint32_t *createtimep,char *coinstr,
 
 uint64_t scan_telepods(char *coinstr)
 {
+   // static int didinit;
+   // static portable_mutex_t mutex;
     uint64_t sum = 0;
     int32_t i,num,n;
     cJSON *array,*item;
@@ -223,8 +227,14 @@ uint64_t scan_telepods(char *coinstr)
     num = 0;
     if ( (cp= get_coin_info(coinstr)) != 0 )
     {
-        //printf("scan %s\n",coinstr);
+        printf("scan %s\n",coinstr);
         sprintf(params,"%d, 99999999",cp->minconfirms);
+        /*if ( didinit == 0 )
+        {
+            portable_mutex_init(&mutex);
+            didinit = 1;
+        }
+        portable_mutex_lock(&mutex);*/
         retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"listunspent",params);
         if ( retstr != 0 && retstr[0] != 0 )
         {
@@ -237,12 +247,13 @@ uint64_t scan_telepods(char *coinstr)
                     {
                         item = cJSON_GetArrayItem(array,i);
                         copy_cJSON(acct,cJSON_GetObjectItem(item,"account"));
-                        fprintf(stderr,"%s.%d acct.%s\n",coinstr,i,acct);
+                        //fprintf(stderr,"%s.%d acct.%s\n",coinstr,i,acct);
                         if ( strcmp(acct,"telepods") == 0 )
                         {
                             num++;
                             if ( (pod= parse_unspent_json(cp,item)) != 0 )
                             {
+                                //fprintf(stderr,"pod.%p parse_unspent\n",pod);
                                 if ( (hp= find_storage(TELEPOD_DATA,pod->txid)) == 0 )
                                 {
                                     disp_telepod("new",pod);
@@ -261,7 +272,7 @@ uint64_t scan_telepods(char *coinstr)
                                 }
                                 sum += pod->satoshis;
                                 free(pod);
-                            }
+                            } else fprintf(stderr,"parse_unspent null\n");
                         }
                     }
                 }
@@ -269,6 +280,7 @@ uint64_t scan_telepods(char *coinstr)
             }
             free(retstr);
         }
+        //portable_mutex_unlock(&mutex);
     }
     printf("num telepods.%d sum %.8f\n",num,dstr(sum));
     return(sum);
@@ -498,7 +510,7 @@ int32_t make_traceable_telepods(struct coin_info *cp,char *refcipher,cJSON *ciph
 char *maketelepods(char *NXTACCTSECRET,char *sender,char *coinstr,int64_t value)
 {
     struct coin_info *cp;
-    printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
+    //printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
     if ( (cp= get_coin_info(coinstr)) != 0 )
     {
         if ( make_traceable_telepods(cp,cp->name,cp->ciphersobj,value) <= 0 )
@@ -534,8 +546,6 @@ double calc_convamount(char *base,char *rel,uint64_t satoshis)
 
 struct telepod **available_telepods(int32_t *nump,double *availp,double *maturingp,double *inboundp,double *outboundp,double *doublespentp,double *cancelledp,char *coinstr,int32_t minage)
 {
-    static int didinit;
-    static portable_mutex_t mutex;
     uint32_t now = (uint32_t)time(NULL);
     DB *dbp = get_selected_database(TELEPOD_DATA);
     struct telepod *pod,**pods = 0;
@@ -551,12 +561,8 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
     max = num_in_db(TELEPOD_DATA);
     max += 100;
     m = 0;
-    if ( didinit == 0 )
-    {
-        portable_mutex_init(&mutex);
-        didinit = 1;
-    }
-    portable_mutex_lock(&mutex);
+    printf("available_telepods\n");
+    //DB_lock(TELEPOD_DATA);
     dbp->cursor(dbp,NULL,&cursorp,0);
     if ( cursorp != 0 )
     {
@@ -566,7 +572,7 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         {
             m++;
             pod = data.data;
-            //fprintf(stderr,"%s %p minage.%d found.%d %s size.%d/%d podstate.%d createtime.%d\n",coinstr,pod,minage,m,key.data,pod->H.datalen,data.size,pod->podstate,pod->H.createtime);
+            fprintf(stderr,"%s %p minage.%d found.%d %s size.%d/%d podstate.%d createtime.%d\n",coinstr,pod,minage,m,key.data,pod->H.datalen,data.size,pod->podstate,pod->H.createtime);
             podstate = pod->podstate;
             createtime = pod->H.createtime;
             if ( minage < 0 )
@@ -601,13 +607,13 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         }
         cursorp->close(cursorp);
     }
-    portable_mutex_unlock(&mutex);
+    //DB_unlock(TELEPOD_DATA);
     //printf("find_closer_Kstored returns n.%d %p\n",n,sps);
     if ( m > num_in_db(TELEPOD_DATA) )
         set_num_in_db(TELEPOD_DATA,m);
     if ( pods != 0 )
         pods[n] = 0;
-   // printf("set nump.%d\n",n);
+    //printf("set nump.%d\n",n);
     *nump = n;
     return(pods);
 }
@@ -669,6 +675,7 @@ int32_t poll_telepods(char *relstr)
     int32_t flag,i,err,n,m = 0;
     struct telepod **pods,*pod,*clonepod;
     double avail,inbound,outbound,maturing,doublespent,cancelled;
+return(0);
     pods = available_telepods(&n,&avail,&maturing,&inbound,&outbound,&doublespent,&cancelled,relstr,-1);
     if ( pods != 0 )
     {
@@ -1040,7 +1047,6 @@ char *telepodacct(char *contactstr,char *coinstr,uint64_t amount,char *withdrawa
         }
     } else scan_telepods(coinstr);
     pods = available_telepods(&n,&avail,&maturing,&inbound,&outbound,&doublespent,&cancelled,coinstr,-1);
-    printf("numtelepods.%d\n",n);
     sprintf(retbuf,"{\"result\":\"telepodacct %.8f %s \",\"avail\":%.8f,\"inbound\":%.8f,\"outbound\":%.8f,\"maturing\":%.8f,\"doublespent\":%.8f,\"cancelled\":%.8f}",dstr(amount),coinstr,avail,inbound,outbound,maturing,doublespent,cancelled);
     if ( pods != 0 )
     {
