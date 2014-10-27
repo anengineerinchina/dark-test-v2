@@ -4165,7 +4165,7 @@ extern "C" void *poll_for_broadcasts(void *args)
     cJSON *json;
     int32_t duration,len;
     unsigned char data[4098];
-    char params[4096],buf[8192],destip[1024],*retstr;
+    char params[4096],buf[8192],destip[1024],ptrstr[64],*retstr;
     while ( 1 )
     {
         sleep((rand() % 10) + 1);
@@ -4193,10 +4193,21 @@ extern "C" void *poll_for_broadcasts(void *args)
                     if ( buf[0] != 0 )
                     {
                         unstringify(buf);
-                     	fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
+                        fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
                         SuperNET_broadcast(buf,duration);
                     }
-                } //else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: unrecognised case duration.%d destip.(%s)\n",duration,destip);
+                }
+                else
+                {
+                    copy_cJSON(buf,cJSON_GetObjectItem(json,"result"));
+                    if ( buf[0] != 0 )
+                    {
+                        unstringify(buf);
+                        copy_cJSON(ptrstr,cJSON_GetObjectItem(json,"ptr"));
+                        fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: (%s) for %s\n",buf,ptrstr);
+                    }
+                    //fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: unrecognised case duration.%d destip.(%s)\n",duration,destip);
+                }
                 free_json(json);
             } else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
             free(retstr);

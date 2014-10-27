@@ -257,7 +257,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     strcpy(retbuf,"{\"result\":\"nothing pending\"}");
     //printf("BTCDpoll.%d\n",counter);
     //BTCDpoll post_process_bitcoind_RPC.SuperNET can't parse.({"msg":"[{"requestType":"ping","NXT":"13434315136155299987","time":1414310974,"pubkey":"34b173939544eb01515119b5e0b05880eadaae3d268439c9cc1471d8681ecb6d","ipaddr":"209.126.70.159"},{"token":"im9n7c9ka58g3qq4b2oe1d8p7mndlqk0pj4jj1163pkdgs8knb0vsreb0kf6luo1bbk097buojs1k5o5c0ldn6r6aueioj8stgel1221fq40f0cvaqq0bciuniit0isi0dikd363f3bjd9ov24iltirp6h4eua0q"}]","duration":86400})
-    if ( (counter & 1) == 0 )
+    if ( (counter % 3) == 0 )
     {
         if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
         {
@@ -277,7 +277,7 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
             free(ptr);
         }
     }
-    else
+    else if ( (counter % 3) == 1 )
     {
         if ( (ptr= queue_dequeue(&NarrowQ)) != 0 )
         {
@@ -292,6 +292,14 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
                 //printf("send back narrow.(%s)\n",retbuf);
             } else printf("BTCDpoll NarrowQ illegal len.%d\n",len);
             free(ptr);
+        }
+    }
+    else
+    {
+        if ( (ptr= queue_dequeue(&ResultsQ)) != 0 )
+        {
+            printf("Got ResultsQ.(%s)\n",ptr);
+            return(ptr);
         }
     }
     return(clonestr(retbuf));
@@ -723,9 +731,9 @@ char *telepodacct_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevad
     copy_cJSON(comment,objs[3]);
     copy_cJSON(cmd,objs[4]);
     copy_cJSON(withdrawaddr,objs[5]);
-    if ( sender[0] != 0 && valid > 0 && contactstr[0] != 0 )
+    if ( sender[0] != 0 && valid > 0 )
         retstr = telepodacct(contactstr,coinstr,(uint64_t)(SATOSHIDEN * amount),withdrawaddr,comment,cmd);
-    else retstr = clonestr("{\"error\":\"invalid teleport request\"}");
+    else retstr = clonestr("{\"error\":\"invalid telepodacct request\"}");
     return(retstr);
 }
 
@@ -1214,7 +1222,7 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
             port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)prevaddr);
         else port = 0, strcpy(ipaddr,"noprevaddr");
         unstringify(jsonstr);
-        printf("BTCDjson jsonstr.(%s) from (%s:%d)\n",jsonstr,ipaddr,port);
+        //printf("BTCDjson jsonstr.(%s) from (%s:%d)\n",jsonstr,ipaddr,port);
         json = cJSON_Parse(jsonstr);
         if ( json != 0 )
         {
