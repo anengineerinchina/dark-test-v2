@@ -73,7 +73,7 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
 // this protocol server (always the first one) just knows how to do HTTP
 static int callback_http(struct libwebsocket_context *context,struct libwebsocket *wsi,enum libwebsocket_callback_reasons reason,void *user,void *in,size_t len)
 {
-	char buf[MAX_JSON_FIELD],*retstr;
+	char buf[MAX_JSON_FIELD],*retstr,*str;
     cJSON *json,*array;
     //if ( len != 0 )
     //printf("reason.%d len.%ld\n",reason,len);
@@ -115,11 +115,12 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY:
-            
-            ((char *)in)[len] = 0;
-            //printf("RPC.(%s)\n",(char *)in);
+            str = malloc(len+1);
+            memcpy(str,in,len);
+            str[len] = 0;
+            fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s)\n",str);
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
-            if ( (json= cJSON_Parse((char *)in)) != 0 )
+            if ( (json= cJSON_Parse(str)) != 0 )
             {
                 if ( (array= cJSON_GetObjectItem(json,"params")) != 0 && is_cJSON_Array(array) != 0 )
                 {
@@ -135,21 +136,16 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                         return_http_str(wsi,retstr);
                         free(retstr);
                         free_json(json);
+                        free(str);
                         return(-1);
                     } else printf("(%s) returned null\n",buf);
                 }
-                else
-                {
-                    strncpy(buf,in,sizeof(buf)-1);
-                    buf[sizeof(buf)-1] = '\0';
-                    //if ( len < 20 )
-                    //    buf[len] = '\0';
-                    lwsl_notice("LWS_CALLBACK_HTTP_BODY: %s\n",buf);
-                }
+                else lwsl_notice("LWS_CALLBACK_HTTP_BODY: (%s)\n",str);
                 free_json(json);
             }
             else printf("couldnt parse (%s)\n",(char *)in);
             return_http_str(wsi,"{\"error\":\"couldnt parse JSON\"}");
+            free(str);
             return(-1);
             break;
         case LWS_CALLBACK_HTTP_BODY_COMPLETION: // the whole sent body arried, close the connection
@@ -160,23 +156,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             //		lwsl_info("LWS_CALLBACK_HTTP_FILE_COMPLETION seen\n");
             return -1;
         case LWS_CALLBACK_HTTP_WRITEABLE:           // we can send more of whatever it is we were sending
-            /*do
-            {
-                n = (int)read(pss->fd,buffer,sizeof buffer);
-                if ( n < 0 ) // problem reading, close conn
-                    goto bail;
-                if ( n == 0 ) // sent it all, close conn
-                    goto flush_bail;
-                // because it's HTTP and not websocket, don't need to take care about pre and postamble
-                m = libwebsocket_write(wsi,buffer,n,LWS_WRITE_HTTP);
-                if ( m < 0 ) // write failed, close conn
-                    goto bail;
-                if ( m != n ) // partial write, adjust
-                    lseek(pss->fd,m - n,SEEK_CUR);
-            } while ( lws_send_pipe_choked(wsi) == 0 );
-            libwebsocket_callback_on_writable(context,wsi);
-            break;
-        flush_bail:
+         /*flush_bail:
             if ( lws_send_pipe_choked(wsi) == 0 )   // true if still partial pending
             {
                 libwebsocket_callback_on_writable(context, wsi);

@@ -4110,7 +4110,6 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
-	printf("SuperNET_broadcast(%s) dur.%d\n",msg,duration);
 	broadcastPubAddr(msg,duration);
 	return(0);
 }
@@ -4145,7 +4144,7 @@ extern "C" void *poll_for_broadcasts(void *args)
         //printf("ISSUE BTCDpoll\n");
         sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDpoll\\\"}\"]");
         retstr = bitcoind_RPC(0,(char *)"BTCDpoll",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-        fprintf(stderr,"BTCDgot params.(%s) retstr.(%s)\n",params,retstr);
+        fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: issued bitcoind_RPC params.(%s) -> retstr.(%s)\n",params,retstr);
         if ( retstr != 0 )
         {
             if ( (json= cJSON_Parse(retstr)) != 0 )
@@ -4157,7 +4156,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"hex"));
                     len = ((int32_t)strlen(buf) >> 1);
                     decode_hex(data,len,buf);
-                    printf("narrowcast %d bytes to %s\n",len,destip);
+                    fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: narrowcast %d bytes to %s\n",len,destip);
                     SuperNET_narrowcast(destip,data,len); //Send a PubAddr message to a specific peer
                 }
                 else if ( duration >= 0 )
@@ -4166,13 +4165,14 @@ extern "C" void *poll_for_broadcasts(void *args)
                     if ( buf[0] != 0 )
                     {
                         unstringify(buf);
+                     	fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
                         SuperNET_broadcast(buf,duration);
                     }
-                }
+                } else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: unrecognised case duration.%d destip.(%s)\n",duration,destip);
                 free_json(json);
-            } else fprintf(stderr,"poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
+            } else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
             free(retstr);
-        } else fprintf(stderr,"poll_for_broadcasts: bitcoind_RPC returns null\n");
+        } else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: bitcoind_RPC returns null\n");
     }
     return(0);
 }
