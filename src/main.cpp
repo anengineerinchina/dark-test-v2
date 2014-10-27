@@ -4000,8 +4000,10 @@ char *stringifyM(char *str)
     int32_t i,j,n;
     for (i=n=0; str[i]!=0; i++)
         n += (str[i] == '"') ? 2 : 1;
-    newstr = (char *)malloc(n + 1);
-    for (i=j=0; str[i]!=0; i++)
+    newstr = (char *)malloc(n + 3);
+    j = 0;
+    newstr[j++] = '"';
+    for (i=0; str[i]!=0; i++)
     {
         if ( str[i] == '"' )
         {
@@ -4010,6 +4012,7 @@ char *stringifyM(char *str)
         }
         else newstr[j++] = str[i];
     }
+    newstr[j++] = '"';
     newstr[j] = 0;
     return(newstr);
 }
@@ -4138,7 +4141,7 @@ extern "C" void *poll_for_broadcasts(void *args)
     char params[4096],buf[8192],destip[1024],*retstr;
     while ( 1 )
     {
-        sleep(1);
+        sleep(1) + sleep((rand() % 10) + 1);
         //printf("ISSUE BTCDpoll\n");
         sprintf(params,"{\"requestType\":\"BTCDpoll\"}");
         retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
@@ -4166,11 +4169,11 @@ extern "C" void *poll_for_broadcasts(void *args)
                      	fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: SuperNET_broadcast(%s) dur.%d\n",buf,duration);
                         SuperNET_broadcast(buf,duration);
                     }
-                } else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: unrecognised case duration.%d destip.(%s)\n",duration,destip);
+                } //else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: unrecognised case duration.%d destip.(%s)\n",duration,destip);
                 free_json(json);
             } else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
             free(retstr);
-        } else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: bitcoind_RPC returns null\n");
+        } //else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: bitcoind_RPC returns null\n");
     }
     return(0);
 }
