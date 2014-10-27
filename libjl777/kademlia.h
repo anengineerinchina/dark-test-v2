@@ -948,8 +948,8 @@ void every_minute(int32_t counter)
     cp = get_coin_info("BTCD");
     if ( cp == 0 )
         return;
-    printf("<<<<<<<<<<<<< EVERY_MINUTE\n");
-    p2p_publishpacket(get_pserver(0,"209.126.70.170",0,0),0);
+    //printf("<<<<<<<<<<<<< EVERY_MINUTE\n");
+    //p2p_publishpacket(get_pserver(0,"209.126.70.170",0,0),0);
     refresh_buckets(cp->srvNXTACCTSECRET);
     if ( broadcast_count == 0 )
     {
