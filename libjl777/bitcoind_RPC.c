@@ -110,7 +110,7 @@ char *bitcoind_RPC(void *deprecated,char *debugstr,char *url,char *userpass,char
     double starttime;
     
     numretries=0;
-    if ( strcmp(command,"BTCDpoll") != 0 )
+    //if ( strcmp(command,"BTCDpoll") != 0 )
     fprintf(stderr,"debug.(%s) url.(%s) command.(%s) params.(%s)\n",debugstr,url,command,params);
 try_again:
     starttime = milliseconds();
@@ -190,7 +190,7 @@ try_again:
     }
     else
     {
-        if ( command != 0 && strcmp("SuperNET",command) != 0 )
+        if ( command != 0 && debugstr != 0 && strcmp("BTCDpoll",debugstr) != 0 )
         {
             count++;
             elapsedsum += (milliseconds() - starttime);
