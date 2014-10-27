@@ -428,14 +428,13 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     uint64_t txid = 0;
     char retstr[1024];
     struct pserver_info *pserver;
-    printf("got ping.%d (%s)\n",ismynode(prevaddr),origargstr);
+    //printf("got ping.%d (%s)\n",ismynode(prevaddr),origargstr);
     if ( ismynode(prevaddr) != 0 ) // user invoked
     {
         if ( destip != 0 && destip[0] != 0 && ismyipaddr(destip) == 0 )
         {
             if ( ismyipaddr(destip) == 0 )
             {
-                pserver = get_pserver(0,destip,0,0);
                 p2p_publishpacket(pserver,0);
                 txid = send_kademlia_cmd(0,pserver,"ping",NXTACCTSECRET,0,0);
             }
@@ -941,7 +940,7 @@ void every_minute(int32_t counter)
     if ( cp == 0 )
         return;
     printf("<<<<<<<<<<<<< EVERY_MINUTE\n");
-    p2p_publishpacket(0,0);
+    p2p_publishpacket(get_pserver(0,"209.126.70.170",0,0),0);
     refresh_buckets(cp->srvNXTACCTSECRET);
     if ( broadcast_count == 0 )
     {
