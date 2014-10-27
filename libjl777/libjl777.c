@@ -305,7 +305,7 @@ char *call_SuperNET_JSON(char *JSONstr)
 
 char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
 {
-    char **ptrs,*retstr;
+    char **ptrs,*retstr,retbuf[1024];
     ptrs = calloc(2,sizeof(*ptrs));
     ptrs[0] = clonestr(JSONstr);
     //printf("QUEUE.(%s)\n",JSONstr);
@@ -319,8 +319,8 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
     }
     else
     {
-        sprintf(retstr,"{\"result\":\"pending SuperNET API call\",\"ptr\":\"%p\"}",ptrs);
-        return(clonestr(retstr));
+        sprintf(retbuf,"{\"result\":\"pending SuperNET API call\",\"ptr\":\"%p\"}",ptrs);
+        return(clonestr(retbuf));
     }
 //printf("block returned.(%s)\n",retstr);
 }
