@@ -139,7 +139,7 @@ try_again:
     databuf = 0;
     if ( params != 0 )
     {
-        if ( specialcase == 0 )
+        if ( command != 0 && specialcase == 0 )
         {
             len = strlen(params);
             if ( len > 0 && params[0] == '[' && params[len-1] == ']' ) {
@@ -199,7 +199,8 @@ try_again:
         }
         else
         {
-            fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: BTCD.(%s) -> (%s)\n",params,s.ptr);
+            if ( specialcase != 0 )
+                fprintf(stderr,"<<<<<<<<<<< bitcoind_RPC: BTCD.(%s) -> (%s)\n",params,s.ptr);
             count2++;
             elapsedsum2 += (milliseconds() - starttime);
             ///if ( (count2 % 10000) == 0) exit(0);
