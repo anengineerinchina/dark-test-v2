@@ -549,6 +549,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
         }
         uint256 hashTx = tx.GetHash();
         std::cout << hashTx << "hash of test deserialization" << std::endl;
+        fprintf(stderr,"tested.(%s)\n",HexStr(ssTx.begin(), ssTx.end()).c_str());
     }
     return result;
 }
