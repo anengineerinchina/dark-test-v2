@@ -125,7 +125,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 if ( (array= cJSON_GetObjectItem(json,"params")) != 0 && is_cJSON_Array(array) != 0 )
                 {
                     copy_cJSON(buf,cJSON_GetArrayItem(array,0));
-                    replace_backslashquotes(buf);
+                    unstringify(buf);
                     stripwhite_ns(buf,strlen(buf));
                     retstr = block_on_SuperNET(1,buf);
                 }
@@ -1126,25 +1126,32 @@ char *gotnewpeer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
     char ip_port[MAX_JSON_FIELD];
     copy_cJSON(ip_port,objs[0]);
     if ( ip_port[0] != 0 )
+    {
         queue_enqueue(&P2P_Q,clonestr(ip_port));
+        return(clonestr("{\"result\":\"ip_port queued\"}"));
+    }
     return(0);
 }
 
 char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr);
-    char jsonstr[MAX_JSON_FIELD],*retstr = 0;
-    cJSON *array;
+    char jsonstr[MAX_JSON_FIELD],ipaddr[64],*retstr = 0;
+    cJSON *json;
+    int32_t port;
     copy_cJSON(jsonstr,objs[0]);
     if ( jsonstr[0] != 0 )
     {
-        //printf("got jsonstr.(%s)\n",jsonstr);
-        replace_backslashquotes(jsonstr);
-        array = cJSON_Parse(jsonstr);
-        if ( array != 0 )
+        if ( prevaddr != 0 )
+            port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)prevaddr);
+        else port = 0, strcpy(ipaddr,"noprevaddr");
+        unstringify(jsonstr);
+        printf("BTCDjson jsonstr.(%s) from (%s:%d)\n",jsonstr,ipaddr,port);
+        json = cJSON_Parse(jsonstr);
+        if ( json != 0 )
         {
-            retstr = SuperNET_json_commands(Global_mp,prevaddr,array,sender,valid,origargstr);
-            free_json(array);
+            retstr = SuperNET_json_commands(Global_mp,prevaddr,json,sender,valid,origargstr);
+            free_json(json);
         }
     }
     return(retstr);
