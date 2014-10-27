@@ -365,7 +365,7 @@ void touppercase(char *str)
         str[i] = toupper(str[i]);
 }
 
-void reverse_hexstrM(char *str)
+void reverse_hexstr(char *str)
 {
     int i,n;
     char *rev;
@@ -378,6 +378,7 @@ void reverse_hexstrM(char *str)
     }
     rev[n] = 0;
     strcpy(str,rev);
+    free(rev);
 }
 
 long stripstr(char *buf,long len)
