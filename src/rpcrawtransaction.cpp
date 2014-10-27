@@ -547,8 +547,6 @@ Value signrawtransaction(const Array& params, bool fHelp)
         catch (std::exception &e) {
             throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "test TX deserialization failed std::exception");
         }
-        uint256 hashTx = tx.GetHash();
-        std::cout << hashTx << "hash of test deserialization" << std::endl;
         fprintf(stderr,"tested.(%s)\n",HexStr(ssTx.begin(), ssTx.end()).c_str());
     }
     return result;
