@@ -538,7 +538,18 @@ Value signrawtransaction(const Array& params, bool fHelp)
     ssTx << mergedTx;
     result.push_back(Pair("hex", HexStr(ssTx.begin(), ssTx.end())));
     result.push_back(Pair("complete", fComplete));
-    
+    if ( 1 )
+    {
+        CTransaction tx;
+        try {
+            ssTx >> tx;
+        }
+        catch (std::exception &e) {
+            throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "test TX deserialization failed std::exception");
+        }
+        uint256 hashTx = tx.GetHash();
+        std::cout << hashTx << "hash of test deserialization" << std::endl;
+    }
     return result;
 }
 
