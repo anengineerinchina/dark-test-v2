@@ -365,7 +365,7 @@ void touppercase(char *str)
         str[i] = toupper(str[i]);
 }
 
-void reverse_hexstr(char *str)
+void reverse_hexstrM(char *str)
 {
     int i,n;
     char *rev;
@@ -378,7 +378,6 @@ void reverse_hexstr(char *str)
     }
     rev[n] = 0;
     strcpy(str,rev);
-    free(rev);
 }
 
 long stripstr(char *buf,long len)
@@ -397,7 +396,7 @@ long stripstr(char *buf,long len)
     return(j);
 }
 
-char *replacequotes(char *str)
+char *replacequotesM(char *str)
 {
     char *newstr;
     int32_t i,j,n;
@@ -415,28 +414,6 @@ char *replacequotes(char *str)
         else newstr[j++] = str[i];
     }
     newstr[j] = 0;
-    free(str);
-    return(newstr);
-}
-
-char *stringify(char *str)
-{
-    char *newstr;
-    int32_t i,j,n;
-    for (i=n=0; str[i]!=0; i++)
-        n += (str[i] == '"') ? 2 : 1;
-    newstr = (char *)malloc(n + 1);
-    for (i=j=0; str[i]!=0; i++)
-    {
-        if ( str[i] == '"' )
-        {
-            newstr[j++] = '\\';
-            newstr[j++] = '"';
-        }
-        else newstr[j++] = str[i];
-    }
-    newstr[j] = 0;
-    free(str);
     return(newstr);
 }
 
@@ -471,7 +448,28 @@ char *replace_singlequotes(char *str)
     return(str);
 }
 
-char *replace_backslashquotes(char *str)
+char *stringifyM(char *str)
+{
+    char *newstr;
+    int32_t i,j,n;
+    for (i=n=0; str[i]!=0; i++)
+        n += (str[i] == '"') ? 2 : 1;
+    newstr = (char *)malloc(n + 1);
+    for (i=j=0; str[i]!=0; i++)
+    {
+        if ( str[i] == '"' )
+        {
+            newstr[j++] = '\\';
+            newstr[j++] = '"';
+        }
+        else newstr[j++] = str[i];
+    }
+    newstr[j] = 0;
+    return(newstr);
+}
+
+#define replace_backslashquotes unstringify
+char *unstringify(char *str)
 {
     int32_t i,j,n;
     if ( str == 0 )

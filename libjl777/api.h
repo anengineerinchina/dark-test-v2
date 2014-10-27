@@ -1132,10 +1132,11 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 {
     static int counter;
     int32_t duration,len;
-    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str;
+    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2;
     counter++;
     strcpy(retbuf,"{\"result\":\"nothing pending\"}");
     //printf("BTCDpoll.%d\n",counter);
+    //BTCDpoll post_process_bitcoind_RPC.SuperNET can't parse.({"msg":"[{"requestType":"ping","NXT":"13434315136155299987","time":1414310974,"pubkey":"34b173939544eb01515119b5e0b05880eadaae3d268439c9cc1471d8681ecb6d","ipaddr":"209.126.70.159"},{"token":"im9n7c9ka58g3qq4b2oe1d8p7mndlqk0pj4jj1163pkdgs8knb0vsreb0kf6luo1bbk097buojs1k5o5c0ldn6r6aueioj8stgel1221fq40f0cvaqq0bciuniit0isi0dikd363f3bjd9ov24iltirp6h4eua0q"}]","duration":86400})
     if ( (counter & 1) == 0 )
     {
         if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
@@ -1148,7 +1149,9 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
                 memcpy(&duration,&ptr[sizeof(len)],sizeof(duration));
                 memcpy(msg,str,len);
                 ptr[sizeof(len) + sizeof(duration) + len] = 0;
-                sprintf(retbuf,"{\"msg\":\"%s\",\"duration\":%d}",msg,duration);
+                msg2 = stringifyM(msg);
+                sprintf(retbuf,"{\"msg\":%s,\"duration\":%d}",msg2,duration);
+                free(msg2);
                 //printf("send back broadcast.(%s)\n",retbuf);
             } else printf("len mismatch %d != %ld (%s)\n",len,strlen(str)+1,str);
             free(ptr);

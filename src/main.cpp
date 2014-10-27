@@ -3994,7 +3994,7 @@ int32_t get_API_int(cJSON *obj,int32_t val)
     return(val);
 }
 
-char *stringify(char *str)
+char *stringifyM(char *str)
 {
     char *newstr;
     int32_t i,j,n;
@@ -4014,12 +4014,31 @@ char *stringify(char *str)
     return(newstr);
 }
 
+char *unstringify(char *str)
+{
+    int32_t i,j,n;
+    if ( str == 0 )
+        return(0);
+    n = (int32_t)strlen(str);
+    if ( str[0] == '"' && str[n-1] == '"' )
+        str[n-1] = 0, i = 1;
+    else i = 0;
+    for (j=0; str[i]!=0; i++)
+    {
+        if ( str[i] == '\\' && str[i+1] == '"' )
+            str[j++] = '"', i++;
+        else str[j++] = str[i];
+    }
+    str[j] = 0;
+    return(str);
+}
+
 char *SuperNET_JSON(char *JSONstr)
 {
     char *retstr,*jsonstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     memset(params,0,sizeof(params));
-    jsonstr = stringify(JSONstr);
+    jsonstr = stringifyM(JSONstr);
     sprintf(params,"[\"{\\\"requestType\\\":\\\"BTCDjson\\\",\\\"json\\\":%s}\"]",jsonstr);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr != 0 )
@@ -4145,10 +4164,13 @@ extern "C" void *poll_for_broadcasts(void *args)
                 {
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"msg"));
                     if ( buf[0] != 0 )
+                    {
+                        unstringify(buf);
                         SuperNET_broadcast(buf,duration);
+                    }
                 }
                 free_json(json);
-            }
+            } else fprintf(stderr,"poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
             free(retstr);
         }
     }
