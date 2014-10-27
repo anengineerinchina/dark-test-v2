@@ -76,7 +76,7 @@ int32_t verify_addr(struct sockaddr *addr,char *refipaddr,int32_t refport)
     port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)addr);
     if ( strcmp(ipaddr,refipaddr) != 0 )//|| refport != port )
     {
-        printf("(%s) vs (%s) ",refipaddr,ipaddr);
+        printf("verify_addr error: (%s) vs (%s)\n",refipaddr,ipaddr);
         return(-1);
     }
     return(0);
@@ -454,10 +454,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     else // sender ping'ed us
     {
         if ( verify_addr(prevaddr,ipaddr,port) < 0 )
-        {
-            if ( Debuglevel > 0 )
-                sprintf(retstr,"{\"error\":\"kademlia_ping from %s doesnt verify (%s)\"}",sender,origargstr);
-        }
+            sprintf(retstr,"{\"error\":\"kademlia_ping from %s doesnt verify (%s)\"}",sender,origargstr);
         else
         {
             txid = send_kademlia_cmd(0,get_pserver(0,ipaddr,0,0),"pong",NXTACCTSECRET,0,0);
