@@ -1178,6 +1178,7 @@ char *gotpacket_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr
     if ( prevaddr != 0 )
         return(0);
     copy_cJSON(msg,objs[0]);
+    unstringify(msg);
     duration = (int32_t)get_API_int(objs[1],600);
     copy_cJSON(ip_port,objs[2]);
     return(SuperNET_gotpacket(msg,duration,ip_port));

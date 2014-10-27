@@ -17,8 +17,14 @@ void *portable_thread_create(void *funcp,void *argp)
 
 void launch_SuperNET()
 {
+    FILE *fp;
     void *processptr;
+    system("rm horrible.hack");
     processptr = portable_thread_create(poll_for_broadcasts,0);
     if ( system("./SuperNET &") != 0 )
         printf("error launching SuperNET\n");
+    while ( (fp= fopen("horrible.hack","rb")) == 0 )
+        sleep(1);
+    fclose(fp);
+    printf("SuperNET file found!\n");
 }
