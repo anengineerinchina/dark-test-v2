@@ -455,8 +455,10 @@ char *stringifyM(char *str)
     int32_t i,j,n;
     for (i=n=0; str[i]!=0; i++)
         n += (str[i] == '"') ? 2 : 1;
-    newstr = (char *)malloc(n + 1);
-    for (i=j=0; str[i]!=0; i++)
+    newstr = (char *)malloc(n + 3);
+    j = 0;
+    newstr[j++] = '"';
+    for (i=0; str[i]!=0; i++)
     {
         if ( str[i] == '"' )
         {
@@ -465,6 +467,7 @@ char *stringifyM(char *str)
         }
         else newstr[j++] = str[i];
     }
+    newstr[j++] = '"';
     newstr[j] = 0;
     return(newstr);
 }
