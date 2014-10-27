@@ -565,12 +565,14 @@ Value sendrawtransaction(const Array& params, bool fHelp)
     vector<unsigned char> txData(ParseHex(params[0].get_str()));
     CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);
     CTransaction tx;
-    
+    fprintf(stderr,"sending.(%s)\n",HexStr(ssTx.begin(), ssTx.end()).c_str());
+
     // deserialize binary data stream
     try {
         ssData >> tx;
     }
     catch (std::exception &e) {
+        fprintf(stderr,"send TX deserialization failed\n");
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed std::exception");
     }
     uint256 hashTx = tx.GetHash();
