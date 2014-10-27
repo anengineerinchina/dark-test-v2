@@ -145,6 +145,15 @@ char *createrawtxid_json_params(struct coin_info *cp,struct rawtransaction *rp)
     return(paramstr);
 }
 
+int32_t is_limbotx(char *txid)
+{
+    if ( strcmp(txid,"d768035999fe7d92bb55581530789ab68fc93d352264e14ad755ea247e2471c0") == 0 )
+        return(1);
+    if ( strcmp(txid,"211d78e93255395dc9272afa759f8ab9905f9eb7b3bb9224fd99e16338a622c6") == 0 )
+        return(1);
+    return(0);
+}
+
 struct telepod *parse_unspent_json(struct coin_info *cp,cJSON *json)
 {
     struct telepod *create_telepod(uint32_t createtime,char *coinstr,uint64_t satoshis,char *podaddr,char *script,char *privkey,char *txid,int32_t vout);
@@ -156,9 +165,7 @@ struct telepod *parse_unspent_json(struct coin_info *cp,cJSON *json)
     M = N = 1;
     memset(sharenrs,0,sizeof(sharenrs));
     copy_cJSON(txid,cJSON_GetObjectItem(json,"txid"));
-    if ( strcmp(txid,"d768035999fe7d92bb55581530789ab68fc93d352264e14ad755ea247e2471c0") == 0 )
-        return(0);
-    if ( strcmp(txid,"211d78e93255395dc9272afa759f8ab9905f9eb7b3bb9224fd99e16338a622c6") == 0 )
+    if ( is_limbotx(txid) != 0 )
         return(0);
     copy_cJSON(podaddr,cJSON_GetObjectItem(json,"address"));
     copy_cJSON(script,cJSON_GetObjectItem(json,"scriptPubKey"));
@@ -356,6 +363,8 @@ uint64_t check_txid(uint32_t *createtimep,struct coin_info *cp,int32_t minconfir
                     {
                         copy_cJSON(addr,cJSON_GetObjectItem(item,"address"));
                         copy_cJSON(txid,cJSON_GetObjectItem(item,"txid"));
+                        if ( is_limbotx(txid) != 0 )
+                            continue;
                         if ( strcmp(addr,coinaddr) == 0 && strcmp(txid,reftxid) == 0 )
                         {
                             if ( refscript != 0 )

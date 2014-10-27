@@ -538,7 +538,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
     ssTx << mergedTx;
     result.push_back(Pair("hex", HexStr(ssTx.begin(), ssTx.end())));
     result.push_back(Pair("complete", fComplete));
-    fprintf(stderr,"tested.(%s)\n",HexStr(ssTx.begin(), ssTx.end()).c_str());
+    /*fprintf(stderr,"tested.(%s)\n",HexStr(ssTx.begin(), ssTx.end()).c_str());
     CTransaction tx;
     try {
         ssTx >> tx;
@@ -547,7 +547,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
         fprintf(stderr,"test TX deserialization failed\n");
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "test TX deserialization failed std::exception");
     }
-    fprintf(stderr,"test TX deserialization PASSED!\n");
+    fprintf(stderr,"test TX deserialization PASSED!\n");*/
 
     return result;
 }
@@ -565,7 +565,7 @@ Value sendrawtransaction(const Array& params, bool fHelp)
     vector<unsigned char> txData(ParseHex(params[0].get_str()));
     CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);
     CTransaction tx;
-    fprintf(stderr,"sending.(%s)\n",HexStr(ssData.begin(), ssData.end()).c_str());
+    //fprintf(stderr,"sending.(%s)\n",HexStr(ssData.begin(), ssData.end()).c_str());
 
     // deserialize binary data stream
     try {
