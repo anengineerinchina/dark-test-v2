@@ -4041,11 +4041,11 @@ char *SuperNET_JSON(char *JSONstr)
 {
     char *retstr,*jsonstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
-    while ( Pending_RPC != 0 )
+    /*while ( Pending_RPC != 0 )
     {
         fprintf(stderr,".");
         sleep(1);
-    }
+    }*/
     memset(params,0,sizeof(params));
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
