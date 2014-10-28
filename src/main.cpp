@@ -4049,10 +4049,10 @@ char *SuperNET_JSON(char *JSONstr)
     memset(params,0,sizeof(params));
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
+    Pending_RPC++;
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr != 0 )
     {
-        Pending_RPC++;
         //    fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s)\n",retstr,jsonstr);
     }
     free(jsonstr);
