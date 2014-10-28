@@ -701,8 +701,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
             std::cout << "amount: " << (double)COIN/tx.vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
         }
 		if (isTeleport)
-			txMinFee = tx.
-            (1000, GMF_TELEPORT, nSize);
+			txMinFee = tx.GetMinFee(1000, GMF_TELEPORT, nSize);
         //TODO: add another if stmt here to set min fee if multisig
 		else
 			txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize); //standard tx
@@ -4045,7 +4044,7 @@ char *SuperNET_JSON(char *JSONstr)
     long len;
     if ( SuperNET_retval < 0 )
         return(0);
-  // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+ // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     if ( 1 && Pending_RPC != 0 )
     {
         sprintf(result,"{\"error\":\"Pending_RPC.%d please resubmit request\"}",Pending_RPC);
