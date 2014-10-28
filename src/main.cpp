@@ -4036,7 +4036,7 @@ char *unstringify(char *str)
     return(str);
 }
 
-int Pending_RPC;
+int Pending_RPC,SuperNET_retval;
 char *SuperNET_JSON(char *JSONstr)
 {
     char *retstr,*jsonstr,params[MAX_JSON_FIELD];
@@ -4046,6 +4046,8 @@ char *SuperNET_JSON(char *JSONstr)
         fprintf(stderr,".");
         sleep(1);
     }*/
+    if ( SuperNET_retval < 0 )
+        return(0);
     memset(params,0,sizeof(params));
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
@@ -4062,6 +4064,8 @@ char *SuperNET_JSON(char *JSONstr)
 int32_t issue_gotnewpeer(char *ip_port)
 {
     char *retstr,params[MAX_JSON_FIELD];
+    if ( SuperNET_retval < 0 )
+        return(-1);
     memset(params,0,sizeof(params));
     sprintf(params,"{\"requestType\":\"gotnewpeer\",\"ip_port\":\"%s\"}",ip_port);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
@@ -4114,6 +4118,8 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	int32_t len;
     char *retstr,params[MAX_JSON_FIELD*2],*str;
     //printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
+    if ( SuperNET_retval < 0 )
+        return(0);
 	if ( msg == 0 || msg[0] == 0 )
 	{
 		printf("no point to process null msg.%p\n",msg);
@@ -4147,7 +4153,9 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
-	broadcastPubAddr(msg,duration);
+    if ( SuperNET_retval < 0 )
+        return(-1);
+    broadcastPubAddr(msg,duration);
 	return(0);
 }
 
@@ -4157,6 +4165,8 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     CPubAddr *pubaddr = new CPubAddr;
     std::string supernetmsg = "";
     CNode *peer = FindNode((CService)destip);
+    if ( SuperNET_retval < 0 )
+        return(-1);
     if ( peer == NULL )
         return(-1); // Not a known peer
     for(int32_t i=0; i<len; i++)
@@ -4232,7 +4242,7 @@ void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
-    launch_SuperNET(myip);
+    SuperNET_retval = launch_SuperNET(myip);
     did_SuperNET_init = 1;
     std::cout << "back from start" << std::endl;
 }
