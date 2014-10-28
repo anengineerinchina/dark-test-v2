@@ -4223,10 +4223,10 @@ extern "C" void *poll_for_broadcasts(void *args)
                 }
                 else
                 {
-                    Pending_RPC--;
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"result"));
                     if ( buf[0] != 0 )
                     {
+                        Pending_RPC = 0;
                         unstringify(buf);
                         copy_cJSON(txidstr,cJSON_GetObjectItem(json,"txid"));
                         if ( txidstr[0] != 0 )
