@@ -423,8 +423,8 @@ enum GetMinFee_mode
     GMF_BLOCK,
     GMF_RELAY,
     GMF_SEND,
-	GMF_TELEPORT, //bitcoindark: additional modes
 	GMF_MSIG,
+	//GMF_TELEPORT, //bitcoindark: additional modes
 };
 
 typedef std::map<uint256, std::pair<CTxIndex, CTransaction> > MapPrevTx;

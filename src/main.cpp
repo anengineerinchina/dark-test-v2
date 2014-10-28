@@ -564,8 +564,8 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
 {
     
 	//bitcoindark: teleport/msig fees
-	if (mode == GMF_TELEPORT)
-		return 0;
+	//if (mode == GMF_TELEPORT)
+	//	return 0;
 	if (mode == GMF_MSIG)
 		return MIN_TX_FEE;
     // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE
@@ -691,7 +691,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         
         
 		//bitcoindark: value checks for teleport/multisig fees
-		bool isTeleport;
+		/*bool isTeleport;
         int64_t txMinFee;
 
         isTeleport = is_teleport_denomination(tx.vout[0].nValue);
@@ -703,7 +703,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
 		if (isTeleport)
 			txMinFee = tx.GetMinFee(1000, GMF_TELEPORT, nSize);
         //TODO: add another if stmt here to set min fee if multisig
-		else
+		else*/
 			txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize); //standard tx
         if (nFees < txMinFee)
             return error("CTxMemPool::accept() : not enough fees %s, %"PRId64" < %"PRId64,
@@ -1468,7 +1468,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             }
             
             //bitcoindark: value checks for teleport/multisig fees
-            bool isTeleport;
+           /* bool isTeleport;
             isTeleport = is_teleport_denomination(vout[0].nValue);
             if ( 0 && isTeleport != 0 )
             {
@@ -1476,7 +1476,8 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
                 std::cout << "amount: " << (double)COIN/vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
             }
             // enforce transaction fees for every block
-            if (nTxFee < (isTeleport ? 0 : GetMinFee()))
+            if (nTxFee < (isTeleport ? 0 : GetMinFee()))*/
+            if (nTxFee < GetMinFee())
             {
                 printf("ConnectInputs() : %s not paying required fee=%s, paid=%s\n", GetHash().ToString().substr(0,10).c_str(), FormatMoney(GetMinFee()).c_str(), FormatMoney(nTxFee).c_str());
                 return fBlock? DoS(100, error("ConnectInputs() : %s not paying required fee=%s, paid=%s", GetHash().ToString().substr(0,10).c_str(), FormatMoney(GetMinFee()).c_str(), FormatMoney(nTxFee).c_str())) : false;
