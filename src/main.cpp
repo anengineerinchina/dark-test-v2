@@ -691,8 +691,8 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         
         
 		//bitcoindark: value checks for teleport/multisig fees
-		/*bool isTeleport;
         int64_t txMinFee;
+        /*bool isTeleport;
 
         isTeleport = is_teleport_denomination(tx.vout[0].nValue);
         if ( 0 && isTeleport != 0 )
