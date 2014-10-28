@@ -4041,6 +4041,7 @@ char *SuperNET_JSON(char *JSONstr)
 {
     char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD];
     cJSON *json;
+    long len;
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     if ( 1 && Pending_RPC != 0 )
     {
