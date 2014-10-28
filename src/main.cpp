@@ -4041,6 +4041,11 @@ char *SuperNET_JSON(char *JSONstr)
 {
     char *retstr,*jsonstr,params[MAX_JSON_FIELD];
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    if ( Pending_RPC != 0 )
+    {
+        fprintf(stderr,"Pending_RPC.%d please resubmit request\n",Pending_RPC);
+        return(0);
+    }
     /*while ( Pending_RPC != 0 )
     {
         fprintf(stderr,".");
