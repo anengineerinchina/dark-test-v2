@@ -164,7 +164,8 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
     //printf("html hdr.(%s)\n",buffer);
     libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
     libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);
-    //printf("SuperNET >>>>>>>>>>>>>> sends back (%s)\n",retstr);
+    if ( Debuglevel > 2 )
+        printf("SuperNET >>>>>>>>>>>>>> sends back (%s)\n",retstr);
 }
 
 // this protocol server (always the first one) just knows how to do HTTP
@@ -209,7 +210,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             str[len] = 0;
             //if ( wsi != 0 )
             //dump_handshake_info(wsi);
-            //fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s) wsi.%p user.%p\n",str,wsi,user);
+            if ( Debuglevel > 2 && strcmp("{\"requestType\":\"BTCDpoll\"}",str) != 0 )
+                fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s) wsi.%p user.%p\n",str,wsi,user);
             //>>>>>>>>>>>>>> SuperNET received RPC.({"requestType":"BTCDjson","json":{\"requestType\":\"getpeers\"}})
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
             if ( (json= cJSON_Parse(str)) != 0 )
@@ -285,9 +287,9 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     int32_t duration,len;
     char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2,**ptrs;
     counter++;
-    strcpy(retbuf,"{\"result\":\"nothing pending\"}");
     //printf("BTCDpoll.%d\n",counter);
     //BTCDpoll post_process_bitcoind_RPC.SuperNET can't parse.({"msg":"[{"requestType":"ping","NXT":"13434315136155299987","time":1414310974,"pubkey":"34b173939544eb01515119b5e0b05880eadaae3d268439c9cc1471d8681ecb6d","ipaddr":"209.126.70.159"},{"token":"im9n7c9ka58g3qq4b2oe1d8p7mndlqk0pj4jj1163pkdgs8knb0vsreb0kf6luo1bbk097buojs1k5o5c0ldn6r6aueioj8stgel1221fq40f0cvaqq0bciuniit0isi0dikd363f3bjd9ov24iltirp6h4eua0q"}]","duration":86400})
+    retbuf[0] = 0;
     if ( (counter % 3) == 0 )
     {
         if ( (ptr= queue_dequeue(&BroadcastQ)) != 0 )
@@ -325,12 +327,12 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
             free(ptr);
         }
     }
-    else
+    if ( retbuf[0] == 0 )
     {
         if ( (ptr= queue_dequeue(&ResultsQ)) != 0 )
         {
             memcpy(&ptrs,ptr,sizeof(ptrs));
-            fprintf(stderr,"Got ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
+            //fprintf(stderr,"Got ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
             if ( ptrs[0] != 0 )
                 free(ptrs[0]);
             if ( ptrs[1] != 0 )
@@ -339,6 +341,8 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
             strcpy(retbuf,ptr+sizeof(ptrs));
         }
     }
+    if ( retbuf[0] == 0 )
+        strcpy(retbuf,"{\"result\":\"nothing pending\"}");
     return(clonestr(retbuf));
 }
 
@@ -782,8 +786,8 @@ char *maketelepods_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *preva
         return(0);
     value = (SATOSHIDEN * get_API_float(objs[0]));
     copy_cJSON(coinstr,objs[1]);
-    printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
-    if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 )
+    //printf("maketelepods.%s %.8f\n",coinstr,dstr(value));
+    if ( coinstr[0] != 0 && sender[0] != 0 && valid > 0 && value > 0 )
         retstr = maketelepods(NXTACCTSECRET,sender,coinstr,value);
     else retstr = clonestr("{\"error\":\"invalid maketelepods_func arguments\"}");
     return(retstr);
@@ -1259,13 +1263,13 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
             port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)prevaddr);
         else port = 0, strcpy(ipaddr,"noprevaddr");
         unstringify(jsonstr);
-        //printf("BTCDjson jsonstr.(%s) from (%s:%d)\n",jsonstr,ipaddr,port);
+        printf("BTCDjson jsonstr.(%s) from (%s:%d)\n",jsonstr,ipaddr,port);
         json = cJSON_Parse(jsonstr);
         if ( json != 0 )
         {
             retstr = SuperNET_json_commands(Global_mp,prevaddr,json,sender,valid,origargstr);
             free_json(json);
-        }
+        } else printf("PARSE error.(%s)\n",jsonstr);
     }
     return(retstr);
 }
@@ -1310,13 +1314,13 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
 
     // Teleport
     static char *maketelepods[] = { (char *)maketelepods_func, "maketelepods", "V", "amount", "coin", 0 };
-    static char *teleport[] = { (char *)teleport_func, "teleport", "V", "amount", "contact", "coin", "minage", "withdraw", 0 };
     static char *telepodacct[] = { (char *)telepodacct_func, "telepodacct", "V", "amount", "contact", "coin", "comment", "cmd", "withdraw", 0 };
-   //static char *telepod[] = { (char *)telepod_func, "telepod", "V", "crc", "i", "h", "c", "v", "a", "t", "o", "p", "k", "L", "s", "M", "N", "D", 0 };
+    static char *teleport[] = { (char *)teleport_func, "teleport", "V", "amount", "contact", "coin", "minage", "withdraw", 0 };
+    //static char *telepod[] = { (char *)telepod_func, "telepod", "V", "crc", "i", "h", "c", "v", "a", "t", "o", "p", "k", "L", "s", "M", "N", "D", 0 };
     //static char *transporter[] = { (char *)transporter_func, "transporter", "V", "coin", "height", "minage", "value", "totalcrc", "telepods", "M", "N", "sharenrs", "pubaddr", 0 };
     //static char *transporterstatus[] = { (char *)transporterstatus_func, "transporter_status", "V", "status", "coin", "totalcrc", "value", "num", "minage", "height", "crcs", "sharei", "M", "N", "sharenrs", "ind", "pubaddr", 0 };
     
-   // InstantDEX
+    // InstantDEX
     static char *respondtx[] = { (char *)respondtx_func, "respondtx", "V", "signedtx", 0 };
     static char *processutx[] = { (char *)processutx_func, "processutx", "V", "utx", "sig", "full", 0 };
     static char *orderbook[] = { (char *)orderbook_func, "orderbook", "V", "obookid", "polarity", "allfields", 0 };

@@ -105,6 +105,7 @@ void SuperNET_idler(uv_idle_t *handle)
             if ( wr == firstwr )
             {
                 queue_enqueue(&sendQ,wr);
+                //printf("reached firstwr.%p\n",firstwr);
                 break;
             }
             if ( (wr->queuetime % 10) == r )
@@ -333,7 +334,7 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
         txid = calc_txid((uint8_t *)JSONstr,(int32_t)strlen(JSONstr));
         ptrs[2] = (char *)txid;
     }
-   // printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
+    //printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
     queue_enqueue(&JSON_Q,ptrs);
     if ( blockflag != 0 )
     {
@@ -378,7 +379,7 @@ char *SuperNET_JSON(char *JSONstr)
     cJSON *json;
     if ( Finished_init == 0 )
         return(0);
-    if ( Debuglevel > 0 )
+    if ( Debuglevel > 1 )
         printf("got JSON.(%s)\n",JSONstr);
     if ( cp != 0 && (json= cJSON_Parse(JSONstr)) != 0 )
     {
@@ -400,7 +401,7 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
 {
     int32_t SuperNET_broadcast(char *msg,int32_t duration);
     int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len);
-    char ip_port[64],ipaddr[64],*ptr;
+    char ip_port[64],*ptr;
     struct nodestats *stats;
     uint64_t txid = 0;
     int32_t port;
@@ -412,10 +413,11 @@ uint64_t call_SuperNET_broadcast(struct pserver_info *pserver,char *msg,int32_t 
         if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
             port = (stats->p2pport == 0) ? BTCD_PORT : stats->p2pport;
         else port = BTCD_PORT;
+        //fprintf(stderr,"port.%d\n",port);
         sprintf(ip_port,"%s:%d",pserver->ipaddr,port);
-        txid ^= calc_ipbits(ipaddr);
+        txid ^= calc_ipbits(pserver->ipaddr);
         if ( Debuglevel > 0 )
-            printf("%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,msg,(long long)txid,ip_port);
+            fprintf(stderr,"%s NARROWCAST.(%s) txid.%llu (%s)\n",pserver->ipaddr,msg,(long long)txid,ip_port);
         ptr = calloc(1,64 + sizeof(len) + len + 1);
         memcpy(ptr,&len,sizeof(len));
         memcpy(&ptr[sizeof(len)],ip_port,strlen(ip_port));

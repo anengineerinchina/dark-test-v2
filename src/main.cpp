@@ -564,8 +564,8 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mod
 {
     
 	//bitcoindark: teleport/msig fees
-	if (mode == GMF_TELEPORT)
-		return 0;
+	//if (mode == GMF_TELEPORT)
+	//	return 0;
 	if (mode == GMF_MSIG)
 		return MIN_TX_FEE;
     // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE
@@ -691,8 +691,8 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         
         
 		//bitcoindark: value checks for teleport/multisig fees
-		bool isTeleport;
         int64_t txMinFee;
+        /*bool isTeleport;
 
         isTeleport = is_teleport_denomination(tx.vout[0].nValue);
         if ( 0 && isTeleport != 0 )
@@ -703,7 +703,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
 		if (isTeleport)
 			txMinFee = tx.GetMinFee(1000, GMF_TELEPORT, nSize);
         //TODO: add another if stmt here to set min fee if multisig
-		else
+		else*/
 			txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize); //standard tx
         if (nFees < txMinFee)
             return error("CTxMemPool::accept() : not enough fees %s, %"PRId64" < %"PRId64,
@@ -1468,7 +1468,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             }
             
             //bitcoindark: value checks for teleport/multisig fees
-            bool isTeleport;
+           /* bool isTeleport;
             isTeleport = is_teleport_denomination(vout[0].nValue);
             if ( 0 && isTeleport != 0 )
             {
@@ -1476,7 +1476,8 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
                 std::cout << "amount: " << (double)COIN/vout[0].nValue << "\nisTeleport? " << std::boolalpha << isTeleport << std::endl;
             }
             // enforce transaction fees for every block
-            if (nTxFee < (isTeleport ? 0 : GetMinFee()))
+            if (nTxFee < (isTeleport ? 0 : GetMinFee()))*/
+            if (nTxFee < GetMinFee())
             {
                 printf("ConnectInputs() : %s not paying required fee=%s, paid=%s\n", GetHash().ToString().substr(0,10).c_str(), FormatMoney(GetMinFee()).c_str(), FormatMoney(nTxFee).c_str());
                 return fBlock? DoS(100, error("ConnectInputs() : %s not paying required fee=%s, paid=%s", GetHash().ToString().substr(0,10).c_str(), FormatMoney(GetMinFee()).c_str(), FormatMoney(nTxFee).c_str())) : false;
@@ -4036,16 +4037,44 @@ char *unstringify(char *str)
     return(str);
 }
 
+int Pending_RPC,SuperNET_retval;
 char *SuperNET_JSON(char *JSONstr)
 {
-    char *retstr,*jsonstr,params[MAX_JSON_FIELD];
-    // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD];
+    cJSON *json;
+    long len;
+    if ( SuperNET_retval < 0 )
+        return(0);
+ // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
+    if ( 1 && Pending_RPC != 0 )
+    {
+        sprintf(result,"{\"error\":\"Pending_RPC.%d please resubmit request\"}",Pending_RPC);
+        len = strlen(result)+1;
+        retstr = (char *)malloc(len);
+        memcpy(retstr,result,len);
+        return(retstr);
+    }
+    /*while ( Pending_RPC != 0 )
+    {
+        fprintf(stderr,".");
+        sleep(1);
+    }*/
     memset(params,0,sizeof(params));
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
+    Pending_RPC++;
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
-    //if ( retstr != 0 )
-    //    fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s)\n",retstr,jsonstr);
+    if ( retstr != 0 )
+    {
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            copy_cJSON(result,cJSON_GetObjectItem(json,"result"));
+            if ( strcmp(result,"pending SuperNET API call") != 0 )
+                Pending_RPC = 0;
+            free_json(json);
+        }
+        fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s) result.(%s)\n",retstr,jsonstr,result);
+    }
     free(jsonstr);
     return(retstr);
 }
@@ -4053,6 +4082,8 @@ char *SuperNET_JSON(char *JSONstr)
 int32_t issue_gotnewpeer(char *ip_port)
 {
     char *retstr,params[MAX_JSON_FIELD];
+    if ( SuperNET_retval < 0 )
+        return(-1);
     memset(params,0,sizeof(params));
     sprintf(params,"{\"requestType\":\"gotnewpeer\",\"ip_port\":\"%s\"}",ip_port);
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
@@ -4105,6 +4136,8 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 	int32_t len;
     char *retstr,params[MAX_JSON_FIELD*2],*str;
     //printf("in process_jl777_msg(%s) dur.%d\n",msg,duration);
+    if ( SuperNET_retval < 0 )
+        return(0);
 	if ( msg == 0 || msg[0] == 0 )
 	{
 		printf("no point to process null msg.%p\n",msg);
@@ -4138,7 +4171,9 @@ char *process_jl777_msg(CNode *from,char *msg, int32_t duration)
 
 extern "C" int32_t SuperNET_broadcast(char *msg,int32_t duration)
 {
-	broadcastPubAddr(msg,duration);
+    if ( SuperNET_retval < 0 )
+        return(-1);
+    broadcastPubAddr(msg,duration);
 	return(0);
 }
 
@@ -4148,6 +4183,8 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     CPubAddr *pubaddr = new CPubAddr;
     std::string supernetmsg = "";
     CNode *peer = FindNode((CService)destip);
+    if ( SuperNET_retval < 0 )
+        return(-1);
     if ( peer == NULL )
         return(-1); // Not a known peer
     for(int32_t i=0; i<len; i++)
@@ -4202,6 +4239,7 @@ extern "C" void *poll_for_broadcasts(void *args)
                     copy_cJSON(buf,cJSON_GetObjectItem(json,"result"));
                     if ( buf[0] != 0 )
                     {
+                        Pending_RPC = 0;
                         unstringify(buf);
                         copy_cJSON(txidstr,cJSON_GetObjectItem(json,"txid"));
                         if ( txidstr[0] != 0 )
@@ -4217,12 +4255,12 @@ extern "C" void *poll_for_broadcasts(void *args)
     return(0);
 }
 
-extern "C" void launch_SuperNET(char *);
+extern "C" int32_t launch_SuperNET(char *);
 void init_jl777(char *myip)
 {
     std::cout << "starting SuperNET" << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
-    launch_SuperNET(myip);
+    SuperNET_retval = launch_SuperNET(myip);
     did_SuperNET_init = 1;
     std::cout << "back from start" << std::endl;
 }
