@@ -4043,7 +4043,7 @@ char *SuperNET_JSON(char *JSONstr)
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     while ( Pending_RPC != 0 )
     {
-        fprint(stderr,".");
+        fprintf(stderr,".");
         sleep(1);
     }
     memset(params,0,sizeof(params));
