@@ -4039,7 +4039,8 @@ char *unstringify(char *str)
 int Pending_RPC,SuperNET_retval;
 char *SuperNET_JSON(char *JSONstr)
 {
-    char *retstr,*jsonstr,params[MAX_JSON_FIELD];
+    char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD];
+    cJSON *json;
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
     if ( Pending_RPC != 0 )
     {
@@ -4060,7 +4061,14 @@ char *SuperNET_JSON(char *JSONstr)
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr != 0 )
     {
-        //    fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s)\n",retstr,jsonstr);
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            copy_cJSON(result,"result");
+            if ( strcmp(result,"pending SuperNET API call") != 0 )
+                Pending_RPC = 0;
+            free_json(json);
+        }
+        fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s) result.(%s)\n",retstr,jsonstr,result);
     }
     free(jsonstr);
     return(retstr);
