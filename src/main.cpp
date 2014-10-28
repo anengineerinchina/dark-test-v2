@@ -4063,7 +4063,7 @@ char *SuperNET_JSON(char *JSONstr)
     {
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
-            copy_cJSON(result,"result");
+            copy_cJSON(result,cJSON_GetObjectItem(json,"result"));
             if ( strcmp(result,"pending SuperNET API call") != 0 )
                 Pending_RPC = 0;
             free_json(json);
