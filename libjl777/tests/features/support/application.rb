@@ -17,12 +17,15 @@ class App
         sleep 5
         if `ps aux | grep -i BitcoinDarkd | grep -v grep` != ""
             # Wait for ready signal in nohup.out file to show 'back from start'
-            App.searchLog('back from start', 50)
+            App.searchLog('back from start', true, 50)
             sleep 5 # Extra time to connect to some peers
         end
         puts "Completely finished starting BitcoinDarkd"
     end
 
+    # Search for the given text in the BitcoinDarkd execution log.
+    # The strict search restricts the search to the exact text found
+    # somewhere in the log. When it's false a regular experssion is admitted.
     def self.searchLog(text, strict_search = true, timeout = 10)
         old_timeout = timeout
         while timeout > 0

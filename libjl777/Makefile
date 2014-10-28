@@ -63,7 +63,7 @@ patch: doesntexist; \
 onetime: doesntexist; \
     unzip lws.zip -d libwebsockets; \
     cd libwebsockets/lib; \
-    cmake ..; \
+    cmake -D CMAKE_C_COMPILER=gcc ..; \
     cp libwebsockets.h lws_config.h ../../includes; \
     cp libwebsockets-test-server.key.pem ../../SuperNET.key.pem; \
     cp libwebsockets-test-server.pem ../../SuperNET.pem; \
