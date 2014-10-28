@@ -4042,16 +4042,19 @@ char *SuperNET_JSON(char *JSONstr)
     char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD];
     cJSON *json;
     // static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "ip_port", 0 };
-    if ( 0 && Pending_RPC != 0 )
+    if ( 1 && Pending_RPC != 0 )
     {
-        fprintf(stderr,"Pending_RPC.%d please resubmit request\n",Pending_RPC);
-        return(0);
+        sprintf(result,"{\"error\":\"Pending_RPC.%d please resubmit request\"}",Pending_RPC);
+        len = strlen(result)+1;
+        retstr = (char *)malloc(len);
+        memcpy(retstr,result,len);
+        return(retstr);
     }
-    while ( Pending_RPC != 0 )
+    /*while ( Pending_RPC != 0 )
     {
         fprintf(stderr,".");
         sleep(1);
-    }
+    }*/
     if ( SuperNET_retval < 0 )
         return(0);
     memset(params,0,sizeof(params));
