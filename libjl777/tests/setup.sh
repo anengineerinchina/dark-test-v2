@@ -15,7 +15,8 @@ curl -L https://get.rvm.io | bash -s stable
 
 sudo apt-get install expect-dev # Required to unbuffer the output of BitcoinDarkd
 
-[ -f $HOME/.bashrc ] && echo "[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm">>$HOME/.bashrc
-[ -f $HOME/.zshrc ] && echo "[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm">>$HOME/.zshrc
+rvm_line="[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm"
+grep -qF "$rvm_line" "$HOME/.bashrc" || ( [ -f $HOME/.bashrc ] && echo "$rvm_line">>$HOME/.bashrc )
+grep -qF "$rvm_line" "$HOME/.bashrc" || ( [ -f $HOME/.zshrc ] && echo "$rvm_line">>$HOME/.zshrc )
 
 ./internal_setup.sh
