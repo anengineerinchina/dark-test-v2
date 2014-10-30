@@ -51,7 +51,7 @@ static const int64_t nTargetTimespan = 60 * 60;  // BitcoinDark - every 1 hour
 unsigned int nTargetSpacing = 1 * 60; // BitcoinDark - 1 minute
 //static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 
-static const int64_t nDiffChangeTarget = 1;
+//static const int64_t nDiffChangeTarget = 1;
 
 unsigned int nStakeMinAge = 8 * 60 * 60; // BitcoinDark - 8 hours
 unsigned int nStakeMaxAge = -1;
