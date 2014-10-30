@@ -554,7 +554,7 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
     *availp = *maturingp = *inboundp = *outboundp = *doublespentp = *cancelledp = 0.;
     if ( dbp == 0 )
         return(0);
-    max = num_in_db(TELEPOD_DATA);
+    max = (int32_t)max_in_db(TELEPOD_DATA);
     max += 100;
     m = 0;
     printf("available_telepods\n");
@@ -603,13 +603,12 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         }
         cursorp->close(cursorp);
     }
-    //DB_unlock(TELEPOD_DATA);
     //printf("find_closer_Kstored returns n.%d %p\n",n,sps);
-    if ( m > num_in_db(TELEPOD_DATA) )
-        set_num_in_db(TELEPOD_DATA,m);
+    if ( m > max_in_db(TELEPOD_DATA) )
+        set_max_in_db(TELEPOD_DATA,m);
     if ( pods != 0 )
         pods[n] = 0;
-    //printf("set nump.%d\n",n);
+    printf("set nump.%d\n",n);
     *nump = n;
     return(pods);
 }
@@ -671,7 +670,7 @@ int32_t poll_telepods(char *relstr)
     int32_t flag,i,err,n,m = 0;
     struct telepod **pods,*pod,*clonepod;
     double avail,inbound,outbound,maturing,doublespent,cancelled;
-return(0);
+//return(0);
     pods = available_telepods(&n,&avail,&maturing,&inbound,&outbound,&doublespent,&cancelled,relstr,-1);
     if ( pods != 0 )
     {
@@ -1119,6 +1118,7 @@ char *telepodacct(char *contactstr,char *coinstr,uint64_t amount,char *withdrawa
         stripwhite_ns(retstr,strlen(retstr));
         return(retstr);
     }
+    printf("TELEPODACCT.(%s)\n",retbuf);
     return(clonestr(retbuf));
 }
 

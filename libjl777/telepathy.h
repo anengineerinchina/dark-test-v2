@@ -339,12 +339,16 @@ char *private_publish(struct contact_info *contact,int32_t sequenceid,char *msg)
             expand_nxt64bits(key,location);
             printf("store.(%s) len.%ld -> %llu %llu\n",privatedatastr,strlen(privatedatastr)/2,(long long)seqacct,(long long)location);
             retstr = kademlia_storedata(0,seqacct,AESpasswordstr,seqacct,key,privatedatastr);
-            add_storage(PRIVATE_DATA,key,privatedatastr);
-            add_storage(PUBLIC_DATA,key,privatedatastr);
+            if ( IS_LIBTEST != 0 )
+            {
+                add_storage(PRIVATE_DATA,key,privatedatastr);
+                add_storage(PUBLIC_DATA,key,privatedatastr);
+            }
         }
         else
         {
-            add_storage(PRIVATE_DATA,key,privatedatastr);
+            if ( IS_LIBTEST != 0 )
+                add_storage(PRIVATE_DATA,key,privatedatastr);
             if ( contact->deaddrop != 0 )
             {
                 contact->numsent++;
@@ -465,6 +469,7 @@ void init_telepathy_contact(struct contact_info *contact)
     uint64_t randbits;
     for (i=0; i<=MAX_DROPPED_PACKETS; i++)
         create_telepathy_entry(contact,i);
+    printf("entries created\n");
     if ( contact->mydrop == 0 )
     {
         randbits = cp->srvpubnxtbits;
@@ -472,9 +477,12 @@ void init_telepathy_contact(struct contact_info *contact)
             randbits ^= (1L << ((rand()>>8) & 63));
         contact->mydrop = randbits;
     }
+    printf("telepathic_transmit msg.0\n");
     telepathic_transmit(retbuf,contact,0,0,0);
+    printf("check_privategenesis\n");
     if ( (retstr= check_privategenesis(contact)) != 0 )
         free(retstr);
+    printf("done init_telepathy_contact\n");
 }
 
 uint64_t conv_acctstr(char *acctstr)
