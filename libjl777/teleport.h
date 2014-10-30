@@ -557,7 +557,7 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
     max = (int32_t)max_in_db(TELEPOD_DATA);
     max += 100;
     m = 0;
-    printf("available_telepods\n");
+    //printf("available_telepods\n");
     //DB_lock(TELEPOD_DATA);
     dbp->cursor(dbp,NULL,&cursorp,0);
     if ( cursorp != 0 )
@@ -608,7 +608,7 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         set_max_in_db(TELEPOD_DATA,m);
     if ( pods != 0 )
         pods[n] = 0;
-    printf("set nump.%d\n",n);
+    //printf("set nump.%d\n",n);
     *nump = n;
     return(pods);
 }
