@@ -51,9 +51,9 @@ uint64_t calc_transporter_fee(struct coin_info *cp,uint64_t satoshis)
 
 void update_telepod(struct telepod *pod)
 {
-    fprintf(stderr,"call update_telepod\n");
+    //fprintf(stderr,"call update_telepod\n");
     update_storage(TELEPOD_DATA,pod->txid,&pod->H);
-    fprintf(stderr,"back update_telepod\n");
+    //fprintf(stderr,"back update_telepod\n");
 }
 
 char *_podstate(int32_t podstate)
@@ -108,6 +108,8 @@ void disp_telepod(char *msg,struct telepod *pod)
 {
     char *str;
     cJSON *podjson;
+    if ( Debuglevel <= 0 )
+        return;
     podjson = telepod_json(pod);
     if ( podjson != 0 )
     {
@@ -430,7 +432,7 @@ struct telepod *clone_telepod(struct coin_info *cp,struct telepod *refpod,uint64
                     update_telepod(refpod);
                 }
                 pod = create_telepod((uint32_t)time(NULL),cp->name,refsatoshis,podaddr,"",privkey,txid,TELEPOD_CONTENTS_VOUT);
-                pod->podstate = TELEPOD_INBOUND;
+                pod->podstate = (refpod != 0) ? TELEPOD_INBOUND : TELEPOD_AVAIL;
                 update_telepod(pod);
             }
             //if ( cp->enabled == 0 )
@@ -556,8 +558,8 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         {
             m++;
             pod = data.data;
-            if ( Debuglevel > 1 )
-                fprintf(stderr,"%-5s.%d minage.%d %s size.%d/%d time.%d %.8f | %s\n",coinstr,m,minage,key.data,pod->H.datalen,data.size,pod->H.createtime,dstr(pod->satoshis),_podstate(pod->podstate));
+            if ( Debuglevel > 0 )
+                fprintf(stderr,"%5s.%-4d minage.%-4d %s size.%d/%d lag.%-8d %.8f | %s clone.%d\n",coinstr,m,minage,key.data,pod->H.datalen,data.size,now - pod->H.createtime,dstr(pod->satoshis),_podstate(pod->podstate),pod->clonetime==0?0:pod->clonetime-now);
             if ( pod->H.datalen != data.size )
             {
                 fprintf(stderr,"podsize mismatch error %d != %d, skip: ",pod->H.datalen,data.size);
@@ -566,21 +568,27 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
             podstate = pod->podstate;
             createtime = pod->H.createtime;
             if ( minage < 0 )
+            {
                 ADD_TELEPOD
-            evolve_amount = calc_convamount(pod->coinstr,coinstr,pod->satoshis);
-            if ( evolve_amount == 0. )
-            {
-                clear_pair(&key,&data);
-                continue;
+                evolve_amount = (double)pod->satoshis / SATOSHIDEN;
             }
-            if ( podstate == TELEPOD_AVAIL )
+            else
             {
-                if ( createtime > (now - minage) )
+                evolve_amount = calc_convamount(pod->coinstr,coinstr,pod->satoshis);
+                if ( evolve_amount == 0. )
                 {
+                    clear_pair(&key,&data);
+                    continue;
+                }
+            }
+            if ( podstate == TELEPOD_AVAIL || podstate == TELEPOD_CLONED )
+            {
+                if ( minage >= 0 )
+                    ADD_TELEPOD
+                if ( minage < 0 || createtime > (now - minage) )
                     (*availp) += evolve_amount;
-                    if ( minage >= 0 )
-                        ADD_TELEPOD
-                } else (*maturingp) += evolve_amount;
+                else (*maturingp) += evolve_amount;
+                //printf("evolve_amount %.8f satoshis %.8f | %.8f %.8f\n",evolve_amount,dstr(pod->satoshis),*availp,*maturingp);
             }
             else if ( podstate == TELEPOD_OUTBOUND ) // telepod is waiting to be cloned by destination
                 (*outboundp) += evolve_amount;
@@ -597,12 +605,11 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         }
         cursorp->close(cursorp);
     }
-    //printf("find_closer_Kstored returns n.%d %p\n",n,sps);
     if ( m > max_in_db(TELEPOD_DATA) )
         set_max_in_db(TELEPOD_DATA,m);
     if ( pods != 0 )
         pods[n] = 0;
-    //printf("set nump.%d\n",n);
+    printf("E avail %.8f, maturing %.8f, inbound %.8f, outbound %.8f, doublespent %.8f, cancelled %.8f | set nump.%d\n",*availp,*maturingp,*inboundp,*outboundp,*doublespentp,*cancelledp,n);
     *nump = n;
     return(pods);
 }
@@ -664,7 +671,6 @@ int32_t poll_telepods(char *relstr)
     int32_t flag,i,err,n,m = 0;
     struct telepod **pods,*pod,*clonepod;
     double avail,inbound,outbound,maturing,doublespent,cancelled;
-//return(0);
     pods = available_telepods(&n,&avail,&maturing,&inbound,&outbound,&doublespent,&cancelled,relstr,-1);
     if ( pods != 0 )
     {
@@ -688,19 +694,23 @@ int32_t poll_telepods(char *relstr)
                             {
                                 if ( unspent == 0 )
                                     flag = TELEPOD_DOUBLESPENT;
-                                printf("Doublespend? txid.%s vout.%d satoshis %.8f vs %.8f\n",pod->txid,pod->vout,dstr(unspent),dstr(pod->satoshis));
+                                fprintf(stderr,"Doublespend? txid.%s vout.%d satoshis %.8f vs %.8f\n",pod->txid,pod->vout,dstr(unspent),dstr(pod->satoshis));
                             }
-                            else if ( pod->podstate == TELEPOD_INBOUND && pod->clonetime > now )
+                            else if ( pod->podstate == TELEPOD_INBOUND )
                             {
-                                cp = get_coin_info(pod->coinstr);
-                                if ( cp != 0 && (clonepod= clone_telepod(cp,pod,pod->satoshis,0)) != 0 )
+                                if ( pod->clonetime > now )
                                 {
-                                    flag = TELEPOD_CLONED;
-                                    free(clonepod);
+                                    cp = get_coin_info(pod->coinstr);
+                                    if ( cp != 0 && (clonepod= clone_telepod(cp,pod,pod->satoshis,0)) != 0 )
+                                    {
+                                        flag = TELEPOD_CLONED;
+                                        free(clonepod);
+                                    }
+                                    else printf("error cloning %s %s.%d\n",pod->coinstr,pod->txid,pod->vout);
                                 }
-                                else printf("error cloning %s %s.%d\n",pod->coinstr,pod->txid,pod->vout);
+                                else if ( pod->clonetime == 0 )
+                                    flag = TELEPOD_AVAIL;
                             }
-                            break;
                             break;
                         case TELEPOD_OUTBOUND:
                             if ( unspent == 0 )
@@ -711,12 +721,12 @@ int32_t poll_telepods(char *relstr)
                             break;
                             // nothing left to do for these
                         case TELEPOD_DOUBLESPENT:
-                        case TELEPOD_CANCELLED:
                         case TELEPOD_CLONED:
+                        case TELEPOD_CANCELLED:
                         case TELEPOD_SPENT:
                             break;
                     }
-                    if ( flag != 0 )
+                    if ( flag != pod->podstate )
                     {
                         pod->podstate = flag;
                         update_telepod(pod);
