@@ -1308,7 +1308,7 @@ char *settings_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 {
     static char *buf=0;
     static int64_t len=0,allocsize=0;
-    char reinit[MAX_JSON_FIELD],field[MAX_JSON_FIELD],value[MAX_JSON_FIELD],decodedhex[MAX_JSON_FIELD],*str,*retstr;
+    char reinit[MAX_JSON_FIELD],field[MAX_JSON_FIELD],value[MAX_JSON_FIELD*2+1],decodedhex[MAX_JSON_FIELD*2],*str,*retstr;
     cJSON *json,*item;
     FILE *fp;
     printf("settings.%p\n",prevaddr);
