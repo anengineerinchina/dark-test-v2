@@ -158,7 +158,8 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
             "HTTP/1.0 200 OK\x0d\x0a"
             "Server: NXTprotocol.jl777\x0d\x0a"
             "Content-Type: text/html\x0d\x0a"
-            "Access-Control-Allow-Origin: *\x0d\x0a"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Access-Control-Allow-Headers: Authorization, Content-Type\r\n"
             "Content-Length: %u\x0d\x0a\x0d\x0a",
             (unsigned int)len);
     //printf("html hdr.(%s)\n",buffer);
@@ -186,7 +187,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
-            //printf("GOT.(%s)\n",(char *)in);
+            printf("RPC GOT.(%s)\n",(char *)in);
             str = malloc(len+1);
             memcpy(str,(void *)((long)in + 1),len-1);
             str[len-1] = 0;
@@ -210,7 +211,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             str[len] = 0;
             //if ( wsi != 0 )
             //dump_handshake_info(wsi);
-            if ( Debuglevel > 2 && strcmp("{\"requestType\":\"BTCDpoll\"}",str) != 0 )
+            if ( Debuglevel > 0 && strcmp("{\"requestType\":\"BTCDpoll\"}",str) != 0 )
                 fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s) wsi.%p user.%p\n",str,wsi,user);
             //>>>>>>>>>>>>>> SuperNET received RPC.({"requestType":"BTCDjson","json":{\"requestType\":\"getpeers\"}})
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
@@ -1265,6 +1266,17 @@ char *gotnewpeer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
     return(0);
 }
 
+char *stop_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    int32_t got_newpeer(char *ip_port);
+    
+    if ( prevaddr != 0 )
+        return(0);
+    close_SuperNET_dbs();
+    exit(0);
+    return(clonestr("{\"result\":\"stopping SuperNET...\"}"));
+}
+
 char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr);
@@ -1364,6 +1376,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "", "ip_port", 0 };
     static char *BTCDpoll[] = { (char *)BTCDpoll_func, "BTCDpoll", "", 0 };
     static char *GUIpoll[] = { (char *)GUIpoll_func, "GUIpoll", "", 0 };
+    static char *stop[] = { (char *)stop_func, "stop", "", 0 };
     static char *settings[] = { (char *)settings_func, "settings", "V", "field", "value", "reinit", 0 };
 
     // multisig
@@ -1416,7 +1429,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     // Tradebot
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
 
-     static char **commands[] = { GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
+     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
