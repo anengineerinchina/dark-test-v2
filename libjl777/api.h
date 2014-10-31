@@ -1317,6 +1317,8 @@ char *settings_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     copy_cJSON(field,objs[0]);
     copy_cJSON(value,objs[1]);
     copy_cJSON(reinit,objs[2]);
+    copy_file("SuperNET.conf.old","backups/SuperNET.conf.old");
+    copy_file("SuperNET.conf","SuperNET.conf.old");
     retstr = load_file("SuperNET.conf",&buf,&len,&allocsize);
     if ( retstr != 0 )
     {
