@@ -4104,7 +4104,7 @@ return_result:
     }
     else
     {
-        retstr = malloc(strlen("{\"result\":null}") + 1);
+        retstr = (char *)malloc(strlen("{\"result\":null}") + 1);
         strcpy(retstr,"{\"result\":null}");
     }
     free(jsonstr);
