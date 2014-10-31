@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <pthread.h>
 void *poll_for_broadcasts(void *args);
-extern int did_SuperNET_init;
 
 void *portable_thread_create(void *funcp,void *argp)
 {

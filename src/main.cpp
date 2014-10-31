@@ -4064,7 +4064,11 @@ char *SuperNET_JSON(char *JSONstr)
     {
         copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
         if ( strcmp(request,"stop") == 0 )
+        {
+            Pending_RPC = 0;
             did_SuperNET_init = 0;
+            SuperNET_retval = -2;
+        }
         else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
         {
             init_jl777(0);
