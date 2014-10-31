@@ -4068,6 +4068,9 @@ return_result:
         {
             Pending_RPC = 0;
             did_SuperNET_init = 0;
+            sprintf(result,"{\"result\":\"stopped\"}");
+            free_json(json);
+            goto return_result;
         }
         else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
         {

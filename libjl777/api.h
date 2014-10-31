@@ -187,7 +187,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
-            printf("RPC GOT.(%s)\n",(char *)in);
+            //printf("RPC GOT.(%s)\n",(char *)in);
             str = malloc(len+1);
             memcpy(str,(void *)((long)in + 1),len-1);
             str[len-1] = 0;
@@ -211,7 +211,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             str[len] = 0;
             //if ( wsi != 0 )
             //dump_handshake_info(wsi);
-            if ( Debuglevel > 0 && strcmp("{\"requestType\":\"BTCDpoll\"}",str) != 0 )
+            if ( Debuglevel > 2 && strcmp("{\"requestType\":\"BTCDpoll\"}",str) != 0 )
                 fprintf(stderr,">>>>>>>>>>>>>> SuperNET received RPC.(%s) wsi.%p user.%p\n",str,wsi,user);
             //>>>>>>>>>>>>>> SuperNET received RPC.({"requestType":"BTCDjson","json":{\"requestType\":\"getpeers\"}})
             //{"jsonrpc": "1.0", "id":"curltest", "method": "SuperNET", "params": ["{\"requestType\":\"getpeers\"}"]  }
