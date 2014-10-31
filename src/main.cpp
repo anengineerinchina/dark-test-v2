@@ -4069,8 +4069,8 @@ return_result:
             Pending_RPC = 0;
             did_SuperNET_init = 0;
             sprintf(result,"{\"result\":\"stopped\"}");
-            free_json(json);
-            goto return_result;
+            //free_json(json);
+            //goto return_result;
         }
         else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
         {
@@ -4285,8 +4285,11 @@ extern "C" int32_t launch_SuperNET(char *);
 void init_jl777(char *myip)
 {
     static char ipaddr[64];
-    if ( myip != 0 && ipaddr[0] == 0 )
+    if ( myip != 0 )
+    {
         strcpy(ipaddr,myip);
+        myip = ipaddr;
+    }
     if ( myip == 0 )
         myip = ipaddr;
     std::cout << "starting SuperNET " << myip << std::endl;
