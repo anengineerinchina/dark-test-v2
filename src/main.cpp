@@ -4077,6 +4077,7 @@ return_result:
             free_json(json);
             goto return_result;
         }
+        Pending_RPC++;
         free_json(json);
     }
     else
@@ -4086,7 +4087,6 @@ return_result:
     }
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
-    Pending_RPC++;
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr != 0 )
     {
