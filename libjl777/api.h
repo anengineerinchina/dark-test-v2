@@ -1298,6 +1298,7 @@ char *settings_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     char reinit[MAX_JSON_FIELD],field[MAX_JSON_FIELD],value[MAX_JSON_FIELD],*str,*retstr;
     cJSON *json,*item;
     FILE *fp;
+    printf("settings.%p\n",prevaddr);
     if ( prevaddr != 0 )
         return(0);
     copy_cJSON(field,objs[0]);
@@ -1305,20 +1306,33 @@ char *settings_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
     copy_cJSON(reinit,objs[2]);
     retstr = load_file("SuperNET.conf",&buf,&len,&allocsize);
     if ( retstr != 0 )
+    {
+        printf("cloning.(%s)\n",retstr);
         retstr = clonestr(retstr);
-    if ( retstr != 0 && field[0] != 0 )
+    }
+    if ( retstr != 0 )
     {
         fprintf(stderr,"settings: field.(%s) <- (%s)\n",field,value);
         json = cJSON_Parse(retstr);
         if ( json != 0 )
         {
-            if ( value[0] == 0 )
-                cJSON_DeleteItemFromObject(json,field);
-            else if ( (item= cJSON_GetObjectItem(json,field)) != 0 )
-                cJSON_ReplaceItemInObject(json,field,cJSON_CreateString(value));
-            else cJSON_AddItemToObject(json,field,cJSON_CreateString(value));
             free(retstr);
-            retstr = cJSON_Print(json);
+            if ( field[0] != 0 )
+            {
+                printf("FIELD.(%s)\n",field);
+                if ( value[0] == 0 )
+                    cJSON_DeleteItemFromObject(json,field);
+                else if ( (item= cJSON_GetObjectItem(json,field)) != 0 )
+                    cJSON_ReplaceItemInObject(json,field,cJSON_CreateString(value));
+                else cJSON_AddItemToObject(json,field,cJSON_CreateString(value));
+                retstr = cJSON_Print(json);
+            }
+            else
+            {
+                unstringify(value);
+                printf("unstringify.(%s)\n",value);
+                retstr = clonestr(value);
+            }
             free_json(json);
             if ( (fp= fopen("SuperNET.conf","wb")) != 0 )
             {
@@ -1336,7 +1350,7 @@ char *settings_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
             free(str);
             str = 0;
         }
-    }
+    } else printf("cant load SuperNET.conf\n");
     if ( retstr != 0 && strcmp(reinit,"yes") == 0 )
         init_MGWconf(retstr,0);
     return(retstr);
