@@ -344,6 +344,7 @@ string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeader
       << "User-Agent: BitcoinDark-json-rpc/" << FormatFullVersion() << "\r\n"
       << "Host: 127.0.0.1\r\n"
       << "Content-Type: application/json\r\n"
+      << "Access-Control-Allow-Origin: *\x0d\x0a"
       << "Content-Length: " << strMsg.size() << "\r\n"
       << "Connection: close\r\n"
       << "Accept: application/json\r\n";
@@ -399,6 +400,7 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
             "Connection: %s\r\n"
             "Content-Length: %"PRIszu"\r\n"
             "Content-Type: application/json\r\n"
+            "Access-Control-Allow-Origin: *\x0d\x0a"
             "Server: BitcoinDark-json-rpc/%s\r\n"
             "\r\n"
             "%s",
