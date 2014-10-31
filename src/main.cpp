@@ -4068,7 +4068,6 @@ return_result:
         {
             Pending_RPC = 0;
             did_SuperNET_init = 0;
-            SuperNET_retval = -2;
         }
         else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
         {
