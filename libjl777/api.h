@@ -158,7 +158,8 @@ void return_http_str(struct libwebsocket *wsi,char *retstr)
             "HTTP/1.0 200 OK\x0d\x0a"
             "Server: NXTprotocol.jl777\x0d\x0a"
             "Content-Type: text/html\x0d\x0a"
-            "Access-Control-Allow-Origin: *\x0d\x0a"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Access-Control-Allow-Headers: Authorization, Content-Type\r\n"
             "Content-Length: %u\x0d\x0a\x0d\x0a",
             (unsigned int)len);
     //printf("html hdr.(%s)\n",buffer);
@@ -186,11 +187,12 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
-            //printf("GOT.(%s)\n",(char *)in);
             str = malloc(len+1);
             memcpy(str,(void *)((long)in + 1),len-1);
             str[len-1] = 0;
             convert_percent22(str);
+            if ( Debuglevel > 2 )
+                printf("RPC GOT.(%s)\n",str);
             if ( (json= cJSON_Parse(str)) != 0 )
             {
                 retstr = block_on_SuperNET(is_BTCD_command(json) == 0,str);
@@ -200,7 +202,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     free(retstr);
                 }
                 free_json(json);
-            }
+            } else printf("couldnt parse.(%s)\n",str);
             free(str);
             return(-1);
             break;
@@ -285,7 +287,9 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
 {
     static int counter;
     int32_t duration,len;
-    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2,**ptrs;
+    char ip_port[64],hexstr[8192],msg[MAX_JSON_FIELD],retbuf[MAX_JSON_FIELD*3],*ptr,*str,*msg2;
+    if ( prevaddr != 0 )
+        return(0);
     counter++;
     //printf("BTCDpoll.%d\n",counter);
     //BTCDpoll post_process_bitcoind_RPC.SuperNET can't parse.({"msg":"[{"requestType":"ping","NXT":"13434315136155299987","time":1414310974,"pubkey":"34b173939544eb01515119b5e0b05880eadaae3d268439c9cc1471d8681ecb6d","ipaddr":"209.126.70.159"},{"token":"im9n7c9ka58g3qq4b2oe1d8p7mndlqk0pj4jj1163pkdgs8knb0vsreb0kf6luo1bbk097buojs1k5o5c0ldn6r6aueioj8stgel1221fq40f0cvaqq0bciuniit0isi0dikd363f3bjd9ov24iltirp6h4eua0q"}]","duration":86400})
@@ -328,11 +332,24 @@ char *BTCDpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,
         }
     }
     if ( retbuf[0] == 0 )
+        strcpy(retbuf,"{\"result\":\"nothing pending\"}");
+    return(clonestr(retbuf));
+}
+
+char *GUIpoll_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    static int counter;
+    char retbuf[MAX_JSON_FIELD*3],*ptr,**ptrs;
+    if ( prevaddr != 0 )
+        return(0);
+    counter++;
+    retbuf[0] = 0;
+    if ( retbuf[0] == 0 )
     {
         if ( (ptr= queue_dequeue(&ResultsQ)) != 0 )
         {
             memcpy(&ptrs,ptr,sizeof(ptrs));
-            //fprintf(stderr,"Got ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
+            fprintf(stderr,"Got GUI ResultsQ.(%s) ptrs.%p %p %p\n",ptr+sizeof(ptrs),ptrs,ptrs[0],ptrs[1]);
             if ( ptrs[0] != 0 )
                 free(ptrs[0]);
             if ( ptrs[1] != 0 )
@@ -1139,6 +1156,8 @@ char *getdb_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,cha
 {
     char dirstr[MAX_JSON_FIELD],contact[MAX_JSON_FIELD],key[MAX_JSON_FIELD],*retstr = 0;
     int32_t sequenceid,dir;
+    if ( prevaddr != 0 )
+        return(0);
     copy_cJSON(contact,objs[0]);
     sequenceid = get_API_int(objs[1],0);
     copy_cJSON(key,objs[2]);
@@ -1248,6 +1267,17 @@ char *gotnewpeer_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevadd
     return(0);
 }
 
+char *stop_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    int32_t got_newpeer(char *ip_port);
+    
+    if ( prevaddr != 0 )
+        return(0);
+    close_SuperNET_dbs();
+    exit(0);
+    return(clonestr("{\"result\":\"stopping SuperNET...\"}"));
+}
+
 char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr);
@@ -1273,7 +1303,83 @@ char *gotjson_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,c
     }
     return(retstr);
 }
-    
+
+char *settings_func(char *NXTaddr,char *NXTACCTSECRET,struct sockaddr *prevaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    static char *buf=0;
+    static int64_t len=0,allocsize=0;
+    char reinit[MAX_JSON_FIELD],field[MAX_JSON_FIELD],value[MAX_JSON_FIELD*2+1],decodedhex[MAX_JSON_FIELD*2],*str,*retstr;
+    cJSON *json,*item;
+    FILE *fp;
+    printf("settings.%p\n",prevaddr);
+    if ( prevaddr != 0 )
+        return(0);
+    copy_cJSON(field,objs[0]);
+    copy_cJSON(value,objs[1]);
+    copy_cJSON(reinit,objs[2]);
+    copy_file("SuperNET.conf.old","backups/SuperNET.conf.old");
+    copy_file("SuperNET.conf","SuperNET.conf.old");
+    retstr = load_file("SuperNET.conf",&buf,&len,&allocsize);
+    if ( retstr != 0 )
+    {
+        printf("cloning.(%s)\n",retstr);
+        retstr = clonestr(retstr);
+    }
+    if ( retstr != 0 )
+    {
+        fprintf(stderr,"settings: field.(%s) <- (%s)\n",field,value);
+        json = cJSON_Parse(retstr);
+        if ( json != 0 )
+        {
+            free(retstr);
+            if ( field[0] != 0 )
+            {
+                printf("FIELD.(%s)\n",field);
+                if ( value[0] == 0 )
+                    cJSON_DeleteItemFromObject(json,field);
+                else if ( (item= cJSON_GetObjectItem(json,field)) != 0 )
+                    cJSON_ReplaceItemInObject(json,field,cJSON_CreateString(value));
+                else cJSON_AddItemToObject(json,field,cJSON_CreateString(value));
+                retstr = cJSON_Print(json);
+            }
+            else
+            {
+                if ( is_hexstr(value) != 0 )
+                {
+                    decode_hex((unsigned char *)decodedhex,(int32_t)strlen(value)/2,value);
+                    retstr = clonestr(decodedhex);
+                    printf("hex.(%s) -> (%s)\n",value,buf);
+                }
+                else
+                {
+                    unstringify(value);
+                    printf("unstringify.(%s)\n",value);
+                    retstr = clonestr(value);
+                }
+            }
+            free_json(json);
+            if ( (fp= fopen("SuperNET.conf","wb")) != 0 )
+            {
+                if ( fwrite(retstr,1,strlen(retstr),fp) != strlen(retstr) )
+                    printf("error saving SuperNET.conf\n");
+                fclose(fp);
+            }
+        }
+        else
+        {
+            str = stringifyM(retstr);
+            free(retstr);
+            retstr = malloc(strlen(str) + 512);
+            sprintf(retstr,"{\"error\":\"SuperNET.conf PARSE error\",\"settings\":%s}",str);
+            free(str);
+            str = 0;
+        }
+    } else printf("cant load SuperNET.conf\n");
+    if ( retstr != 0 && strcmp(reinit,"yes") == 0 )
+        init_MGWconf(retstr,0);
+    return(retstr);
+}
+
 char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevaddr,cJSON *origargjson,char *sender,int32_t valid,char *origargstr)
 {
     // glue
@@ -1281,7 +1387,10 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     static char *gotpacket[] = { (char *)gotpacket_func, "gotpacket", "", "msg", "dur", "ip_port", 0 };
     static char *gotnewpeer[] = { (char *)gotnewpeer_func, "gotnewpeer", "", "ip_port", 0 };
     static char *BTCDpoll[] = { (char *)BTCDpoll_func, "BTCDpoll", "", 0 };
-  
+    static char *GUIpoll[] = { (char *)GUIpoll_func, "GUIpoll", "", 0 };
+    static char *stop[] = { (char *)stop_func, "stop", "", 0 };
+    static char *settings[] = { (char *)settings_func, "settings", "", "field", "value", "reinit", 0 };
+
     // multisig
     static char *cosign[] = { (char *)cosign_func, "cosign", "V", "otheracct", "seed", "text", 0 };
     static char *cosigned[] = { (char *)cosigned_func, "cosigned", "V", "seed", "result", "privacct", "pubacct", 0 };
@@ -1332,7 +1441,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     // Tradebot
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
 
-     static char **commands[] = { BTCDpoll,gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
+     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, sendfile, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, getorderbooks, teleport, telepodacct, savefile, restorefile  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];

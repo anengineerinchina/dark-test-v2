@@ -135,7 +135,8 @@ void SuperNET_idler(uv_idle_t *handle)
         {
             char *call_SuperNET_JSON(char *JSONstr);
             jsonstr = ptrs[0];
-            //printf("dequeue JSON_Q.(%s)\n",jsonstr);
+            if ( Debuglevel > 1 )
+                printf("dequeue JSON_Q.(%s)\n",jsonstr);
             if ( (retstr= call_SuperNET_JSON(jsonstr)) == 0 )
                 retstr = clonestr("{\"result\":null}");
             if ( ptrs[2] != 0 )
@@ -151,18 +152,6 @@ void SuperNET_idler(uv_idle_t *handle)
                 queue_enqueue(&ResultsQ,str);
             }
             ptrs[1] = retstr;
-
-            //free(ptrs[0]); free(ptrs[1]); free(ptrs);
-            
-            /*printf("dequeue JSON_Q.(%s)\n",jsonstr);
-            if ( (retstr= call_SuperNET_JSON(jsonstr)) != 0 )
-            {
-                //printf("(%s) -> (%s)\n",jsonstr,retstr);
-                ptrs[1] = retstr;
-            } else ptrs[1] = clonestr("{\"result\":null}");
-            //printf("JSON_Q ret.(%s)\n",retstr);
-            free(jsonstr);*/
-
             lastattempt = millis;
         }
         if ( process_storageQ() != 0 )
@@ -334,7 +323,8 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
         txid = calc_txid((uint8_t *)JSONstr,(int32_t)strlen(JSONstr));
         ptrs[2] = (char *)txid;
     }
-    //printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
+    if ( Debuglevel > 1 )
+        printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
     queue_enqueue(&JSON_Q,ptrs);
     if ( blockflag != 0 )
     {

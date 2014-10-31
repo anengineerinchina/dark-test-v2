@@ -431,7 +431,6 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
         estblocktime = get_API_int(cJSON_GetObjectItem(json,"estblocktime"),300);
         min_telepod_satoshis = get_API_nxt64bits(cJSON_GetObjectItem(json,"min_telepod_satoshis"));
         dust = get_API_nxt64bits(cJSON_GetObjectItem(json,"dust"));
-
         txfee = get_API_nxt64bits(cJSON_GetObjectItem(json,"txfee_satoshis"));
         if ( txfee == 0 )
             txfee = (uint64_t)(SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"txfee")));
@@ -469,9 +468,9 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                     cp->tradebotfname = clonestr(tradebotfname);
                 if ( extract_cJSON_str(cp->privacyserver,sizeof(cp->privacyserver),json,"privacyServer") > 0 )
                     printf("set default privacyServer to (%s)\n",cp->privacyserver);
-                if ( extract_cJSON_str(cp->pubaddr,sizeof(cp->pubaddr),json,"pubaddr") > 0 )
+                if ( extract_cJSON_str(cp->privateaddr,sizeof(cp->privateaddr),json,"privateaddr") > 0 || extract_cJSON_str(cp->privateaddr,sizeof(cp->privateaddr),json,"pubaddr") > 0 )
                 {
-                    coinaddr = cp->pubaddr;
+                    coinaddr = cp->privateaddr;
                     if ( (privkey= get_telepod_privkey(&coinaddr,cp->coinpubkey,cp)) != 0 )
                     {
                         printf("copy key <- (%s)\n",privkey);
@@ -479,7 +478,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                         cp->privatebits = issue_getAccountId(0,privkey);
                         expand_nxt64bits(cp->privateNXTADDR,cp->privatebits);
                         conv_NXTpassword(Global_mp->myprivkey.bytes,Global_mp->mypubkey.bytes,cp->privateNXTACCTSECRET);
-                        printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->pubaddr,cp->privateNXTACCTSECRET,(long long)cp->privatebits);
+                        printf("SET ACCTSECRET for %s.%s to %s NXT.%llu\n",cp->name,cp->privateaddr,cp->privateNXTACCTSECRET,(long long)cp->privatebits);
                         free(privkey);
                         stats = get_nodestats(cp->privatebits);
                         add_new_node(cp->privatebits);
@@ -522,9 +521,8 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                 if ( (cp->min_telepod_satoshis= min_telepod_satoshis) == 0 )
                     cp->min_telepod_satoshis = (dust == 0) ? SATOSHIDEN/10000 : dust;
                 if ( dust == 0 )
-                    dust = 100000;
+                    dust = 10000;
                 cp->dust = dust;
-           
                 cp->maxevolveiters = get_API_int(cJSON_GetObjectItem(json,"maxevolveiters"),100);
                 cp->M = get_API_int(cJSON_GetObjectItem(json,"telepod_M"),1);
                 cp->N = get_API_int(cJSON_GetObjectItem(json,"telepod_N"),1);
@@ -540,7 +538,7 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
                 if ( ciphersobj == 0 || (privkeys= validate_ciphers(&cipherids,cp,ciphersobj)) == 0 )
                 {
                     free_cipherptrs(ciphersobj,privkeys,cipherids);
-                    sprintf(buf,"[{\"aes\":\"%s\"}]",cp->pubaddr);
+                    sprintf(buf,"[{\"aes\":\"%s\"}]",cp->privateaddr);
                     cp->ciphersobj = cJSON_Parse(buf);
                 } else cp->ciphersobj = ciphersobj;
                 free_cipherptrs(0,privkeys,cipherids);
@@ -561,18 +559,18 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
 
 char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
 {
+    static int didinit,exchangeflag;
+    static char ipbuf[64],*buf=0;
+    static int64_t len=0,allocsize=0;
     int32_t init_SuperNET_storage();
-    //int32_t set_pubpeerinfo(char *srvNXTaddr,char *srvipaddr,int32_t srvport,struct peerinfo *peer,char *pubBTCD,char *pubkey,uint64_t pubnxtbits,char *pubBTC);
-    //struct peerinfo *update_peerinfo(int32_t *createdflagp,struct peerinfo *refpeer);
     int32_t init_tradebots(cJSON *languagesobj);
-    static int32_t exchangeflag;
     uint64_t nxt64bits;
     struct coin_info *cp;
     cJSON *array,*item,*languagesobj = 0;
-    char ipaddr[MAX_JSON_FIELD],coinstr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],NXTADDR[MAX_JSON_FIELD],*buf=0,*jsonstr;
+    char ipaddr[64],coinstr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],NXTADDR[MAX_JSON_FIELD],*jsonstr;
     int32_t i,n,ismainnet,timezone=0;
-    int64_t len=0,allocsize=0;
-    //struct peerinfo *refpeer,peer;
+    void close_SuperNET_dbs();
+    close_SuperNET_dbs();
     NXTACCTSECRET[0] = 0;
     NXTADDR[0] = 0;
     exchangeflag = 0;//!strcmp(NXTACCTSECRET,"exchanges");
@@ -589,19 +587,19 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
     if ( jsonstr != 0 )
     {
         printf("loaded.(%s)\n",jsonstr);
+        if ( MGWconf != 0 )
+            free_json(MGWconf);
         MGWconf = cJSON_Parse(jsonstr);
         if ( MGWconf != 0 )
         {
-            static char ipbuf[64];
             if ( myipaddr == 0 )
             {
-                if ( extract_cJSON_str(ipbuf,sizeof(ipbuf),MGWconf,"myipaddr") <= 0 )
+                if ( didinit == 0 && extract_cJSON_str(ipbuf,sizeof(ipbuf),MGWconf,"myipaddr") <= 0 )
                     strcpy(ipbuf,"127.0.0.1");
             } else parse_ipaddr(ipbuf,myipaddr);
             myipaddr = ipbuf;
             if ( extract_cJSON_str(Global_mp->myhandle,sizeof(Global_mp->myhandle),MGWconf,"myhandle") <= 0 )
                 strcpy(Global_mp->myhandle,"myhandle");
-            printf("parsed\n");
             timezone = get_API_int(cJSON_GetObjectItem(MGWconf,"timezone"),0);
             init_jdatetime(NXT_GENESISTIME,timezone * 3600);
             languagesobj = cJSON_GetObjectItem(MGWconf,"tradebot_languages");
@@ -690,7 +688,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         parse_ipaddr(cp->myipaddr,myipaddr);
                         if ( strcmp(coinstr,"BTCD") == 0 )
                         {
-                            BTCDaddr = cp->pubaddr;
+                            BTCDaddr = cp->privateaddr;
                             strcpy(NXTACCTSECRET,cp->privateNXTACCTSECRET);
                             printf("BTCDaddr.(%s)\n",BTCDaddr);
                             if ( cp->privatebits != 0 )
@@ -698,9 +696,9 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                             addcontact(Global_mp->myhandle,cp->privateNXTADDR);
                         }
                         else if ( strcmp(coinstr,"BTC") == 0 )
-                            BTCaddr = cp->pubaddr;
+                            BTCaddr = cp->privateaddr;
                         else if ( strcmp(coinstr,"NXT") == 0 )
-                            pubNXT = cp->pubaddr;
+                            pubNXT = cp->privateNXTADDR;
                      }
                 }
             } else printf("no coins array.%p ?\n",array);
@@ -733,11 +731,12 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                 MGW_blacklist[n++] = "4551058913252105307";    // from accidental transfer
                 MGW_blacklist[n++] = "";
             }
-            array = cJSON_GetObjectItem(MGWconf,"contacts");
+            array = (IS_LIBTEST != 0) ? cJSON_GetObjectItem(MGWconf,"contacts") : 0;
             if ( array != 0 && is_cJSON_Array(array) != 0 ) // first three must be the gateway's addresses
             {
                 char handle[MAX_JSON_FIELD],acct[MAX_JSON_FIELD],*retstr;
                 n = cJSON_GetArraySize(array);
+                printf("Initializing %d contacts\n",n);
                 for (i=0; i<n; i++)
                 {
                     if ( array == 0 || n == 0 )
@@ -749,6 +748,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         copy_cJSON(acct,cJSON_GetArrayItem(item,1));
                         if ( handle[0] != 0 && acct[0] != 0 )
                         {
+                            printf("addcontact (%s) <-> (%s)\n",handle,acct);
                             retstr = addcontact(handle,acct);
                             if ( retstr != 0 )
                                 free(retstr);
@@ -757,33 +757,40 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                 }
                 printf("contacts.%d\n",n);
             }
-            void start_polling_exchanges(int32_t exchangeflag);
-            int32_t init_exchanges(cJSON *confobj,int32_t exchangeflag);
-            if ( init_exchanges(MGWconf,exchangeflag) > 0 )
-                start_polling_exchanges(exchangeflag);
+            if ( didinit == 0 )
+            {
+                void start_polling_exchanges(int32_t exchangeflag);
+                int32_t init_exchanges(cJSON *confobj,int32_t exchangeflag);
+                if ( init_exchanges(MGWconf,exchangeflag) > 0 )
+                    start_polling_exchanges(exchangeflag);
+            }
         }
         else printf("PARSE ERROR\n");
         free(jsonstr);
     }
-    init_tradebots(languagesobj);
-    if ( ORIGBLOCK[0] == 0 )
+    if ( didinit == 0 )
     {
-        char blockidstr[64];
-        int32_t isrescan,height,timestamp;
-        set_current_NXTblock(&isrescan,0,ORIGBLOCK);
-        for (i=0; i<MIN_NXTCONFIRMS; i++)
-        {
-            strcpy(blockidstr,ORIGBLOCK);
-            set_prev_NXTblock(0,&height,&timestamp,ORIGBLOCK,blockidstr);
-            printf("i.%d height.%d block.(%s)\n",i,height,blockidstr);
-        }
+        init_tradebots(languagesobj);
         if ( ORIGBLOCK[0] == 0 )
         {
-            fprintf(stderr,"need a non-zero origblock.(%s)\n",ORIGBLOCK);
-            exit(1);
+            char blockidstr[64];
+            int32_t isrescan,height,timestamp;
+            set_current_NXTblock(&isrescan,0,ORIGBLOCK);
+            for (i=0; i<MIN_NXTCONFIRMS; i++)
+            {
+                strcpy(blockidstr,ORIGBLOCK);
+                set_prev_NXTblock(0,&height,&timestamp,ORIGBLOCK,blockidstr);
+                printf("i.%d height.%d block.(%s)\n",i,height,blockidstr);
+            }
+            if ( ORIGBLOCK[0] == 0 )
+            {
+                fprintf(stderr,"need a non-zero origblock.(%s)\n",ORIGBLOCK);
+                exit(1);
+            }
+            else printf("ORIGBLOCK.(%s)\n",ORIGBLOCK);
         }
-        else printf("ORIGBLOCK.(%s)\n",ORIGBLOCK);
     }
+    didinit = 1;
     return(myipaddr);
 }
 #endif

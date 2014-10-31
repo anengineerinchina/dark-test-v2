@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 void *poll_for_broadcasts(void *args);
+extern int32_t SuperNET_retval,did_SuperNET_init;
 
 void *portable_thread_create(void *funcp,void *argp)
 {
@@ -15,12 +16,13 @@ void *portable_thread_create(void *funcp,void *argp)
     } else return(ptr);
 }
 
-int32_t launch_SuperNET(char *myip)
+void *_launch_SuperNET(void *_myip)
 {
+    char *myip = _myip;
     FILE *fp;
     char cmd[128];
     int32_t retval;
-    void *processptr;
+    void *processptr = 0;
     system("rm horrible.hack");
     sprintf(cmd,"./SuperNET %s &",myip);
     if ( system(cmd) != 0 )
@@ -32,6 +34,17 @@ int32_t launch_SuperNET(char *myip)
     fclose(fp);
     printf("SuperNET file found! retval.%d\n",retval);
     if ( retval == 0 )
+    {
         processptr = portable_thread_create(poll_for_broadcasts,0);
-    return(retval);
+        did_SuperNET_init = 1;
+    }
+    SuperNET_retval = retval;
+    return(processptr);
+}
+
+int32_t launch_SuperNET(char *myip)
+{
+    void *processptr;
+    processptr = portable_thread_create(_launch_SuperNET,myip);
+    return(0);
 }

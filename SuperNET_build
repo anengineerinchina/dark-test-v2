@@ -1,0 +1,16 @@
+For Ubuntu: make sure to have clang and curl installed, everything else is included in this repo
+
+git clone https://github.com/jl777/btcd
+cd btcd/libjl777
+make onetime
+./m_unix
+
+Make sure to have SuperNET.conf in the libjl777 directory. Also, note that SuperNET is a different process
+from BitcoinDarkd and has to be manually killed each time you run. This will be fixed soon
+
+For Windows: coming soon
+
+For Macintosh: you can build SuperNET using the same process as for unix, building the wallet with Mac should be
+the same as the baseline BitcoinDarkd, but has not been verified yet
+
+

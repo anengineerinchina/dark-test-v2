@@ -51,7 +51,7 @@ static const int64_t nTargetTimespan = 60 * 60;  // BitcoinDark - every 1 hour
 unsigned int nTargetSpacing = 1 * 60; // BitcoinDark - 1 minute
 //static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 
-static const int64_t nDiffChangeTarget = 1;
+//static const int64_t nDiffChangeTarget = 1;
 
 unsigned int nStakeMinAge = 8 * 60 * 60; // BitcoinDark - 8 hours
 unsigned int nStakeMaxAge = -1;
@@ -4037,10 +4037,10 @@ char *unstringify(char *str)
     return(str);
 }
 
-int Pending_RPC,SuperNET_retval;
+int Pending_RPC,SuperNET_retval,did_SuperNET_init;
 char *SuperNET_JSON(char *JSONstr)
 {
-    char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD];
+    char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD],request[MAX_JSON_FIELD];
     cJSON *json;
     long len;
     if ( SuperNET_retval < 0 )
@@ -4049,6 +4049,7 @@ char *SuperNET_JSON(char *JSONstr)
     if ( 1 && Pending_RPC != 0 )
     {
         sprintf(result,"{\"error\":\"Pending_RPC.%d please resubmit request\"}",Pending_RPC);
+return_result:
         len = strlen(result)+1;
         retstr = (char *)malloc(len);
         memcpy(retstr,result,len);
@@ -4060,9 +4061,35 @@ char *SuperNET_JSON(char *JSONstr)
         sleep(1);
     }*/
     memset(params,0,sizeof(params));
+    if ( (json= cJSON_Parse(JSONstr)) != 0 )
+    {
+        copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
+        if ( strcmp(request,"stop") == 0 )
+        {
+            Pending_RPC = 0;
+            did_SuperNET_init = 0;
+            sprintf(result,"{\"result\":\"stopped\"}");
+            //free_json(json);
+            //goto return_result;
+        }
+        else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
+        {
+            fprintf(stderr,"start again\n");
+            init_jl777(0);
+            sprintf(result,"{\"result\":\"started\",\"retval\":%d}",SuperNET_retval);
+            free_json(json);
+            goto return_result;
+        }
+        else Pending_RPC++;
+        free_json(json);
+    }
+    else
+    {
+        fprintf(stderr,"SuperNET RPC: malformed JSON.(%s)\n",JSONstr);
+        return(0);
+    }
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
-    Pending_RPC++;
     retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
     if ( retstr != 0 )
     {
@@ -4074,6 +4101,11 @@ char *SuperNET_JSON(char *JSONstr)
             free_json(json);
         }
         fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s) result.(%s)\n",retstr,jsonstr,result);
+    }
+    else
+    {
+        retstr = (char *)malloc(strlen("{\"result\":null}") + 1);
+        strcpy(retstr,"{\"result\":null}");
     }
     free(jsonstr);
     return(retstr);
@@ -4096,7 +4128,6 @@ int32_t issue_gotnewpeer(char *ip_port)
     return(-1);
 }
 
-int did_SuperNET_init;
 int32_t got_newpeer(const char *ip_port)
 {
     static int numearly;
@@ -4203,7 +4234,7 @@ extern "C" void *poll_for_broadcasts(void *args)
     int32_t duration,len;
     unsigned char data[4098];
     char params[4096],buf[8192],destip[1024],txidstr[64],*retstr;
-    while ( 1 )
+    while ( did_SuperNET_init != 0 )
     {
         sleep(1);
         //printf("ISSUE BTCDpoll\n");
@@ -4258,10 +4289,17 @@ extern "C" void *poll_for_broadcasts(void *args)
 extern "C" int32_t launch_SuperNET(char *);
 void init_jl777(char *myip)
 {
-    std::cout << "starting SuperNET" << std::endl;
+    static char ipaddr[64];
+    if ( myip != 0 )
+    {
+        strcpy(ipaddr,myip);
+        myip = ipaddr;
+    }
+    if ( myip == 0 )
+        myip = ipaddr;
+    std::cout << "starting SuperNET " << myip << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
-    SuperNET_retval = launch_SuperNET(myip);
-    did_SuperNET_init = 1;
+    launch_SuperNET(myip);
     std::cout << "back from start" << std::endl;
 }
 

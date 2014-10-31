@@ -13,15 +13,12 @@ INCLUDEPATHS= \
  -I"$(CURDIR)" \
  -I"$(CURDIR)"/obj \
  -I"$(DEPSDIR)/include" \
- -I/usr/local/Cellar/berkeley-db/5.3.28/include
- #-I"$(DEPSDIR)/include/db48"
+ -I"/usr/local/opt/berkeley-db4/include" \
+ -I"$(DEPSDIR)/include/db48"
 
 LIBPATHS= \
  -L"$(DEPSDIR)/lib" \
- -L/usr/local/Cellar/boost \
- -L/usr/local/Cellar/boost/1.55.0_1/lib \
- -L/usr/local/Cellar/berkeley-db/5.3.28/lib
- #-L"$(DEPSDIR)/lib/db48"
+ -L"/usr/local/opt/berkeley-db4/lib" 
 
 USE_UPNP:=1
 
@@ -30,8 +27,7 @@ LIBS= -dead_strip
 ifdef STATIC
 # Build STATIC if you are redistributing the BitcoinDarkd binary
 LIBS += \
-# $(DEPSDIR)/lib/db48/libdb_cxx-4.8.a \
- /usr/local/Cellar/berkeley-db/5.3.28/lib/libdb.a \
+ $(DEPSDIR)/lib/db48/libdb_cxx-4.8.a \
  $(DEPSDIR)/lib/libboost_system-mt.a \
  $(DEPSDIR)/lib/libboost_filesystem-mt.a \
  $(DEPSDIR)/lib/libboost_program_options-mt.a \
@@ -41,8 +37,7 @@ LIBS += \
  -lz
 else
 LIBS += \
-# -ldb_cxx-4.8 \
- -ldb \
+ -ldb_cxx-4.8 \
  -lboost_system-mt \
  -lboost_filesystem-mt \
  -lboost_program_options-mt \
@@ -69,7 +64,6 @@ CFLAGS += -Wall -Wextra -Wformat -Wno-ignored-qualifiers -Wformat-security -Wno-
 
 OBJS= \
     obj/alert.o \
-    obj/pubaddr.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -80,8 +74,8 @@ OBJS= \
     obj/init.o \
     obj/irc.o \
     obj/keystore.o \
-    obj/miner.o \
     obj/main.o \
+    obj/miner.o \
     obj/net.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
@@ -97,11 +91,11 @@ OBJS= \
     obj/wallet.o \
     obj/walletdb.o \
     obj/noui.o \
-    obj/kernel.o \
     obj/pbkdf2.o \
+    obj/kernel.o \
     obj/scrypt.o \
     obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o
+    obj/scrypt-x86_64.o \
 
 ifndef USE_UPNP
 	override USE_UPNP = -
@@ -117,7 +111,7 @@ endif
 
 all: BitcoinDarkd
 
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a -lboost_thread-mt -lboost_filesystem-mt -lboost_program_options-mt -lboost_system-mt /usr/local/Cellar/berkeley-db/5.3.28/lib/libdb.a -lssl -lcrypto -lnacl -lz -luv
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a glue.o -lcurl
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 OBJS += obj/txdb-leveldb.o
@@ -147,7 +141,7 @@ obj/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 BitcoinDarkd: $(OBJS:obj/%=obj/%)
-	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+	gcc -c glue.c; $(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
 clean:
 	-rm -f BitcoinDarkd
@@ -156,3 +150,4 @@ clean:
 	-rm -f obj/build.h
 
 FORCE:
+
