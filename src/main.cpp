@@ -4102,6 +4102,11 @@ return_result:
         }
         fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s) result.(%s)\n",retstr,jsonstr,result);
     }
+    else
+    {
+        retstr = malloc(strlen("{\"result\":null}") + 1);
+        strcpy(retstr,"{\"result\":null}");
+    }
     free(jsonstr);
     return(retstr);
 }
