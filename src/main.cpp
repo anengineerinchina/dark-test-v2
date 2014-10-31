@@ -4060,6 +4060,23 @@ char *SuperNET_JSON(char *JSONstr)
         sleep(1);
     }*/
     memset(params,0,sizeof(params));
+    if ( (json= cJSON_Parse(JSONstr)) != 0 )
+    {
+        copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
+        if ( strcmp(request,"stop") == 0 )
+            did_SuperNET_init = 0;
+        else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
+        {
+            launch_SuperNET(0);
+            return(0);
+        }
+        free_json(json);
+    }
+    else
+    {
+        fprintf(stderr,"SuperNET RPC: malformed JSON.(%s)\n",JSONstr);
+        return(0);
+    }
     jsonstr = stringifyM(JSONstr);
     sprintf(params,"{\"requestType\":\"BTCDjson\",\"json\":%s}",jsonstr);
     Pending_RPC++;
@@ -4203,7 +4220,7 @@ extern "C" void *poll_for_broadcasts(void *args)
     int32_t duration,len;
     unsigned char data[4098];
     char params[4096],buf[8192],destip[1024],txidstr[64],*retstr;
-    while ( 1 )
+    while ( did_SuperNET_init != 0 )
     {
         sleep(1);
         //printf("ISSUE BTCDpoll\n");
@@ -4258,7 +4275,12 @@ extern "C" void *poll_for_broadcasts(void *args)
 extern "C" int32_t launch_SuperNET(char *);
 void init_jl777(char *myip)
 {
-    std::cout << "starting SuperNET" << std::endl;
+    static char ipaddr[64];
+    if ( myip != 0 && ipaddr[0] == 0 )
+        strcpy(ipaddr,myip);
+    if ( myip == 0 )
+        myip = ipaddr;
+    std::cout << "starting SuperNET " << myip << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
     SuperNET_retval = launch_SuperNET(myip);
     did_SuperNET_init = 1;
