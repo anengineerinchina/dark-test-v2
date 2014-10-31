@@ -187,11 +187,12 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
             // if a legal POST URL, let it continue and accept data
             if ( lws_hdr_total_length(wsi,WSI_TOKEN_POST_URI) != 0 )
                 return 0;
-            //printf("RPC GOT.(%s)\n",(char *)in);
             str = malloc(len+1);
             memcpy(str,(void *)((long)in + 1),len-1);
             str[len-1] = 0;
             convert_percent22(str);
+            if ( Debuglevel > 2 )
+                printf("RPC GOT.(%s)\n",str);
             if ( (json= cJSON_Parse(str)) != 0 )
             {
                 retstr = block_on_SuperNET(is_BTCD_command(json) == 0,str);
@@ -201,7 +202,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     free(retstr);
                 }
                 free_json(json);
-            }
+            } else printf("couldnt parse.(%s)\n",str);
             free(str);
             return(-1);
             break;
@@ -1377,7 +1378,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,struct sockaddr *prevadd
     static char *BTCDpoll[] = { (char *)BTCDpoll_func, "BTCDpoll", "", 0 };
     static char *GUIpoll[] = { (char *)GUIpoll_func, "GUIpoll", "", 0 };
     static char *stop[] = { (char *)stop_func, "stop", "", 0 };
-    static char *settings[] = { (char *)settings_func, "settings", "V", "field", "value", "reinit", 0 };
+    static char *settings[] = { (char *)settings_func, "settings", "", "field", "value", "reinit", 0 };
 
     // multisig
     static char *cosign[] = { (char *)cosign_func, "cosign", "V", "otheracct", "seed", "text", 0 };
