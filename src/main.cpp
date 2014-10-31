@@ -4077,7 +4077,7 @@ return_result:
             free_json(json);
             goto return_result;
         }
-        Pending_RPC++;
+        else Pending_RPC++;
         free_json(json);
     }
     else
