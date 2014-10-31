@@ -4049,6 +4049,7 @@ char *SuperNET_JSON(char *JSONstr)
     if ( 1 && Pending_RPC != 0 )
     {
         sprintf(result,"{\"error\":\"Pending_RPC.%d please resubmit request\"}",Pending_RPC);
+return_result:
         len = strlen(result)+1;
         retstr = (char *)malloc(len);
         memcpy(retstr,result,len);
@@ -4071,8 +4072,11 @@ char *SuperNET_JSON(char *JSONstr)
         }
         else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
         {
+            fprintf(stderr,"start again\n");
             init_jl777(0);
-            return(0);
+            sprintf(result,"{\"result\":\"started\",\"retval\":%d}",SuperNET_retval);
+            free_json(json);
+            goto return_result;
         }
         free_json(json);
     }
