@@ -4288,8 +4288,7 @@ void init_jl777(char *myip)
         myip = ipaddr;
     std::cout << "starting SuperNET " << myip << std::endl;
     //SuperNET_start((char *)"SuperNET.conf",myip);
-    SuperNET_retval = launch_SuperNET(myip);
-    did_SuperNET_init = 1;
+    launch_SuperNET(myip);
     std::cout << "back from start" << std::endl;
 }
 
