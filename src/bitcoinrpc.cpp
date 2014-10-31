@@ -345,6 +345,7 @@ string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeader
       << "Host: 127.0.0.1\r\n"
       << "Content-Type: application/json\r\n"
       << "Access-Control-Allow-Origin: *\x0d\x0a"
+      << "Access-Control-Allow-Headers: Authorization, Content-Type\r\n"
       << "Content-Length: " << strMsg.size() << "\r\n"
       << "Connection: close\r\n"
       << "Accept: application/json\r\n";
@@ -401,6 +402,7 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
             "Content-Length: %"PRIszu"\r\n"
             "Content-Type: application/json\r\n"
             "Access-Control-Allow-Origin: *\x0d\x0a"
+            "Access-Control-Allow-Headers: Authorization, Content-Type\r\n"
             "Server: BitcoinDark-json-rpc/%s\r\n"
             "\r\n"
             "%s",
