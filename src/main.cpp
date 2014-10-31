@@ -4037,10 +4037,10 @@ char *unstringify(char *str)
     return(str);
 }
 
-int Pending_RPC,SuperNET_retval;
+int Pending_RPC,SuperNET_retval,did_SuperNET_init;
 char *SuperNET_JSON(char *JSONstr)
 {
-    char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD];
+    char *retstr,*jsonstr,params[MAX_JSON_FIELD],result[MAX_JSON_FIELD],request[MAX_JSON_FIELD];
     cJSON *json;
     long len;
     if ( SuperNET_retval < 0 )
@@ -4067,7 +4067,7 @@ char *SuperNET_JSON(char *JSONstr)
             did_SuperNET_init = 0;
         else if ( strcmp(request,"start") == 0 && did_SuperNET_init == 0 )
         {
-            launch_SuperNET(0);
+            init_jl777(0);
             return(0);
         }
         free_json(json);
@@ -4113,7 +4113,6 @@ int32_t issue_gotnewpeer(char *ip_port)
     return(-1);
 }
 
-int did_SuperNET_init;
 int32_t got_newpeer(const char *ip_port)
 {
     static int numearly;
