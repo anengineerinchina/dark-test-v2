@@ -12,25 +12,6 @@
 #include "db.h"
 
 #define MAX_KADEMLIA_STORAGE (1024L * 1024L * 1024L)
-#define PUBLIC_DATA 0
-#define PRIVATE_DATA 1
-#define TELEPOD_DATA 2
-#define PRICE_DATA 3
-#define DEADDROP_DATA 4
-#define PEER_DATA 5
-#define NUM_SUPERNET_DBS (PEER_DATA + 1)
-
-struct storage_header
-{
-    uint64_t modified,keyhash;
-    uint32_t datalen,laststored,lastaccess,createtime;
-};
-
-struct kademlia_storage
-{
-    struct storage_header H;
-    unsigned char data[];
-};
 
 struct SuperNET_db
 {
@@ -41,7 +22,7 @@ struct SuperNET_db
     uint32_t busy,type,flags,active;
 };
 
-struct dbreq { DB_TXN *txn; DBT *key,*data; int32_t flags,retval; uint16_t selector,funcid,doneflag,pad; };
+struct dbreq { DB_TXN *txn; DBT key,*data; int32_t flags,retval; uint16_t selector,funcid,doneflag,pad; };
 
 long Total_stored;
 DB_ENV *Storage;
@@ -52,6 +33,7 @@ void *_process_SuperNET_dbqueue(void *selectorp) // serialize dbreq functions
     struct SuperNET_db *sdb;
     int32_t n,selector = *(int32_t *)selectorp;
     struct dbreq *req;
+    DBT data;
     n = 0;
     sdb = &SuperNET_dbs[selector];
     while ( sdb->active != 0 )
@@ -61,13 +43,19 @@ void *_process_SuperNET_dbqueue(void *selectorp) // serialize dbreq functions
         n = 0;
         while ( (req= queue_dequeue(&sdb->queue)) != 0 )
         {
+            memset(&data,0,sizeof(data));
+            if ( req->data != 0 )
+                data = *req->data;
+            //printf("DB.%d func.%c key.(%s)\n",selector,req->funcid,req->key.data);
             if ( req->funcid == 'G' )
-                req->retval = sdb->dbp->get(sdb->dbp,req->txn,req->key,req->data,req->flags);
+                req->retval = sdb->dbp->get(sdb->dbp,req->txn,&req->key,&data,req->flags);
             else if ( req->funcid == 'P' )
-                req->retval = sdb->dbp->put(sdb->dbp,req->txn,req->key,req->data,req->flags);
+                req->retval = sdb->dbp->put(sdb->dbp,req->txn,&req->key,&data,req->flags);
             else if ( req->funcid == 'S' )
                 req->retval = sdb->dbp->sync(sdb->dbp,req->flags);
             else printf("UNEXPECTED SuperNET_db funcid.(%c) %d\n",req->funcid,req->funcid);
+            if ( req->data != 0 )
+                *req->data = data;
             req->doneflag = 1;
             n++;
         }
@@ -105,7 +93,8 @@ struct dbreq *_queue_dbreq(int32_t funcid,int32_t selector,DB_TXN *txn,DBT *key,
         req->funcid = funcid;
         req->selector = selector;
         req->txn = txn;
-        req->key = key;
+        if ( key != 0 )
+            req->key = *key;
         req->data = data;
         req->flags = flags;
         //while ( sdb->busy > 0 )
@@ -194,7 +183,7 @@ void close_SuperNET_dbs()
             {
                 fprintf(stderr,".");
                 usleep(100000);
-                fprintf(stderr," selector.%d shutdown\n",selector);
+                fprintf(stderr," %s selector.%d shutdown\n",sdb->name,selector);
                 sdb->active = -1;
             }
         }
@@ -228,7 +217,8 @@ int32_t init_SuperNET_storage()
             open_database(TELEPOD_DATA,"telepods.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT);
             open_database(PRICE_DATA,"prices.db",DB_BTREE,DB_CREATE | DB_AUTO_COMMIT);
             open_database(DEADDROP_DATA,"deaddrops.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT);
-            open_database(PEER_DATA,"peers.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT);
+            open_database(CONTACT_DATA,"contacts.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT);
+            open_database(NODESTATS_DATA,"nodestats.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT);
             for (selector=0; selector<NUM_SUPERNET_DBS; selector++)
             {
                 selectors[selector] = selector;
@@ -300,7 +290,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
     uint64_t hashval = 0;
     DBT key,data;
     //DB_TXN *txn = 0;
-    struct kademlia_storage *sp;
+    struct SuperNET_storage *sp;
     if ( valid_SuperNET_db("add_storage",selector) == 0 )
         return;
     if ( selector == PUBLIC_DATA && Total_stored > MAX_KADEMLIA_STORAGE )
@@ -312,7 +302,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
     if ( datalen > sizeof(databuf) )
         return;
     decode_hex(databuf,datalen,datastr);
-    if ( (sp= (struct kademlia_storage *)find_storage(selector,keystr)) == 0 || sp->H.datalen != datalen || memcmp(sp->data,databuf,datalen) != 0 )
+    if ( (sp= (struct SuperNET_storage *)find_storage(selector,keystr)) == 0 || sp->H.datalen != datalen || memcmp(sp->data,databuf,datalen) != 0 )
     {
         slen = (int32_t)strlen(keystr);
         if ( sp == 0 )
@@ -334,7 +324,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
             memcpy(space,sp,sizeof(*sp));
             free(sp);
         }
-        sp = (struct kademlia_storage *)space;
+        sp = (struct SuperNET_storage *)space;
         if ( createdflag != 0 )
             sp->H.keyhash = hashval;
         else if ( sp->H.keyhash != hashval )
@@ -364,7 +354,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
                 //else
                 {
                     fprintf(stderr,"created.%d DB entry for (%s)\n",createdflag,keystr);
-                    if ( (sp= (struct kademlia_storage *)find_storage(selector,keystr)) != 0 )
+                    if ( (sp= (struct SuperNET_storage *)find_storage(selector,keystr)) != 0 )
                     {
                         if ( memcmp(sp->data,databuf,datalen) != 0 )
                             fprintf(stderr,"data cmp error\n");
@@ -395,4 +385,45 @@ void update_storage(int32_t selector,char *keystr,struct storage_header *hp)
         //fprintf(stderr,"after dbp->put\n");
     }
 }
+
+struct storage_header **copy_all_DBentries(int32_t *nump,int32_t selector)
+{
+    DB *dbp = get_selected_database(selector);
+    struct storage_header *ptr,**ptrs = 0;
+    int32_t ret,max,m,n = 0;
+    DBT key,data;
+    DBC *cursorp = 0;
+    *nump = 0;
+    if ( dbp == 0 )
+        return(0);
+    max = (int32_t)max_in_db(selector);
+    max += 100;
+    m = 0;
+    dbp->cursor(dbp,NULL,&cursorp,0);
+    if ( cursorp != 0 )
+    {
+        clear_pair(&key,&data);
+        ptrs = (struct storage_header **)calloc(sizeof(struct storage_header *),max+1);
+        while ( (ret= cursorp->get(cursorp,&key,&data,DB_NEXT)) == 0 )
+        {
+            m++;
+            ptr = calloc(1,data.size);
+            memcpy(ptr,data.data,data.size);
+            ptrs[n++] = ptr;
+            if ( n >= max )
+            {
+                max += 100;
+                ptrs = (struct storage_header **)realloc(ptrs,sizeof(struct storage_header *)*(max+1));
+            }   clear_pair(&key,&data);
+        }
+        cursorp->close(cursorp);
+    }
+    if ( m > max_in_db(selector) )
+        set_max_in_db(selector,m);
+    if ( ptrs != 0 )
+        ptrs[n] = 0;
+    *nump = n;
+    return(ptrs);
+}
+
 #endif

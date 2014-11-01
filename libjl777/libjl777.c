@@ -92,8 +92,7 @@ void SuperNET_idler(uv_idle_t *handle)
     struct udp_queuecmd *qp;
     struct write_req_t *wr,*firstwr = 0;
     int32_t r;
-    long len;
-    char *jsonstr,*retstr,**ptrs,*str,*str2,retbuf[MAX_JSON_FIELD*4];
+    char *jsonstr,*retstr,**ptrs;
     if ( Finished_init == 0 )
         return;
     millis = ((double)uv_hrtime() / 1000000);
@@ -135,23 +134,13 @@ void SuperNET_idler(uv_idle_t *handle)
         {
             char *call_SuperNET_JSON(char *JSONstr);
             jsonstr = ptrs[0];
-            if ( Debuglevel > 1 )
+            if ( Debuglevel > 2 )
                 printf("dequeue JSON_Q.(%s)\n",jsonstr);
             if ( (retstr= call_SuperNET_JSON(jsonstr)) == 0 )
                 retstr = clonestr("{\"result\":null}");
-            if ( ptrs[2] != 0 )
-            {
-                str = stringifyM(retstr);
-                str2 = stringifyM(jsonstr);
-                memcpy(retbuf,&ptrs,sizeof(ptrs));
-                sprintf(retbuf+sizeof(ptrs),"{\"result\":%s,\"txid\":\"%llu\"}",str,(long long)ptrs[2]);
-                free(str); free(str2);
-                len = sizeof(ptrs) + strlen(retbuf+sizeof(ptrs)) + 1;
-                str = malloc(len);
-                memcpy(str,retbuf,len);
-                queue_enqueue(&ResultsQ,str);
-            }
             ptrs[1] = retstr;
+            if ( ptrs[2] != 0 )
+                queue_GUIpoll(ptrs);
             lastattempt = millis;
         }
         if ( process_storageQ() != 0 )
@@ -191,7 +180,8 @@ void run_UVloop(void *arg)
 
 void run_libwebsockets(void *arg)
 {
-    init_API_port(USESSL,APIPORT,APISLEEP);
+    int32_t usessl = *(int32_t *)arg;
+    init_API_port(usessl,APIPORT-!usessl,APISLEEP);
 }
 
 void init_NXThashtables(struct NXThandler_info *mp)
@@ -230,6 +220,7 @@ void init_NXThashtables(struct NXThandler_info *mp)
 
 char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
 {
+    static int32_t zero,one = 1;
     struct NXThandler_info *mp = Global_mp;    // seems safest place to have main data structure
     printf("init_NXTservices.(%s)\n",myipaddr);
     UV_loop = uv_default_loop();
@@ -250,8 +241,12 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
     printf("run_UVloop\n");
     if ( portable_thread_create((void *)run_UVloop,Global_mp) == 0 )
         printf("ERROR hist process_hashtablequeues\n");
-    if ( portable_thread_create((void *)run_libwebsockets,Global_mp) == 0 )
-        printf("ERROR hist process_hashtablequeues\n");
+    if ( portable_thread_create((void *)run_libwebsockets,&one) == 0 )
+        printf("ERROR hist run_libwebsockets SSL\n");
+    while ( SSL_done == 0 )
+        usleep(100000);
+    if ( portable_thread_create((void *)run_libwebsockets,&zero) == 0 )
+        printf("ERROR hist run_libwebsockets\n");
     sleep(3);
     {
         struct coin_info *cp;
@@ -323,7 +318,7 @@ char *block_on_SuperNET(int32_t blockflag,char *JSONstr)
         txid = calc_txid((uint8_t *)JSONstr,(int32_t)strlen(JSONstr));
         ptrs[2] = (char *)txid;
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("block.%d QUEUE.(%s)\n",blockflag,JSONstr);
     queue_enqueue(&JSON_Q,ptrs);
     if ( blockflag != 0 )
