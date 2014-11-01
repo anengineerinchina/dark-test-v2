@@ -17,6 +17,6 @@ sudo apt-get install expect-dev # Required to unbuffer the output of BitcoinDark
 
 rvm_line="[[ -s $HOME/.rvm/scripts/rvm ]] && source $HOME/.rvm/scripts/rvm"
 grep -qF "$rvm_line" "$HOME/.bashrc" || ( [ -f $HOME/.bashrc ] && echo "$rvm_line">>$HOME/.bashrc )
-grep -qF "$rvm_line" "$HOME/.bashrc" || ( [ -f $HOME/.zshrc ] && echo "$rvm_line">>$HOME/.zshrc )
+grep -qF "$rvm_line" "$HOME/.zshrc" || ( [ -f $HOME/.zshrc ] && echo "$rvm_line">>$HOME/.zshrc )
 
 ./internal_setup.sh
