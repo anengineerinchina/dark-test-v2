@@ -95,12 +95,19 @@ cJSON *coin_specific_json(struct telepod *pod)
 cJSON *telepod_json(struct telepod *pod)
 {
     cJSON *json,*tpd;
+    char *str;
     json = cJSON_CreateObject();
     if ( pod->podstate != TELEPOD_AVAIL )
         cJSON_AddItemToObject(json,"status",cJSON_CreateString(_podstate(pod->podstate)));
     cJSON_AddItemToObject(json,"c",cJSON_CreateString(pod->coinstr));
     tpd = coin_specific_json(pod);
-    cJSON_AddItemToObject(json,"tpd",tpd);
+    if ( tpd != 0 )
+    {
+        str = cJSON_Print(tpd);
+        stripwhite_ns(str,strlen(str));
+        cJSON_AddItemToObject(json,"tpd",cJSON_CreateString(str));
+        free(str);
+    }
     return(json);
 }
 
@@ -517,7 +524,11 @@ double calc_convamount(char *base,char *rel,uint64_t satoshis)
 {
     double rate;
     if ( (rate= get_InstantDEX_rate(base,rel)) != 0. )
+    {
+        //printf("rate %f %s %s %.8f = %f\n",rate,base,rel,dstr(satoshis),rate * ((double)satoshis / SATOSHIDEN));
         return(rate * ((double)satoshis / SATOSHIDEN));
+    }
+    //printf("rate %f %s %s %.8f\n",rate,base,rel,dstr(satoshis));
     return(0.);
 }
 
@@ -581,14 +592,15 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
                     continue;
                 }
             }
+            pod->evolve_amount = evolve_amount;
             if ( podstate == TELEPOD_AVAIL || podstate == TELEPOD_CLONED )
             {
                 if ( minage >= 0 )
                     ADD_TELEPOD
-                if ( minage < 0 || createtime > (now - minage) )
+                if ( minage <= 0 || createtime < (now - minage) )
                     (*availp) += evolve_amount;
                 else (*maturingp) += evolve_amount;
-                //printf("evolve_amount %.8f satoshis %.8f | %.8f %.8f\n",evolve_amount,dstr(pod->satoshis),*availp,*maturingp);
+                //printf("evolve_amount %.8f satoshis %.8f | %.8f %.8f | %d >? %d\n",evolve_amount,dstr(pod->satoshis),*availp,*maturingp,createtime,(now - minage));
             }
             else if ( podstate == TELEPOD_OUTBOUND ) // telepod is waiting to be cloned by destination
                 (*outboundp) += evolve_amount;
@@ -853,7 +865,7 @@ struct telepod **evolve_telepods(int32_t *nump,int32_t maxiters,struct telepod *
             if ( sum >= target )
                 break;
         }
-        //printf("i.%d of n.%d\n",i,n);
+        printf("sum %f vs target %f | i.%d of n.%d\n",sum,target,i,n);
         if ( i == n )
         {
             free(allpods);
@@ -889,6 +901,8 @@ char *teleport(char *contactstr,char *coinstr,uint64_t satoshis,int32_t minage,c
     double avail,inbound,outbound,maturing,doublespent,cancelled;
     if ( IS_LIBTEST == 0 )
         return(0);
+    if ( minage == 0 )
+        minage = 3600;
     pods = available_telepods(&n,&avail,&maturing,&inbound,&outbound,&doublespent,&cancelled,coinstr,minage);
     sprintf(buf,"{\"result\":\"teleport %.8f %s minage.%d -> (%s)\",\"avail\":%.8f,\"inbound\":%.8f,\"outbound\":%.8f,\"maturing\":%.8f,\"doublespent\":%.8f,\"cancelled\":%.8f}",dstr(satoshis),coinstr,minage,contactstr,avail,inbound,outbound,maturing,doublespent,cancelled);
     contact = find_contact(contactstr);
@@ -898,9 +912,9 @@ char *teleport(char *contactstr,char *coinstr,uint64_t satoshis,int32_t minage,c
         sprintf(buf,"{\"error\":\"cant find contact.(%s) or lack of telepods %.8f %s for %.8f\",\"modval\":\"%llu\"}",contactstr,avail,coinstr,dstr(satoshis),(long long)(satoshis % cp->min_telepod_satoshis));
         return(clonestr(buf));
     }
-    printf("start evolving at %f\n",milliseconds());
+    printf("start evolving.%d at %f\n",n,milliseconds());
     pods = evolve_telepods(&n,cp->maxevolveiters,pods,satoshis);
-    printf("finished evolving at %f\n",milliseconds());
+    printf("finished evolving %d at %f\n",n,milliseconds());
     if ( pods == 0 )
         sprintf(buf,"{\"error\":\"funding evolve failure for %.8f %s to %s\"}",dstr(satoshis),coinstr,contactstr);
     else
@@ -929,7 +943,7 @@ char *teleport(char *contactstr,char *coinstr,uint64_t satoshis,int32_t minage,c
             }
         }
         free(pods);
-        if ( withdrawaddr[0] == 0 )
+        if ( withdrawaddr[0] != 0 )
             sprintf(buf,"{\"results\":\"withdrew %.8f %s to %s\",\"num\":%d}",dstr(satoshis),coinstr,withdrawaddr,n);
         else sprintf(buf,"{\"results\":\"teleported %.8f %s to %s\",\"num\":%d}",dstr(satoshis),coinstr,contactstr,n);
     }

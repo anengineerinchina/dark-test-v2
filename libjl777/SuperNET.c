@@ -30,7 +30,7 @@ int main(int argc,const char *argv[])
     if ( argc > 1 && argv[1] != 0 && strlen(argv[1]) < 32 )
         strcpy(ipaddr,argv[1]);
     else ipaddr[0] = 0;
-    retval = SuperNET_start("SuperNET.conf",ipaddr);
+    retval = SuperNET_start("SuperNET.conf",0);
     if ( (fp= fopen("horrible.hack","wb")) != 0 )
     {
         fwrite(&retval,1,sizeof(retval),fp);
@@ -38,7 +38,7 @@ int main(int argc,const char *argv[])
     }
     while ( retval == 0 )
     {
-        sleep(3);
+        sleep(13);
         //continue;
         sprintf(params,"{\"requestType\":\"GUIpoll\"}");
         retstr = bitcoind_RPC(0,(char *)"BTCD",(char *)"https://127.0.0.1:7777",(char *)"",(char *)"SuperNET",params);
