@@ -21,7 +21,7 @@ Feature: General requests and answers from superNET API
     Then I receive a pong answer
 
   @general @send_message @general-004
-  Scenario: As a superNET user I want to make a ping and receive an answer
+  Scenario: As a superNET user I want to send a message to myself and receive it
     Given superNET is running on the computer with some peers
     When I send a message to myself with content "Cucumber SuperNET test"
     Then I receive a message to myself with content "Cucumber SuperNET test" in less than 50 seconds
