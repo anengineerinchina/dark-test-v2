@@ -245,7 +245,7 @@ uint64_t calc_privatedatastr(bits256 *AESpassword,char *AESpasswordstr,char *pri
             if ( verify_AES_codec(encoded,encodedlen,msg,AESpasswordstr) > 0 )
                 retval = location;
         }
-    }
+    } else fprintf(stderr,"calc_privatedatastr error calculating location for %s.%d\n",contact->handle,sequence);
     return(retval);
 }
 
@@ -320,7 +320,7 @@ char *check_privategenesis(struct contact_info *contact)
     return(0);
 }
 
-char *private_publish(struct contact_info *contact,int32_t sequenceid,char *msg)
+char *private_publish(uint64_t *locationp,struct contact_info *contact,int32_t sequenceid,char *msg)
 {
     char privatedatastr[8192],AESpasswordstr[512],seqacct[64],key[64],*retstr = 0;
     uint64_t location;
@@ -329,14 +329,20 @@ char *private_publish(struct contact_info *contact,int32_t sequenceid,char *msg)
         if ( (retstr= check_privategenesis(contact)) != 0 )
             free(retstr);
     }
+    if ( locationp != 0 )
+        *locationp = 0;
+    printf("private_publish(%s) -> %s.%d\n",msg,contact->handle,sequenceid);
     if ( (location= calc_privatedatastr(0,AESpasswordstr,privatedatastr,contact,sequenceid,msg)) != 0 )
     {
+        printf("location.%llu\n",(long long)location);
+        if ( locationp != 0 )
+            *locationp = location;
         expand_nxt64bits(seqacct,location);
         if ( location != issue_getAccountId(0,AESpasswordstr) )
             printf("ERROR: private_publish location %llu != %llu from (%s)\n",(long long)location,(long long)issue_getAccountId(0,AESpasswordstr),AESpasswordstr);
+        expand_nxt64bits(key,location);
         if ( sequenceid == 0 )
         {
-            expand_nxt64bits(key,location);
             printf("store.(%s) len.%ld -> %llu %llu\n",privatedatastr,strlen(privatedatastr)/2,(long long)seqacct,(long long)location);
             retstr = kademlia_storedata(0,seqacct,AESpasswordstr,seqacct,key,privatedatastr);
             if ( IS_LIBTEST != 0 )
@@ -347,13 +353,14 @@ char *private_publish(struct contact_info *contact,int32_t sequenceid,char *msg)
         }
         else
         {
+            printf("telepathic.(%s) len.%ld -> %llu %llu\n",privatedatastr,strlen(privatedatastr)/2,(long long)seqacct,(long long)location);
             if ( IS_LIBTEST != 0 )
                 add_storage(PRIVATE_DATA,key,privatedatastr);
             if ( contact->deaddrop != 0 )
             {
                 contact->numsent++;
                 contact->lastsent = sequenceid;
-                //printf("telepathic send to %s.%d via %llu using %llu (%s)\n",contact->handle,sequenceid,(long long)contact->deaddrop,(long long)location,AESpasswordstr);
+                printf("telepathic send to %s.%d via %llu using %llu (%s)\n",contact->handle,sequenceid,(long long)contact->deaddrop,(long long)location,AESpasswordstr);
                 expand_nxt64bits(key,contact->deaddrop);
                 retstr = kademlia_find("findnode",0,seqacct,AESpasswordstr,seqacct,key,privatedatastr,0); // find and you shall telepath
             } else retstr = clonestr("{\"error\":\"no deaddrop address\"}");
@@ -430,11 +437,12 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
 
 cJSON *telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *contact,int32_t sequenceid,char *type,cJSON *attachmentjson)
 {
-    char numstr[64],*retstr,*jsonstr;
+    char numstr[64],*retstr,*jsonstr,*str,*str2;
+    uint64_t location;
     cJSON *json = cJSON_CreateObject();
     if ( sequenceid < 0 )
         sequenceid = contact->lastsent+1;
-    sprintf(numstr,"%llu",(long long)contact->deaddrop);
+    sprintf(numstr,"%llu",(long long)contact->mydrop);
     cJSON_AddItemToObject(json,"deaddrop",cJSON_CreateString(numstr));
     cJSON_AddItemToObject(json,"id",cJSON_CreateNumber(sequenceid));
     cJSON_AddItemToObject(json,"time",cJSON_CreateNumber(time(NULL)));
@@ -442,16 +450,26 @@ cJSON *telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *cont
     {
         cJSON_AddItemToObject(json,"type",cJSON_CreateString(type));
         if ( attachmentjson != 0 )
-            cJSON_AddItemToObject(json,"attach",attachmentjson);
+        {
+            str = cJSON_Print(attachmentjson);
+            if ( str != 0 )
+            {
+                stripwhite_ns(str,strlen(str));
+                str2 = stringifyM(str);
+                cJSON_AddItemToObject(json,"attach",cJSON_CreateString(str));
+                free(str);
+                free(str2);
+            }
+        }
     }
     if ( (jsonstr= cJSON_Print(json)) != 0 )
     {
         stripwhite_ns(jsonstr,strlen(jsonstr));
-        retstr = private_publish(contact,sequenceid,jsonstr);
+        retstr = private_publish(&location,contact,sequenceid,jsonstr);
         if ( retstr != 0 )
         {
             strcpy(retbuf,retstr);
-            printf("telepathy.(%s) -> (%s).%d\n",jsonstr,contact->handle,sequenceid);
+            printf("telepathy.(%s) -> (%s).%d @ %llu\n",jsonstr,contact->handle,sequenceid,(long long)location);
             free(retstr);
         } else strcpy(retbuf,"{\"error\":\"no result from private_publish\"}");
         free(jsonstr);
@@ -575,7 +593,7 @@ char *addcontact(char *handle,char *acct)
     bits256 mysecret,mypublic;
     struct coin_info *cp = get_coin_info("BTCD");
     struct contact_info *contact;
-    char retstr[1024],pubkeystr[128],*ret;
+    char retstr[1024],pubkeystr[128],RSaddr[64],*ret;
     if ( cp == 0 )
     {
         printf("addcontact: no BTCD cp?\n");
@@ -621,7 +639,10 @@ char *addcontact(char *handle,char *acct)
         contact->pubkey = issue_getpubkey(acct);
         init_hexbytes(pubkeystr,contact->pubkey.bytes,sizeof(contact->pubkey));
         if ( contact->pubkey.txid == 0 )
-            sprintf(retstr,"{\"error\":\"(%s) acct.(%s) has no pubkey.(%s)\"}",handle,acct,pubkeystr);
+        {
+            conv_rsacctstr(RSaddr,nxt64bits);
+            sprintf(retstr,"{\"error\":\"(%s) acct.(%s) has no pubkey.(%s)\",\"RS\":\"%s\"}",handle,acct,pubkeystr,RSaddr);
+        }
         else
         {
             //if ( strcmp(contact->handle,"myhandle") != 0 )
@@ -630,7 +651,7 @@ char *addcontact(char *handle,char *acct)
                 contact->shared = curve25519(mysecret,contact->pubkey);
                 fprintf(stderr,"init_telepathy_contact\n");
                 init_telepathy_contact(contact);
-                sprintf(retstr,"{\"result\":\"(%s) acct.(%s) (%llu) has pubkey.(%s)\"}",handle,acct,(long long)contact->nxt64bits,pubkeystr);
+                sprintf(retstr,"{\"result\":\"(%s) acct.(%s) (%llu) has pubkey.(%s) SS.%llx\"}",handle,acct,(long long)contact->nxt64bits,pubkeystr,*(long long *)&contact->shared);
             }
         }
     }

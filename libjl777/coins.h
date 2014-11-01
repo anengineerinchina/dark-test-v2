@@ -434,6 +434,8 @@ struct coin_info *init_coin_info(cJSON *json,char *coinstr)
         txfee = get_API_nxt64bits(cJSON_GetObjectItem(json,"txfee_satoshis"));
         if ( txfee == 0 )
             txfee = (uint64_t)(SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"txfee")));
+        if ( txfee == 0 )
+            txfee = 10000;
         NXTfee_equiv = get_API_nxt64bits(cJSON_GetObjectItem(json,"NXTfee_equiv_satoshis"));
         if ( NXTfee_equiv == 0 )
             NXTfee_equiv = (uint64_t)(SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"NXTfee_equiv")));
@@ -777,7 +779,7 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             int32_t isrescan,height,timestamp;
             set_current_NXTblock(&isrescan,0,ORIGBLOCK);
             for (i=0; i<MIN_NXTCONFIRMS; i++)
-            {
+            {break;
                 strcpy(blockidstr,ORIGBLOCK);
                 set_prev_NXTblock(0,&height,&timestamp,ORIGBLOCK,blockidstr);
                 printf("i.%d height.%d block.(%s)\n",i,height,blockidstr);

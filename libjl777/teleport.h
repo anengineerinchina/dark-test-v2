@@ -51,9 +51,9 @@ uint64_t calc_transporter_fee(struct coin_info *cp,uint64_t satoshis)
 
 void update_telepod(struct telepod *pod)
 {
-    fprintf(stderr,"call update_telepod\n");
+    //fprintf(stderr,"call update_telepod\n");
     update_storage(TELEPOD_DATA,pod->txid,&pod->H);
-    fprintf(stderr,"back update_telepod\n");
+    //fprintf(stderr,"back update_telepod\n");
 }
 
 char *_podstate(int32_t podstate)
@@ -95,12 +95,19 @@ cJSON *coin_specific_json(struct telepod *pod)
 cJSON *telepod_json(struct telepod *pod)
 {
     cJSON *json,*tpd;
+    char *str;
     json = cJSON_CreateObject();
     if ( pod->podstate != TELEPOD_AVAIL )
         cJSON_AddItemToObject(json,"status",cJSON_CreateString(_podstate(pod->podstate)));
     cJSON_AddItemToObject(json,"c",cJSON_CreateString(pod->coinstr));
     tpd = coin_specific_json(pod);
-    cJSON_AddItemToObject(json,"tpd",tpd);
+    if ( tpd != 0 )
+    {
+        str = cJSON_Print(tpd);
+        stripwhite_ns(str,strlen(str));
+        cJSON_AddItemToObject(json,"tpd",cJSON_CreateString(str));
+        free(str);
+    }
     return(json);
 }
 
@@ -108,6 +115,8 @@ void disp_telepod(char *msg,struct telepod *pod)
 {
     char *str;
     cJSON *podjson;
+    if ( Debuglevel <= 0 )
+        return;
     podjson = telepod_json(pod);
     if ( podjson != 0 )
     {
@@ -430,7 +439,7 @@ struct telepod *clone_telepod(struct coin_info *cp,struct telepod *refpod,uint64
                     update_telepod(refpod);
                 }
                 pod = create_telepod((uint32_t)time(NULL),cp->name,refsatoshis,podaddr,"",privkey,txid,TELEPOD_CONTENTS_VOUT);
-                pod->podstate = TELEPOD_INBOUND;
+                pod->podstate = (refpod != 0) ? TELEPOD_INBOUND : TELEPOD_AVAIL;
                 update_telepod(pod);
             }
             //if ( cp->enabled == 0 )
@@ -515,7 +524,11 @@ double calc_convamount(char *base,char *rel,uint64_t satoshis)
 {
     double rate;
     if ( (rate= get_InstantDEX_rate(base,rel)) != 0. )
+    {
+        //printf("rate %f %s %s %.8f = %f\n",rate,base,rel,dstr(satoshis),rate * ((double)satoshis / SATOSHIDEN));
         return(rate * ((double)satoshis / SATOSHIDEN));
+    }
+    //printf("rate %f %s %s %.8f\n",rate,base,rel,dstr(satoshis));
     return(0.);
 }
 
@@ -556,8 +569,8 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         {
             m++;
             pod = data.data;
-            if ( Debuglevel > 1 )
-                fprintf(stderr,"%-5s.%d minage.%d %s size.%d/%d time.%d %.8f | %s\n",coinstr,m,minage,key.data,pod->H.datalen,data.size,pod->H.createtime,dstr(pod->satoshis),_podstate(pod->podstate));
+            if ( Debuglevel > 0 )
+                fprintf(stderr,"%5s.%-4d minage.%-4d %s size.%d/%d lag.%-8d %.8f | %s clone.%d\n",coinstr,m,minage,key.data,pod->H.datalen,data.size,now - pod->H.createtime,dstr(pod->satoshis),_podstate(pod->podstate),pod->clonetime==0?0:pod->clonetime-now);
             if ( pod->H.datalen != data.size )
             {
                 fprintf(stderr,"podsize mismatch error %d != %d, skip: ",pod->H.datalen,data.size);
@@ -566,21 +579,28 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
             podstate = pod->podstate;
             createtime = pod->H.createtime;
             if ( minage < 0 )
+            {
                 ADD_TELEPOD
-            evolve_amount = calc_convamount(pod->coinstr,coinstr,pod->satoshis);
-            if ( evolve_amount == 0. )
-            {
-                clear_pair(&key,&data);
-                continue;
+                evolve_amount = (double)pod->satoshis / SATOSHIDEN;
             }
-            if ( podstate == TELEPOD_AVAIL )
+            else
             {
-                if ( createtime > (now - minage) )
+                evolve_amount = calc_convamount(pod->coinstr,coinstr,pod->satoshis);
+                if ( evolve_amount == 0. )
                 {
+                    clear_pair(&key,&data);
+                    continue;
+                }
+            }
+            pod->evolve_amount = evolve_amount;
+            if ( podstate == TELEPOD_AVAIL || podstate == TELEPOD_CLONED )
+            {
+                if ( minage >= 0 )
+                    ADD_TELEPOD
+                if ( minage <= 0 || createtime < (now - minage) )
                     (*availp) += evolve_amount;
-                    if ( minage >= 0 )
-                        ADD_TELEPOD
-                } else (*maturingp) += evolve_amount;
+                else (*maturingp) += evolve_amount;
+                //printf("evolve_amount %.8f satoshis %.8f | %.8f %.8f | %d >? %d\n",evolve_amount,dstr(pod->satoshis),*availp,*maturingp,createtime,(now - minage));
             }
             else if ( podstate == TELEPOD_OUTBOUND ) // telepod is waiting to be cloned by destination
                 (*outboundp) += evolve_amount;
@@ -597,12 +617,11 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         }
         cursorp->close(cursorp);
     }
-    //printf("find_closer_Kstored returns n.%d %p\n",n,sps);
     if ( m > max_in_db(TELEPOD_DATA) )
         set_max_in_db(TELEPOD_DATA,m);
     if ( pods != 0 )
         pods[n] = 0;
-    //printf("set nump.%d\n",n);
+    printf("E avail %.8f, maturing %.8f, inbound %.8f, outbound %.8f, doublespent %.8f, cancelled %.8f | set nump.%d\n",*availp,*maturingp,*inboundp,*outboundp,*doublespentp,*cancelledp,n);
     *nump = n;
     return(pods);
 }
@@ -664,7 +683,6 @@ int32_t poll_telepods(char *relstr)
     int32_t flag,i,err,n,m = 0;
     struct telepod **pods,*pod,*clonepod;
     double avail,inbound,outbound,maturing,doublespent,cancelled;
-//return(0);
     pods = available_telepods(&n,&avail,&maturing,&inbound,&outbound,&doublespent,&cancelled,relstr,-1);
     if ( pods != 0 )
     {
@@ -688,19 +706,23 @@ int32_t poll_telepods(char *relstr)
                             {
                                 if ( unspent == 0 )
                                     flag = TELEPOD_DOUBLESPENT;
-                                printf("Doublespend? txid.%s vout.%d satoshis %.8f vs %.8f\n",pod->txid,pod->vout,dstr(unspent),dstr(pod->satoshis));
+                                fprintf(stderr,"Doublespend? txid.%s vout.%d satoshis %.8f vs %.8f\n",pod->txid,pod->vout,dstr(unspent),dstr(pod->satoshis));
                             }
-                            else if ( pod->podstate == TELEPOD_INBOUND && pod->clonetime > now )
+                            else if ( pod->podstate == TELEPOD_INBOUND )
                             {
-                                cp = get_coin_info(pod->coinstr);
-                                if ( cp != 0 && (clonepod= clone_telepod(cp,pod,pod->satoshis,0)) != 0 )
+                                if ( pod->clonetime > now )
                                 {
-                                    flag = TELEPOD_CLONED;
-                                    free(clonepod);
+                                    cp = get_coin_info(pod->coinstr);
+                                    if ( cp != 0 && (clonepod= clone_telepod(cp,pod,pod->satoshis,0)) != 0 )
+                                    {
+                                        flag = TELEPOD_CLONED;
+                                        free(clonepod);
+                                    }
+                                    else printf("error cloning %s %s.%d\n",pod->coinstr,pod->txid,pod->vout);
                                 }
-                                else printf("error cloning %s %s.%d\n",pod->coinstr,pod->txid,pod->vout);
+                                else if ( pod->clonetime == 0 )
+                                    flag = TELEPOD_AVAIL;
                             }
-                            break;
                             break;
                         case TELEPOD_OUTBOUND:
                             if ( unspent == 0 )
@@ -711,12 +733,12 @@ int32_t poll_telepods(char *relstr)
                             break;
                             // nothing left to do for these
                         case TELEPOD_DOUBLESPENT:
-                        case TELEPOD_CANCELLED:
                         case TELEPOD_CLONED:
+                        case TELEPOD_CANCELLED:
                         case TELEPOD_SPENT:
                             break;
                     }
-                    if ( flag != 0 )
+                    if ( flag != pod->podstate )
                     {
                         pod->podstate = flag;
                         update_telepod(pod);
@@ -843,7 +865,7 @@ struct telepod **evolve_telepods(int32_t *nump,int32_t maxiters,struct telepod *
             if ( sum >= target )
                 break;
         }
-        //printf("i.%d of n.%d\n",i,n);
+        printf("sum %f vs target %f | i.%d of n.%d\n",sum,target,i,n);
         if ( i == n )
         {
             free(allpods);
@@ -879,17 +901,20 @@ char *teleport(char *contactstr,char *coinstr,uint64_t satoshis,int32_t minage,c
     double avail,inbound,outbound,maturing,doublespent,cancelled;
     if ( IS_LIBTEST == 0 )
         return(0);
+    if ( minage == 0 )
+        minage = 3600;
     pods = available_telepods(&n,&avail,&maturing,&inbound,&outbound,&doublespent,&cancelled,coinstr,minage);
     sprintf(buf,"{\"result\":\"teleport %.8f %s minage.%d -> (%s)\",\"avail\":%.8f,\"inbound\":%.8f,\"outbound\":%.8f,\"maturing\":%.8f,\"doublespent\":%.8f,\"cancelled\":%.8f}",dstr(satoshis),coinstr,minage,contactstr,avail,inbound,outbound,maturing,doublespent,cancelled);
     contact = find_contact(contactstr);
-    if ( (withdrawaddr[0] == 0 && contact == 0) || avail < satoshis || (satoshis % cp->min_telepod_satoshis) != 0 )
+    if ( (withdrawaddr[0] == 0 && contact == 0) || (uint64_t)(SATOSHIDEN * avail) < satoshis || (satoshis % cp->min_telepod_satoshis) != 0 )
     {
+        printf("%s\n",buf);
         sprintf(buf,"{\"error\":\"cant find contact.(%s) or lack of telepods %.8f %s for %.8f\",\"modval\":\"%llu\"}",contactstr,avail,coinstr,dstr(satoshis),(long long)(satoshis % cp->min_telepod_satoshis));
         return(clonestr(buf));
     }
-    printf("start evolving at %f\n",milliseconds());
+    printf("start evolving.%d at %f\n",n,milliseconds());
     pods = evolve_telepods(&n,cp->maxevolveiters,pods,satoshis);
-    printf("finished evolving at %f\n",milliseconds());
+    printf("finished evolving %d at %f\n",n,milliseconds());
     if ( pods == 0 )
         sprintf(buf,"{\"error\":\"funding evolve failure for %.8f %s to %s\"}",dstr(satoshis),coinstr,contactstr);
     else
@@ -918,7 +943,7 @@ char *teleport(char *contactstr,char *coinstr,uint64_t satoshis,int32_t minage,c
             }
         }
         free(pods);
-        if ( withdrawaddr[0] == 0 )
+        if ( withdrawaddr[0] != 0 )
             sprintf(buf,"{\"results\":\"withdrew %.8f %s to %s\",\"num\":%d}",dstr(satoshis),coinstr,withdrawaddr,n);
         else sprintf(buf,"{\"results\":\"teleported %.8f %s to %s\",\"num\":%d}",dstr(satoshis),coinstr,contactstr,n);
     }

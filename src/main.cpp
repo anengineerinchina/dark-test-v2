@@ -4100,7 +4100,7 @@ return_result:
                 Pending_RPC = 0;
             free_json(json);
         }
-        fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s) result.(%s)\n",retstr,jsonstr,result);
+        //fprintf(stderr,"<<<<<<<<<<<<< SuperNET_JSON RET.(%s) for (%s) result.(%s)\n",retstr,jsonstr,result);
     }
     else
     {

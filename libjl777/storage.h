@@ -58,6 +58,7 @@ void *_process_SuperNET_dbqueue(void *selectorp) // serialize dbreq functions
     {
         if ( sdb->busy == 0 && n == 0 )
             usleep(10000);
+        n = 0;
         while ( (req= queue_dequeue(&sdb->queue)) != 0 )
         {
             if ( req->funcid == 'G' )
@@ -192,7 +193,7 @@ void close_SuperNET_dbs()
             while ( sdb->active == 0 )
             {
                 fprintf(stderr,".");
-                sleep(1);
+                usleep(100000);
                 fprintf(stderr," selector.%d shutdown\n",selector);
                 sdb->active = -1;
             }
@@ -321,7 +322,10 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
                 Total_stored += (sizeof(*sp) + datalen);
             createdflag = 1;
             if ( is_decimalstr(keystr) && slen < MAX_NXTADDR_LEN )
+            {
+                printf("check decimalstr.(%s)\n",keystr);
                 hashval = calc_nxt64bits(keystr);
+            }
             else hashval = calc_txid((uint8_t *)keystr,slen);
         }
         else
@@ -359,7 +363,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
                 //    Storage->err(Storage,ret,"Transaction commit failed.");
                 //else
                 {
-                    fprintf(stderr,"created.%d DB entry for %s\n",createdflag,keystr);
+                    fprintf(stderr,"created.%d DB entry for (%s)\n",createdflag,keystr);
                     if ( (sp= (struct kademlia_storage *)find_storage(selector,keystr)) != 0 )
                     {
                         if ( memcmp(sp->data,databuf,datalen) != 0 )
