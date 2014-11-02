@@ -60,6 +60,16 @@ struct udp_queuecmd
     int32_t valid;
 };
 
+void update_nodestats_data(struct nodestats *stats)
+{
+    char NXTaddr[64];
+    if ( stats->H.datalen == 0 )
+        stats->H.datalen = sizeof(*stats);
+    expand_nxt64bits(NXTaddr,stats->nxt64bits);
+    printf("Update nodestats.%s lastcontact %u\n",NXTaddr,stats->lastcontact);
+    update_storage(NODESTATS_DATA,NXTaddr,&stats->H);
+}
+
 // helper and completion funcs
 void portable_alloc(uv_handle_t *handle,size_t suggested_size,uv_buf_t *buf)
 {
@@ -169,7 +179,7 @@ void on_udprecv(uv_udp_t *udp,ssize_t nread,const uv_buf_t *rcvbuf,const struct 
     if ( cp != 0 && nread > 0 )
     {
         supernet_port = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)addr);
-        if ( strcmp("127.0.0.1",ipaddr) == 0 )
+        if ( notlocalip(ipaddr) == 0 )
             strcpy(ipaddr,cp->myipaddr);
         pserver = get_pserver(&createdflag,ipaddr,supernet_port,0);
         if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
@@ -398,7 +408,6 @@ uint64_t route_packet(int32_t encrypted,struct sockaddr *destaddr,char *hopNXTad
 
 uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *origargstr,int32_t len,unsigned char *data,int32_t datalen)
 {
-    //int32_t direct_onionize(uint64_t nxt64bits,unsigned char *destpubkey,unsigned char *maxbuf,unsigned char *encoded,unsigned char **payloadp,int32_t len);
     static unsigned char zeropubkey[crypto_box_PUBLICKEYBYTES];
     uint64_t txid = 0;
     int32_t port,L;
@@ -406,7 +415,6 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
     struct nodestats *stats;
     struct coin_info *cp = get_coin_info("BTCD");
     unsigned char *outbuf;
-    //memset(encoded,0,sizeof(encoded)); // encoded to dest
     if ( (stats= get_nodestats(pserver->nxt64bits)) != 0 )
         port = stats->supernet_port != 0 ? stats->supernet_port : SUPERNET_PORT;
     else port = SUPERNET_PORT;
@@ -418,16 +426,17 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
         char hopNXTaddr[64],destNXTaddr[64],*retstr;
         expand_nxt64bits(destNXTaddr,stats->nxt64bits);
         L = (encrypted>1 ? MAX(encrypted,Global_mp->Lfactor) : 0);
+        if ( Debuglevel > 0 )
+            fprintf(stderr,"direct send via sendmessage (%s) %p %d\n",origargstr,data,datalen);
         retstr = sendmessage(hopNXTaddr,0*L,cp->srvNXTADDR,origargstr,len,destNXTaddr,data,datalen);
         if ( retstr != 0 )
         {
             if ( Debuglevel > 0 )
-                printf("direct send via sendmessage got (%s)\n",retstr);
+                fprintf(stderr,"direct send via sendmessage got (%s)\n",retstr);
             free(retstr);
         }
-        //len = direct_onionize(pserver->nxt64bits,stats->pubkey,encoded,0,&outbuf,len);
     }
-    else
+    else if ( origargstr != 0 )
     {
         encrypted = 0;
         stripwhite_ns(origargstr,len);
@@ -444,7 +453,8 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
             printf("directsend_packet: payload too big %d\n",len);
         else if ( len > 0 )
         {
-            //printf("route_packet encrypted.%d\n",encrypted);
+            if ( Debuglevel > 0 )
+                fprintf(stderr,"route_packet encrypted.%d\n",encrypted);
             txid = route_packet(encrypted,&destaddr,0,outbuf,len);
             //printf("got route_packet txid.%llu\n",(long long)txid);
         }
@@ -518,6 +528,7 @@ int32_t update_nodestats(char *NXTaddr,uint32_t now,struct nodestats *stats,int3
             modified = (1 << p2pflag);
             stats->modified |= modified;
             stats->lastcontact = now;
+            update_nodestats_data(stats);
         }
     }
     if ( memcmp(zeropubkey,stats->pubkey,sizeof(zeropubkey)) != 0 )

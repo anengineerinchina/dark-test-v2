@@ -26,12 +26,24 @@ uint64_t Allnodes[10000];
 int32_t Numallnodes;
 #define MAX_ALLNODES ((int32_t)(sizeof(Allnodes)/sizeof(*Allnodes)))
 
-void update_nodestats_data(struct nodestats *stats)
+void update_Allnodes()
 {
-    char datastr[MAX_JSON_FIELD],NXTaddr[64];
-    init_hexbytes(datastr,(uint8_t *)stats,sizeof(*stats));
-    expand_nxt64bits(NXTaddr,stats->nxt64bits);
-    add_storage(NODESTATS_DATA,NXTaddr,datastr);
+    int32_t i;
+    char NXTaddr[64];
+    struct nodestats *stats,*sp;
+    for (i=0; i<MAX_ALLNODES; i++)
+    {
+        if ( Allnodes[i] != 0 )
+        {
+            stats = get_nodestats(Allnodes[i]);
+            expand_nxt64bits(NXTaddr,Allnodes[i]);
+            if ( (sp= (struct nodestats *)find_storage(NODESTATS_DATA,NXTaddr)) != 0 )
+            {
+                if ( memcmp(sp,stats,sizeof(*sp)) != 0 )
+                    update_nodestats_data(stats);
+            }
+        }
+    }
 }
 
 struct nodestats *find_nodestats(uint64_t nxt64bits)
@@ -104,12 +116,19 @@ int32_t ismynxtbits(uint64_t destbits)
     } else return(-1);
 }
 
+int32_t notlocalip(char *ipaddr)
+{
+    if ( strcmp("127.0.0.1",ipaddr) == 0 || strncmp("192.",ipaddr,4) == 0 )
+        return(0);
+    else return(1);
+}
+
 int32_t ismyipaddr(char *ipaddr)
 {
     struct coin_info *cp = get_coin_info("BTCD");
     if ( cp != 0 )
     {
-        if ( strcmp("127.0.0.1",ipaddr) == 0 || strcmp(cp->myipaddr,ipaddr) == 0 )
+        if ( notlocalip(ipaddr) == 0 || strcmp(cp->myipaddr,ipaddr) == 0 )
             return(1);
         else return(0);
     } else return(-1);
@@ -287,9 +306,8 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
     {
         //C SuperNET_gotpacket.([{"requestType":"ping","NXT":"17572279667799017517","time":1413706981,"pubkey":"0514b7ba1da50363f3ad19ef46611754a1beb9815b9828bbc2ba9f0ea8f73f75","ipaddr":"89.212.19.49"},{"token":"3mtbe505lnpm60t52tgkdropg6srt8akoatih62ruuk0t7tqm65act9vu1v0n1g1hk7aiq2e88b0rp536o25rvkeibck3dmhmq68jc5bqb6gape8c2k21frtcdtq26pku0amfvdcvjrbcihed0jce1u0cq93nvoi"}]) from 89.212.19.49:47717 size.344 ascii txid.14809915081856697906 | flood.0
 
-        printf("send_kademlia_cmd.%s srvpubaddr or cp.%p NULL\n",kadcmd,cp);
+        printf("send_kademlia_cmd.%s srvpubaddr or cp.%p\n",kadcmd,cp);
         strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
-        //return(0);
     }
     init_hexbytes_noT(pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
     verifiedNXTaddr[0] = 0;
@@ -491,7 +509,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     }
     else // sender ping'ed us
     {
-        if ( strcmp("127.0.0.1",cp->myipaddr) == 0 && destip[0] != 0 && calc_ipbits(destip) != 0 )
+        if ( notlocalip(cp->myipaddr) == 0 && destip[0] != 0 && calc_ipbits(destip) != 0 )
         {
             printf("AUTO SETTING MYIP <- (%s)\n",destip);
             set_myipaddr(cp,ipaddr,0);
@@ -517,7 +535,7 @@ char *kademlia_pong(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     struct coin_info *cp = get_coin_info("BTCD");
     stats = get_nodestats(calc_nxt64bits(sender));
     // all the work is already done in update_Kbucket
-    if ( cp != 0 && strcmp("127.0.0.1",cp->myipaddr) == 0 && yourip[0] != 0 && calc_ipbits(yourip) != 0 )
+    if ( cp != 0 && notlocalip(cp->myipaddr) == 0 && yourip[0] != 0 && calc_ipbits(yourip) != 0 )
     {
         printf("AUTOUPDATE IP <= (%s)\n",yourip);
         set_myipaddr(cp,yourip,0);
@@ -709,13 +727,13 @@ char *kademlia_storedata(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *N
             }
         }
         else sp = do_localstore(&txid,key,datastr,NXTACCTSECRET);
-        sprintf(retstr,"{\"result\":\"kademlia_store key.(%s) data.(%s) len.%ld -> txid.%llu\"}",key,datastr,strlen(datastr)/2,(long long)txid);
+        sprintf(retstr,"{\"result\":\"kademlia_store\",\"key\":\"%s\",\"data\":\"%s\",\"len\":%ld,\"txid\":\"%llu\"}",key,datastr,strlen(datastr)/2,(long long)txid);
         //free(sortbuf);
     }
     else
     {
         sp = do_localstore(&txid,key,datastr,NXTACCTSECRET);
-        sprintf(retstr,"{\"error\":\"kademlia_store key.(%s) no peers, stored locally\"}",key);
+        sprintf(retstr,"{\"error\":\"kademlia_store\",\"key\":\"%s\",\"msg\":\"no peers, stored locally\"}",key);
     }
     if ( sp != 0 )
         free(sp);
@@ -760,7 +778,7 @@ char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifi
                         addto_hasnxt(pserver,calc_nxt64bits(destNXTaddr));
                     copy_cJSON(pubkeystr,cJSON_GetArrayItem(item,1));
                     copy_cJSON(ipaddr,cJSON_GetArrayItem(item,2));
-                    if ( ipaddr[0] != 0 && strcmp(ipaddr,"127.0.0.1") != 0 )
+                    if ( ipaddr[0] != 0 && notlocalip(ipaddr) != 0 )
                         addto_hasips(1,pserver,calc_ipbits(ipaddr));
                     copy_cJSON(portstr,cJSON_GetArrayItem(item,3));
                     copy_cJSON(lastcontactstr,cJSON_GetArrayItem(item,4));
@@ -876,23 +894,25 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
                         {
                             if ( remoteflag != 0 && origargstr != 0 && datastr != 0 && datastr[0] != 0 )
                             {
-                                if ( np->stats.ipbits != 0 && np->stats.ipbits != calc_ipbits(previpaddr) )
+                                if ( np->stats.ipbits != 0 )
                                 {
-                                    expand_ipbits(ipaddr,np->stats.ipbits);
-                                    datalen = (int32_t)(strlen(datastr) / 2);
-                                    decode_hex(data,datalen,datastr);
-                                    if ( z++ == 0 )
-                                        printf("find pass through (%s)\n",datastr);
-                                    txid = directsend_packet(1,get_pserver(0,ipaddr,0,0),origargstr,(int32_t)strlen(origargstr)+1,data,datalen);
+                                    if ( np->stats.ipbits != calc_ipbits(previpaddr) )
+                                    {
+                                        expand_ipbits(ipaddr,np->stats.ipbits);
+                                        datalen = (int32_t)(strlen(datastr) / 2);
+                                        decode_hex(data,datalen,datastr);
+                                        if ( z++ == 0 )
+                                            printf("find pass through ip.(%s) (%s) (%s)\n",ipaddr,origargstr,datastr);
+                                        if ( origargstr != 0 )
+                                        {
+                                            txid = directsend_packet(1,get_pserver(0,ipaddr,0,0),origargstr,(int32_t)strlen(origargstr)+1,data,datalen);
+                                            fprintf(stderr,"back from direct_send\n");
+                                        }
+                                        else printf("no origarg string for pass through?\n");
+                                    }
                                 } else printf("warning: find doesnt have IP address for %s\n",destNXTaddr);
                             }
-                            else
-                            {
-                                expand_ipbits(ipaddr,np->stats.ipbits);
-                                *(int *)data = 0xdeadbeef;
-                                directsend_packet(1,get_pserver(0,ipaddr,0,0),origargstr,(int32_t)strlen(origargstr)+1,data,4);
-                                txid = send_kademlia_cmd(destbits,0,cmd,NXTACCTSECRET,key,datastr);
-                            }
+                            else txid = send_kademlia_cmd(destbits,0,cmd,NXTACCTSECRET,key,datastr);
                         }
                     }
                 }
@@ -1033,7 +1053,7 @@ void update_Kbuckets(struct nodestats *stats,uint64_t nxt64bits,char *ipaddr,int
         pserver = get_pserver(0,cp->myipaddr,0,0);
         //fprintf(stderr,"call addto_hasips\n");
         expand_ipbits(tmpipaddr,stats->ipbits);
-        if ( strcmp("127.0.0.1",tmpipaddr) != 0 )
+        if ( notlocalip(tmpipaddr) != 0 )
             addto_hasips(1,pserver,stats->ipbits);
         xorbits = cp->srvpubnxtbits;
         if ( stats->nxt64bits != 0 )

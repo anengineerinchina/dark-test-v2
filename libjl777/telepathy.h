@@ -31,14 +31,14 @@ struct telepathy_entry
 };
 
 int32_t Num_contacts,Max_contacts;
-portable_mutex_t Contacts_mutex;
+//portable_mutex_t Contacts_mutex;
 
 
 void update_contact_info(struct contact_info *contact)
 {
-    char datastr[MAX_JSON_FIELD];
-    init_hexbytes(datastr,(uint8_t *)contact,sizeof(*contact));
-    add_storage(CONTACT_DATA,contact->handle,datastr);
+    if ( contact->H.datalen == 0 )
+        contact->H.datalen = sizeof(*contact);
+    update_storage(CONTACT_DATA,contact->handle,&contact->H);
 }
 
 struct telepathy_entry *find_telepathy_entry(char *locationstr)
@@ -383,9 +383,9 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
     expand_nxt64bits(locationstr,senderbits); // overloading sender with locationbits!
     if ( (tel= find_telepathy_entry(locationstr)) != 0 )
     {
-        portable_mutex_lock(&Contacts_mutex);
+        //portable_mutex_lock(&Contacts_mutex);
         contact = _find_contact_nxt64bits(tel->contactbits);
-        portable_mutex_unlock(&Contacts_mutex);
+        //portable_mutex_unlock(&Contacts_mutex);
         if ( contact != 0 )
         {
             init_hexbytes_noT(AESpasswordstr,tel->AESpassword.bytes,sizeof(tel->AESpassword));
@@ -419,6 +419,7 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
         } else printf("dont have contact info for %llu\n",(long long)tel->contactbits);
         printf("(%s.%d) pass.(%s) | ",contact->handle,tel->sequenceid,AESpasswordstr);
     }
+    if ( cp != 0 )
     {
         char datastr[4096];
         init_hexbytes(datastr,data,datalen);
@@ -531,9 +532,9 @@ struct contact_info *find_contact(char *handle)
     struct contact_info *contact = 0;
     if ( handle == 0 || handle[0] == 0 )
         return(0);
-    portable_mutex_lock(&Contacts_mutex);
+    //portable_mutex_lock(&Contacts_mutex);
     contact = _find_contact(handle);
-    portable_mutex_unlock(&Contacts_mutex);
+    //portable_mutex_unlock(&Contacts_mutex);
     return(contact);
 }
 
@@ -605,13 +606,13 @@ char *addcontact(char *handle,char *acct)
     handle[sizeof(contact->handle)-1] = 0;
     
     nxt64bits = conv_acctstr(acct);
-    portable_mutex_lock(&Contacts_mutex);
+    //portable_mutex_lock(&Contacts_mutex);
     {
         contact = _find_contact_nxt64bits(nxt64bits);
         if ( contact != 0 && strcmp(contact->handle,handle) != 0 )
         {
             sprintf(retstr,"{\"error\":\"(%s) already has %llu\"}",contact->handle,(long long)nxt64bits);
-            portable_mutex_unlock(&Contacts_mutex);
+            //portable_mutex_unlock(&Contacts_mutex);
             if ( Debuglevel > 1 )
                 printf("addcontact: (%s)\n",retstr);
             return(clonestr(retstr));
@@ -632,8 +633,8 @@ char *addcontact(char *handle,char *acct)
         else if ( strcmp(handle,"myhandle") == 0 )
             return(clonestr("{\"error\":\"cant override myhandle\"}"));
     }
-    portable_mutex_unlock(&Contacts_mutex);
-    
+    //portable_mutex_unlock(&Contacts_mutex);
+    contact->removed = 0;
     if ( Debuglevel > 0 )
         printf("%p ADDCONTACT.(%s) lastcontact.%d acct.(%s) -> %llu\n",contact,contact->handle,contact->lastentry,acct,(long long)nxt64bits);
     if ( nxt64bits != contact->nxt64bits || memcmp(&zerokey,&contact->pubkey,sizeof(zerokey)) == 0 )
@@ -671,6 +672,40 @@ char *addcontact(char *handle,char *acct)
     return(clonestr(retstr));
 }
 
+void init_Contacts()
+{
+    char *retstr,NXTaddr[64];
+    struct contact_info **contacts,*contact;
+    int32_t i,j,n,numcontacts;
+    contacts = (struct contact_info **)copy_all_DBentries(&numcontacts,CONTACT_DATA);
+    if ( contacts == 0 )
+        return;
+    for (i=0; i<numcontacts; i++)
+    {
+        if ( contacts[i]->removed != 0 )
+            continue;
+        expand_nxt64bits(NXTaddr,contacts[i]->nxt64bits);
+        if ( (retstr= addcontact(contacts[i]->handle,NXTaddr)) != 0 )
+        {
+            printf("%s\n",retstr);
+            free(retstr);
+            if ( (contact= _find_contact(contacts[i]->handle)) != 0 )
+            {
+                *contact = *contacts[i];
+                printf("lastrecv.%d lastentry.%d\n",contact->lastrecv,contact->lastentry);
+                n = (contact->lastrecv + MAX_DROPPED_PACKETS);
+                if ( n < (contact->lastentry + 2*MAX_DROPPED_PACKETS) )
+                    n = contact->lastentry + 2*MAX_DROPPED_PACKETS;
+                for (j=contact->lastrecv; j<n; j++)
+                    create_telepathy_entry(contact,j);
+            }
+            else printf("error finding %s right after adding it!\n",contacts[i]->handle);
+        }
+        free(contacts[i]);
+    }
+    free(contacts);
+}
+
 char *removecontact(struct sockaddr *prevaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,char *handle)
 {
     struct contact_info *contact;
@@ -678,7 +713,7 @@ char *removecontact(struct sockaddr *prevaddr,char *NXTaddr,char *NXTACCTSECRET,
     handle[sizeof(contact->handle)-1] = 0;
     if ( strcmp("myhandle",handle) == 0 )
         return(0);
-    portable_mutex_lock(&Contacts_mutex);
+    //portable_mutex_lock(&Contacts_mutex);
     if ( (contact= _find_contact(handle)) != 0 )
     {
         contact->removed = 1;
@@ -697,7 +732,7 @@ char *removecontact(struct sockaddr *prevaddr,char *NXTaddr,char *NXTACCTSECRET,
         }
         sprintf(retstr,"{\"result\":\"handle.(%s) deleted num.%d max.%d\"}",handle,Num_contacts,Max_contacts);
     } else sprintf(retstr,"{\"error\":\"handle.(%s) doesnt exist\"}",handle);
-    portable_mutex_unlock(&Contacts_mutex);
+    //portable_mutex_unlock(&Contacts_mutex);
     printf("REMOVECONTACT.(%s)\n",retstr);
     return(clonestr(retstr));
 }
@@ -720,7 +755,7 @@ char *dispcontact(struct sockaddr *prevaddr,char *NXTaddr,char *NXTACCTSECRET,ch
     char retbuf[1024],*retstr = 0;
     handle[sizeof(contact->handle)-1] = 0;
     retbuf[0] = 0;
-    portable_mutex_lock(&Contacts_mutex);
+    //portable_mutex_lock(&Contacts_mutex);
     if ( strcmp(handle,"*") == 0 )
     {
         retstr = clonestr("[");
@@ -741,7 +776,7 @@ char *dispcontact(struct sockaddr *prevaddr,char *NXTaddr,char *NXTACCTSECRET,ch
         else sprintf(retbuf,"{\"error\":\"handle.(%s) doesnt exist\"}",handle);
         retstr = clonestr(retbuf);
     }
-    portable_mutex_unlock(&Contacts_mutex);
+   // portable_mutex_unlock(&Contacts_mutex);
     printf("Contact.(%s)\n",retstr);
     return(retstr);
 }
