@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <memory.h>
+#include <sys/time.h>
 #include "SuperNET.h"
 #include "cJSON.h"
 
@@ -41,14 +42,18 @@ cJSON *SuperAPI(char *cmd,char *field0,char *arg0,char *field1,char *arg1)
 void build_topology()
 {
     cJSON *array,*item,*ret;
-    int32_t i,n;
-    char ipaddr[64];
+    uint32_t now;
+    int32_t i,n,numnodes,numcontacts,numipaddrs = 0;
+    char ipaddr[64],**ipaddrs;
+    struct nodestats **nodes;
+    struct contact_info **contacts;
     array = cJSON_GetObjectItem(MGWconf,"whitelist");
     if ( array != 0 && is_cJSON_Array(array) != 0 )
     {
         int32_t add_SuperNET_whitelist(char *ipaddr);
         n = cJSON_GetArraySize(array);
-        for (i=0; i<n; i++)
+        ipaddrs = calloc(n+1,sizeof(*ipaddrs));
+        for (i=numipaddrs=0; i<n; i++)
         {
             if ( array == 0 || n == 0 )
                 break;
@@ -56,9 +61,42 @@ void build_topology()
             copy_cJSON(ipaddr,item);
             if ( ipaddr[0] != 0 && (ret= SuperAPI("ping","destip",ipaddr,0,0)) != 0 )
             {
+                ipaddrs[numipaddrs] = calloc(1,strlen(ipaddr)+1);
+                strcpy(ipaddrs[numipaddrs++],ipaddr);
                 free_json(ret);
             }
         }
+    }
+    if ( ipaddrs != 0 )
+        for (i=0; i<numipaddrs; i++)
+            printf("%s ",ipaddrs[i]);
+    printf("numipaddrs.%d\n",numipaddrs);
+    while ( 1 )
+    {
+        nodes = (struct nodestats **)copy_all_DBentries(&numnodes,NODESTATS_DATA);
+        contacts = (struct contact_info **)copy_all_DBentries(&numcontacts,CONTACT_DATA);
+        if ( nodes != 0 )
+        {
+            now = (uint32_t)time(NULL);
+            for (i=0; i<numnodes; i++)
+            {
+                printf("(%llu %d) ",(long long)nodes[i]->nxt64bits,nodes[i]->lastcontact-now);
+                free(nodes[i]);
+            }
+            free(nodes);
+        }
+        printf("numnodes.%d\n",numnodes);
+        if ( contacts != 0 )
+        {
+            for (i=0; i<numcontacts; i++)
+            {
+                printf("((%s) %llu) ",contacts[i]->handle,(long long)contacts[i]->nxt64bits);
+                free(contacts[i]);
+            }
+            free(contacts);
+        }
+        printf("numcontacts.%d\n",numcontacts);
+        sleep(10);
     }
 }
 
@@ -98,7 +136,7 @@ void *GUIpoll_loop(void *arg)
                     }
                 }
                 free_json(json);
-            } //else fprintf(stderr,"<<<<<<<<<<< GUI poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
+            } else fprintf(stderr,"<<<<<<<<<<< GUI poll_for_broadcasts: PARSE_ERROR.(%s)\n",retstr);
             free(retstr);
         } //else fprintf(stderr,"<<<<<<<<<<< BTCD poll_for_broadcasts: bitcoind_RPC returns null\n");
     }

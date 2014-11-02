@@ -98,7 +98,7 @@ void SuperNET_idler(uv_idle_t *handle)
     millis = ((double)uv_hrtime() / 1000000);
     if ( millis > (lastattempt + 10) )
     {
-        r = ((rand() >> 8) % 10);
+        r = ((rand() >> 8) % 2);
         while ( (wr= queue_dequeue(&sendQ)) != 0 )
         {
             if ( wr == firstwr )
@@ -107,7 +107,7 @@ void SuperNET_idler(uv_idle_t *handle)
                 //printf("reached firstwr.%p\n",firstwr);
                 break;
             }
-            if ( (wr->queuetime % 10) == r )
+            if ( 1 || (wr->queuetime % 2) == r )
             {
                 process_sendQ_item(wr);
                 // free(wr); libuv does this
@@ -161,7 +161,10 @@ void SuperNET_idler(uv_idle_t *handle)
         if ( (counter % 10) == 3 )
             poll_telepods("BTCD");
         if ( (counter % 60) == 17 )
+        {
             every_minute(counter/60);
+            update_Allnodes();
+        }
         counter++;
         lastclock = millis;
     }
@@ -260,6 +263,7 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         pserver = get_pserver(0,myipaddr,0,0);
         pserver->nxt64bits = cp->srvpubnxtbits;
     }
+    init_Contacts();
     return(myipaddr);
 }
 
@@ -557,7 +561,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
             return(-1);
         fclose(fp);
     }
-    portable_mutex_init(&Contacts_mutex);
+   // portable_mutex_init(&Contacts_mutex);
     Global_mp = calloc(1,sizeof(*Global_mp));
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session
     if ( Global_pNXT == 0 )
