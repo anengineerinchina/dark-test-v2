@@ -116,13 +116,6 @@ int32_t ismynxtbits(uint64_t destbits)
     } else return(-1);
 }
 
-int32_t notlocalip(char *ipaddr)
-{
-    if ( strcmp("127.0.0.1",ipaddr) == 0 || strncmp("192.",ipaddr,4) == 0 )
-        return(0);
-    else return(1);
-}
-
 int32_t ismyipaddr(char *ipaddr)
 {
     struct coin_info *cp = get_coin_info("BTCD");
