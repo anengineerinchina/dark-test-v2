@@ -331,7 +331,7 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
         uint64_t txid;
         keybits = calc_nxt64bits(key);
         dist = bitweight(keybits ^ nxt64bits);
-        if ( dist <= KADEMLIA_MAXTHRESHOLD )
+        //if ( dist <= KADEMLIA_MAXTHRESHOLD )
         {
             if ( datastr != 0 )
                 calc_sha256cat(hash.bytes,(uint8_t *)key,(int32_t)strlen(key),(uint8_t *)datastr,(int32_t)strlen(datastr));
@@ -680,7 +680,10 @@ struct SuperNET_storage *do_localstore(uint64_t *txidp,char *key,char *datastr,c
     if ( keynp->bestbits != 0 )
     {
         if ( ismynxtbits(keynp->bestdist) == 0 )
+        {
+            printf("store at bestbits\n");
             *txidp = send_kademlia_cmd(keynp->bestdist,0,"store",NXTACCTSECRET,key,datastr);
+        }
         printf("Bestdist.%d bestbits.%llu\n",keynp->bestdist,(long long)keynp->bestbits);
         keynp->bestbits = 0;
         keynp->bestdist = 0;
@@ -690,14 +693,14 @@ struct SuperNET_storage *do_localstore(uint64_t *txidp,char *key,char *datastr,c
 
 char *kademlia_storedata(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *datastr)
 {
-    static unsigned char zerokey[crypto_box_PUBLICKEYBYTES];
+    //static unsigned char zerokey[crypto_box_PUBLICKEYBYTES];
     char retstr[32768];
     uint64_t sortbuf[2 * KADEMLIA_NUMBUCKETS * KADEMLIA_NUMK];
     uint64_t keybits,destbits,txid = 0;
     int32_t i,n,dist,mydist;
     struct SuperNET_storage *sp = 0;
     struct coin_info *cp = get_coin_info("BTCD");
-    struct nodestats *stats;
+    //struct nodestats *stats;
     if ( cp == 0 || key == 0 || key[0] == 0 || datastr == 0 || datastr[0] == 0 )
     {
         printf("kademlia_storedata null args\n");
@@ -713,13 +716,9 @@ char *kademlia_storedata(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSEC
         {
             destbits = sortbuf[(i<<1) + 1];
             dist = bitweight(destbits ^ keybits);
-            if ( ismynxtbits(destbits) == 0 || dist < mydist )
+            if ( ismynxtbits(destbits) == 0 && dist < mydist )
             {
-                if ( (stats= get_nodestats(destbits)) != 0 )
-                {
-                    if ( memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
-                        send_kademlia_cmd(destbits,0,"ping",NXTACCTSECRET,0,0);
-                }
+                printf("store i.%d of %d, dist.%d vs mydist.%d\n",i,n,dist,mydist);
                 txid = send_kademlia_cmd(destbits,0,"store",NXTACCTSECRET,key,datastr);
             }
             else if ( is_remote_access(previpaddr) == 0 )
@@ -847,7 +846,7 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
                     init_hexbytes_noT(databuf,sp->data,sp->H.datalen);
                     if ( is_remote_access(previpaddr) != 0 && ismynxtbits(senderbits) == 0 )
                     {
-                        //printf("call store\n");
+                        printf("found value for (%s)! call store\n",key);
                         txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
                     }
                     sprintf(retstr,"{\"data\":\"%s\"}",databuf);
