@@ -92,14 +92,14 @@ int32_t calc_np_dist(struct NXT_acct *np,struct NXT_acct *destnp)
     return(bitweight(a ^ b));
 }
 
-int32_t verify_addr(uint16_t *prevportp,struct sockaddr *addr,char *refipaddr,int32_t refport)
+int32_t verify_addr(uint16_t *prevportp,char *previpaddr,char *refipaddr,int32_t refport)
 {
-    char ipaddr[64];
-    *prevportp = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)addr);
-    if ( strcmp(ipaddr,refipaddr) != 0 )//|| refport != port )
+    //char ipaddr[64];
+    //*prevportp = extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)addr);
+    if ( strcmp(previpaddr,refipaddr) != 0 )//|| refport != port )
     {
-        printf("verify_addr error: (%s) vs (%s)\n",refipaddr,ipaddr);
-        strcpy(refipaddr,ipaddr);
+        printf("verify_addr error: (%s) vs (%s)\n",refipaddr,previpaddr);
+        strcpy(refipaddr,previpaddr);
         return(-1);
     }
     return(0);
@@ -489,7 +489,7 @@ void set_myipaddr(struct coin_info *cp,char *ipaddr,uint16_t port)
     change_nodeinfo(ipaddr,port,cp->srvpubnxtbits);
 }
 
-char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *ipaddr,int32_t port,char *destip,char *origargstr)
+char *kademlia_ping(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *ipaddr,int32_t port,char *destip,char *origargstr)
 {
     uint64_t txid = 0;
     char retstr[1024];
@@ -497,7 +497,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
     struct coin_info *cp = get_coin_info("BTCD");
     //printf("got ping.%d (%s)\n",ismynode(prevaddr),origargstr);
     retstr[0] = 0;
-    if ( ismynode(prevaddr) != 0 ) // user invoked
+    if ( is_remote_access(previpaddr) == 0 ) // user invoked
     {
         if ( destip != 0 && destip[0] != 0 )
         {
@@ -515,7 +515,7 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
             set_myipaddr(cp,ipaddr,port);
         }
         prevport = 0;
-        if ( verify_addr(&prevport,prevaddr,ipaddr,port) < 0 ) // auto-corrects ipaddr
+        if ( verify_addr(&prevport,previpaddr,ipaddr,port) < 0 ) // auto-corrects ipaddr
         {
             change_nodeinfo(ipaddr,prevport,calc_nxt64bits(sender));
             sprintf(retstr,"{\"error\":\"kademlia_ping from %s doesnt verify (%s) -> new IP (%s:%d)\"}",sender,origargstr,ipaddr,prevport);
@@ -523,12 +523,12 @@ char *kademlia_ping(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACC
         else sprintf(retstr,"{\"result\":\"kademlia_pong to (%s/%d)\",\"txid\":\"%llu\"}",ipaddr,prevport,(long long)txid);
         txid = send_kademlia_cmd(0,get_pserver(0,ipaddr,prevport,0),"pong",NXTACCTSECRET,0,0);
     }
-    if ( ismynode(prevaddr) == 0 && retstr[0] != 0 )
+    if ( is_remote_access(previpaddr) != 0 && retstr[0] != 0 )
         printf("PING.(%s)\n",retstr);
     return(clonestr(retstr));
 }
 
-char *kademlia_pong(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *ipaddr,uint16_t port,char *yourip,int32_t yourport)
+char *kademlia_pong(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *ipaddr,uint16_t port,char *yourip,int32_t yourport)
 {
     char retstr[1024];
     struct nodestats *stats;
@@ -650,15 +650,15 @@ uint64_t process_storageQ()
     struct coin_info *cp = get_coin_info("BTCD");
     if ( (ptr= queue_dequeue(&storageQ)) != 0 )
     {
-        //fprintf(stderr,"dequeue StorageQ %p key.(%llu) dest.(%llu) selector.%d\n",ptr,(long long)ptr->keyhash,(long long)ptr->destbits,ptr->selector);
+        fprintf(stderr,"dequeue StorageQ %p key.(%llu) dest.(%llu) selector.%d\n",ptr,(long long)ptr->keyhash,(long long)ptr->destbits,ptr->selector);
         expand_nxt64bits(key,ptr->keyhash);
         if ( (sp= (struct SuperNET_storage *)find_storage(ptr->selector,key)) != 0 )
         {
             init_hexbytes_noT(datastr,sp->data,sp->H.datalen);
-            //printf("dequeued storageQ %p: (%s) len.%d\n",ptr,datastr,sp->datalen);
+            fprintf(stderr,"dequeued storageQ %p: (%s) len.%d\n",ptr,datastr,sp->H.datalen);
             txid = send_kademlia_cmd(ptr->destbits,0,"store",cp->srvNXTACCTSECRET,key,datastr);
             if ( Debuglevel > 1 )
-                printf("txid.%llu send queued push storage key.(%s) to %llu\n",(long long)txid,key,(long long)ptr->destbits);
+                fprintf(stderr,"txid.%llu send queued push storage key.(%s) to %llu\n",(long long)txid,key,(long long)ptr->destbits);
         }
         free(ptr);
     }
@@ -673,6 +673,7 @@ struct SuperNET_storage *do_localstore(uint64_t *txidp,char *key,char *datastr,c
     struct SuperNET_storage *sp;
     keybits = calc_nxt64bits(key);
     //printf("halflen.%ld\n",strlen(datastr)/2);
+    fprintf(stderr,"do_localstor(%s) <- (%s)\n",key,datastr);
     sp = kademlia_getstored(PUBLIC_DATA,keybits,datastr);
     keynp = get_NXTacct(&createdflag,Global_mp,key);
     *txidp = 0;
@@ -687,7 +688,7 @@ struct SuperNET_storage *do_localstore(uint64_t *txidp,char *key,char *datastr,c
     return(sp);
 }
 
-char *kademlia_storedata(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *datastr)
+char *kademlia_storedata(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *datastr)
 {
     static unsigned char zerokey[crypto_box_PUBLICKEYBYTES];
     char retstr[32768];
@@ -708,25 +709,22 @@ char *kademlia_storedata(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *N
     n = sort_all_buckets(sortbuf,keybits);
     if ( n != 0 )
     {
-        if ( ismynode(prevaddr) != 0 )
+        for (i=0; i<n&&i<KADEMLIA_NUMK; i++)
         {
-            for (i=0; i<n&&i<KADEMLIA_NUMK; i++)
+            destbits = sortbuf[(i<<1) + 1];
+            dist = bitweight(destbits ^ keybits);
+            if ( ismynxtbits(destbits) == 0 || dist < mydist )
             {
-                destbits = sortbuf[(i<<1) + 1];
-                dist = bitweight(destbits ^ keybits);
-                if ( ismynxtbits(destbits) == 0 || dist < mydist )
+                if ( (stats= get_nodestats(destbits)) != 0 )
                 {
-                    if ( (stats= get_nodestats(destbits)) != 0 )
-                    {
-                        if ( memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
-                            send_kademlia_cmd(destbits,0,"ping",NXTACCTSECRET,0,0);
-                    }
-                    txid = send_kademlia_cmd(destbits,0,"store",NXTACCTSECRET,key,datastr);
+                    if ( memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
+                        send_kademlia_cmd(destbits,0,"ping",NXTACCTSECRET,0,0);
                 }
-                else sp = do_localstore(&txid,key,datastr,NXTACCTSECRET);
+                txid = send_kademlia_cmd(destbits,0,"store",NXTACCTSECRET,key,datastr);
             }
+            else if ( is_remote_access(previpaddr) == 0 )
+                sp = do_localstore(&txid,key,datastr,NXTACCTSECRET);
         }
-        else sp = do_localstore(&txid,key,datastr,NXTACCTSECRET);
         sprintf(retstr,"{\"result\":\"kademlia_store\",\"key\":\"%s\",\"data\":\"%s\",\"len\":%ld,\"txid\":\"%llu\"}",key,datastr,strlen(datastr)/2,(long long)txid);
         //free(sortbuf);
     }
@@ -742,10 +740,10 @@ char *kademlia_storedata(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *N
     return(clonestr(retstr));
 }
 
-char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *value)
+char *kademlia_havenode(int32_t valueflag,char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *value)
 {
     char retstr[1024],ipaddr[MAX_JSON_FIELD],destNXTaddr[MAX_JSON_FIELD],pubkeystr[MAX_JSON_FIELD],portstr[MAX_JSON_FIELD],lastcontactstr[MAX_JSON_FIELD];
-    int32_t i,n,createdflag,dist,mydist,threshold;
+    int32_t i,n,createdflag,dist,mydist;
     uint32_t lastcontact,port;
     uint64_t keyhash,txid = 0;
     cJSON *array,*item;
@@ -756,10 +754,10 @@ char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifi
     mydist = bitweight(cp->srvpubnxtbits ^ keyhash);
     if ( key != 0 && key[0] != 0 && value != 0 && value[0] != 0 && (array= cJSON_Parse(value)) != 0 )
     {
-        if ( ismynode(prevaddr) == 0 )
+        if ( is_remote_access(previpaddr) != 0 )
         {
-            extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)prevaddr);
-            pserver = get_pserver(0,ipaddr,0,0);
+            //extract_nameport(ipaddr,sizeof(ipaddr),(struct sockaddr_in *)prevaddr);
+            pserver = get_pserver(0,previpaddr,0,0);
         } else if ( cp != 0 ) pserver = get_pserver(0,cp->myipaddr,0,0);
         keynp = get_NXTacct(&createdflag,Global_mp,key);
         //printf("parsed value array.%p\n",array);
@@ -796,8 +794,7 @@ char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifi
                             keynp->bestdist = dist;
                             keynp->bestbits = calc_nxt64bits(destNXTaddr);
                         }
-                        threshold = (valueflag == 0) ? KADEMLIA_MAXTHRESHOLD : KADEMLIA_MINTHRESHOLD;
-                        if ( keynp->bestbits != 0 && ismynxtbits(keynp->bestbits) == 0 && (dist < mydist || dist <= threshold) )
+                        if ( keynp->bestbits != 0 && ismynxtbits(keynp->bestbits) == 0 && dist < mydist )
                             txid = send_kademlia_cmd(keynp->bestbits,0,valueflag!=0?"findvalue":"findnode",NXTACCTSECRET,key,0);
                     }
                 }
@@ -811,24 +808,29 @@ char *kademlia_havenode(int32_t valueflag,struct sockaddr *prevaddr,char *verifi
     return(clonestr(retstr));
 }
 
-char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *datastr,char *origargstr)
+char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *datastr,char *origargstr)
 {
     static unsigned char zerokey[crypto_box_PUBLICKEYBYTES];
     unsigned char data[MAX_JSON_FIELD];
-    char retstr[32768],pubkeystr[256],databuf[32768],numstr[64],ipaddr[64],previpaddr[64],destNXTaddr[64],*value;
+    char retstr[32768],pubkeystr[256],databuf[32768],numstr[64],ipaddr[64],_previpaddr[64],destNXTaddr[64],*value;
     uint64_t keyhash,senderbits,destbits,txid = 0;
     uint64_t sortbuf[2 * KADEMLIA_NUMBUCKETS * KADEMLIA_NUMK];
-    int32_t i,n,threshold,isvalue,createdflag,prevport,datalen,mydist,dist,remoteflag = 0;
+    int32_t i,n,isvalue,createdflag,datalen,mydist,dist,remoteflag = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     struct NXT_acct *keynp,*destnp,*np;
     cJSON *array,*item;
     struct SuperNET_storage *sp;
     struct nodestats *stats;
-    if ( prevaddr != 0 )
-        prevport = extract_nameport(previpaddr,sizeof(previpaddr),(struct sockaddr_in *)prevaddr);
-    else prevport = 0, strcpy(previpaddr,"localhost");
+    if ( previpaddr == 0 )
+    {
+        _previpaddr[0] = 0;
+        previpaddr = _previpaddr;
+    }
+    //if ( prevaddr != 0 )
+    //    prevport = extract_nameport(previpaddr,sizeof(previpaddr),(struct sockaddr_in *)prevaddr);
+   // else prevport = 0, strcpy(previpaddr,"localhost");
     if ( Debuglevel > 0 )
-        printf("myNXT.(%s) kademlia_find.(%s) (%s) data.(%s) mynode.%d\n",verifiedNXTaddr,cmd,key,datastr!=0?datastr:"",ismynode(prevaddr));
+        printf("myNXT.(%s) kademlia_find.(%s) (%s) data.(%s) is_remote_access.%d\n",verifiedNXTaddr,cmd,key,datastr!=0?datastr:"",is_remote_access(previpaddr));
     if ( key != 0 && key[0] != 0 )
     {
         senderbits = calc_nxt64bits(sender);
@@ -843,7 +845,7 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
                 if ( sp->data != 0 )
                 {
                     init_hexbytes_noT(databuf,sp->data,sp->H.datalen);
-                    if ( ismynode(prevaddr) == 0 && ismynxtbits(senderbits) == 0 )
+                    if ( is_remote_access(previpaddr) != 0 && ismynxtbits(senderbits) == 0 )
                     {
                         //printf("call store\n");
                         txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
@@ -858,7 +860,7 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
         else if ( datastr != 0 && datastr[0] != 0 )
         {
             void process_telepathic(char *key,uint8_t *data,int32_t len,uint64_t senderbits,char *senderip);
-            if ( ismynode(prevaddr) == 0 )
+            if ( is_remote_access(previpaddr) != 0 )
             {
                 datalen = (int32_t)(strlen(datastr) / 2);
                 decode_hex(data,datalen,datastr);
@@ -871,23 +873,22 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
         if ( n != 0 )
         {
             printf("search n.%d sorted\n",n);
-            if ( ismynode(prevaddr) != 0 || remoteflag != 0 ) // user invoked
+            if ( is_remote_access(previpaddr) == 0 || remoteflag != 0 ) // user invoked
             {
                 keynp = get_NXTacct(&createdflag,Global_mp,key);
                 keynp->bestdist = 10000;
                 keynp->bestbits = 0;
                 int z = 0;
-                threshold = remoteflag * ((isvalue == 0) ? KADEMLIA_MAXTHRESHOLD : KADEMLIA_MINTHRESHOLD);
                 for (i=0; i<n; i++) //&&i<KADEMLIA_ALPHA
                 {
                     destbits = sortbuf[(i<<1) + 1];
                     dist = bitweight(destbits ^ keyhash);
-                    if ( ismynxtbits(destbits) == 0 && (dist < mydist || dist <= threshold) )
+                    if ( ismynxtbits(destbits) == 0 && dist < mydist )
                     {
                         if ( (stats= get_nodestats(destbits)) != 0 && memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
                             send_kademlia_cmd(destbits,0,"ping",NXTACCTSECRET,0,0);
                         if ( Debuglevel > 1 )
-                            printf("call %llu (%s) dist.%d mydist.%d threshold.%d\n",(long long)destbits,cmd,bitweight(destbits ^ keyhash),mydist,threshold);
+                            printf("call %llu (%s) dist.%d mydist.%d\n",(long long)destbits,cmd,bitweight(destbits ^ keyhash),mydist);
                         expand_nxt64bits(destNXTaddr,destbits);
                         np = get_NXTacct(&createdflag,Global_mp,destNXTaddr);
                         if ( np->stats.ipbits != 0 && np->stats.ipbits != calc_ipbits(previpaddr) )
@@ -917,7 +918,7 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
                     }
                 }
             }
-            if ( ismynode(prevaddr) == 0 )//ismynxtbits(senderbits) == 0 && (isvalue == 0 || datastr == 0) ) // need to respond to sender
+            if ( is_remote_access(previpaddr) != 0 )//ismynxtbits(senderbits) == 0 && (isvalue == 0 || datastr == 0) ) // need to respond to sender
             {
                 array = cJSON_CreateArray();
                 for (i=0; i<n&&i<KADEMLIA_NUMK; i++)
@@ -954,7 +955,7 @@ char *kademlia_find(char *cmd,struct sockaddr *prevaddr,char *verifiedNXTaddr,ch
         } else if ( Debuglevel > 0 )
             printf("kademlia.(%s) no peers\n",cmd);
     }
-    sprintf(retstr,"{\"result\":\"kademlia_%s from.(%s) (%s:%d) key.(%s) datalen.%ld txid.%llu\"}",cmd,sender,previpaddr,prevport,key,datastr!=0?strlen(datastr):0,(long long)txid);
+    sprintf(retstr,"{\"result\":\"kademlia_%s from.(%s) (%s) key.(%s) datalen.%ld txid.%llu\"}",cmd,sender,previpaddr,key,datastr!=0?strlen(datastr):0,(long long)txid);
     //if ( Debuglevel > 0 )
         printf("FIND.(%s)\n",retstr);
     return(clonestr(retstr));
@@ -1371,7 +1372,7 @@ int32_t scan_nodes(uint64_t *newaccts,int32_t max,char *NXTACCTSECRET)
     return(num);
 }
 
-cJSON *gen_peers_json(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,int32_t scanflag)
+cJSON *gen_peers_json(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,int32_t scanflag)
 {
     int32_t i,n,numservers = 0;
     char pubkeystr[512],key[64],*retstr;
@@ -1409,7 +1410,7 @@ cJSON *gen_peers_json(struct sockaddr *prevaddr,char *verifiedNXTaddr,char *NXTA
         {
             expand_nxt64bits(key,cp->nxtaccts[i]);
             init_hexbytes(pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
-            retstr = kademlia_find("findnode",prevaddr,verifiedNXTaddr,NXTACCTSECRET,sender,key,0,0);
+            retstr = kademlia_find("findnode",previpaddr,verifiedNXTaddr,NXTACCTSECRET,sender,key,0,0);
             if ( retstr != 0 )
                 free(retstr);
         }
