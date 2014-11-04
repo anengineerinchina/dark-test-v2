@@ -378,6 +378,8 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
             "WWW-Authenticate: Basic realm=\"jsonrpc\"\r\n"
             "Content-Type: text/html\r\n"
             "Content-Length: 296\r\n"
+             "Access-Control-Allow-Origin: *\r\n"
+             "Access-Control-Allow-Headers: Authorization, Content-Type\r\n"
             "\r\n"
             "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"\r\n"
             "\"http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd\">\r\n"
