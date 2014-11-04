@@ -111,11 +111,12 @@ void every_minute(int32_t counter)
 {
     static int broadcast_count;
     uint32_t now = (uint32_t)time(NULL);
-    int32_t i,n;
-    char ipaddr[64];
+    int32_t i,n,numnodes,len;
+    char ipaddr[64],_cmd[MAX_JSON_FIELD];
+    uint8_t finalbuf[MAX_JSON_FIELD];
     struct coin_info *cp;
-    struct nodestats *stats;
-    struct pserver_info *pserver;//,*mypserver = 0;
+    struct nodestats *stats,**nodes;
+    struct pserver_info *pserver;
     if ( Finished_init == 0 )
         return;
     now = (uint32_t)time(NULL);
@@ -123,12 +124,32 @@ void every_minute(int32_t counter)
     if ( cp == 0 )
         return;
     //printf("<<<<<<<<<<<<< EVERY_MINUTE\n");
-    //p2p_publishpacket(get_pserver(0,"209.126.70.170",0,0),0);
     refresh_buckets(cp->srvNXTACCTSECRET);
     if ( broadcast_count == 0 )
     {
         p2p_publishpacket(0,0);
         update_Kbuckets(get_nodestats(cp->srvpubnxtbits),cp->srvpubnxtbits,cp->myipaddr,0,0,0);
+        nodes = (struct nodestats **)copy_all_DBentries(&numnodes,NODESTATS_DATA);
+        if ( nodes != 0 )
+        {
+            now = (uint32_t)time(NULL);
+            for (i=0; i<numnodes; i++)
+            {
+                expand_ipbits(ipaddr,nodes[i]->ipbits);
+                printf("(%llu %d %s) ",(long long)nodes[i]->nxt64bits,nodes[i]->lastcontact-now,ipaddr);
+                if ( gen_pingstr(_cmd,1) > 0 )
+                {
+                    len = construct_tokenized_req((char *)finalbuf,_cmd,cp->srvNXTACCTSECRET);
+                    send_packet(nodes[i],0,finalbuf,len);
+                    pserver = get_pserver(0,ipaddr,0,0);
+                    send_kademlia_cmd(0,pserver,"ping",cp->srvNXTACCTSECRET,0,0);
+                    p2p_publishpacket(pserver,0);
+                }
+                free(nodes[i]);
+            }
+            free(nodes);
+        }
+        printf("numnodes.%d\n",numnodes);
     }
     if ( (broadcast_count % 10) == 0 )
     {
@@ -159,6 +180,7 @@ void SuperNET_idler(uv_idle_t *handle)
     millis = ((double)uv_hrtime() / 1000000);
     if ( millis > (lastattempt + 10) )
     {
+        lastattempt = millis;
         r = ((rand() >> 8) % 2);
         while ( (wr= queue_dequeue(&sendQ)) != 0 )
         {
@@ -172,7 +194,6 @@ void SuperNET_idler(uv_idle_t *handle)
             {
                 process_sendQ_item(wr);
                 // free(wr); libuv does this
-                lastattempt = millis;
                 break;
             }
             if ( firstwr == 0 )
@@ -191,7 +212,6 @@ void SuperNET_idler(uv_idle_t *handle)
             free(qp->decoded);
             free_json(qp->argjson);
             free(qp);
-            lastattempt = millis;
         }
         else if ( (ptrs= queue_dequeue(&JSON_Q)) != 0 )
         {
@@ -204,12 +224,10 @@ void SuperNET_idler(uv_idle_t *handle)
             ptrs[1] = retstr;
             if ( ptrs[2] != 0 )
                 queue_GUIpoll(ptrs);
-            lastattempt = millis;
         }
         if ( process_storageQ() != 0 )
         {
             printf("processed storage\n");
-            lastattempt = millis;
         }
     }
     if ( millis > (lastclock + 1000) )
