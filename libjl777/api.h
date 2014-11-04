@@ -157,7 +157,7 @@ void return_http_str(struct libwebsocket *wsi,char *retstr,char *insertstr)
         len += (int32_t)strlen(insertstr);
     sprintf((char *)buffer,
             "HTTP/1.0 200 OK\x0d\x0a"
-            "Server: NXTprotocol.jl777\x0d\x0a"
+            "Server: SuperNET\x0d\x0a"
             "Content-Type: text/html\x0d\x0a"
             "Access-Control-Allow-Origin: *\r\n"
             "Access-Control-Allow-Headers: Authorization, Content-Type\r\n"
@@ -167,7 +167,7 @@ void return_http_str(struct libwebsocket *wsi,char *retstr,char *insertstr)
     if ( insertstr != 0 && insertstr[0] != 0 )
         strcat((char *)buffer,insertstr);
     libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
-    libwebsocket_write(wsi,(unsigned char *)retstr,len,LWS_WRITE_HTTP);
+    libwebsocket_write(wsi,(unsigned char *)retstr,strlen(retstr),LWS_WRITE_HTTP);
     if ( Debuglevel > 2 )
         printf("SuperNET >>>>>>>>>>>>>> sends back (%s)\n",retstr);
 }
