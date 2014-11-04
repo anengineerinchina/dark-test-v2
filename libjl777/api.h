@@ -552,6 +552,20 @@ char *getorderbooks_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char
     return(retstr);
 }
 
+void submit_quote(uint64_t obookid,char *quotestr)
+{
+    char NXTaddr[64],keystr[64],datastr[MAX_JSON_FIELD*2],*retstr;
+    struct coin_info *cp = get_coin_info("BTCD");
+    if ( cp != 0 )
+    {
+        strcpy(NXTaddr,cp->privateNXTADDR);
+        expand_nxt64bits(keystr,obookid);
+        retstr = kademlia_storedata(0,NXTaddr,cp->privateNXTACCTSECRET,NXTaddr,keystr,datastr);
+        if ( retstr != 0 )
+            free(retstr);
+    }
+}
+
 char *placequote_func(char *previpaddr,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     cJSON *json;
