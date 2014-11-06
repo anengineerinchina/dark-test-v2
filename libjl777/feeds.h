@@ -244,7 +244,7 @@ int32_t generate_quote_entry(struct exchange_state *ep)
 
 struct orderbook_tx **conv_quotes(int32_t *nump,int32_t type,uint64_t nxt64bits,uint64_t baseid,uint64_t relid,double *bids,int32_t numbids,double *asks,int32_t numasks)
 {
-    int32_t iter,i,ret,m,n = 0;
+    int32_t iter,i,m,n = 0;
     double *quotes;
     struct orderbook_tx *tx,**orders = 0;
     if ( (m= (numbids + numasks)) == 0 )
@@ -268,11 +268,8 @@ struct orderbook_tx **conv_quotes(int32_t *nump,int32_t type,uint64_t nxt64bits,
             if ( tx == 0 )
                 tx = (struct orderbook_tx *)calloc(1,sizeof(*tx));
             create_orderbook_tx(iter,tx,type,nxt64bits,baseid,relid,quotes[i*2],quotes[i*2+1]);
-            if ( ret == 0 )
-            {
-                orders[n++] = tx;
-                tx = 0;
-            }
+            orders[n++] = tx;
+            tx = 0;
         }
     }
     if ( tx != 0 )
