@@ -129,11 +129,11 @@ double parse_InstantDEX_json(uint64_t *baseidp,uint64_t *relidp,struct InstantDE
                 volume = ((double)baseamount / SATOSHIDEN);
                 copy_cJSON(nxtstr,cJSON_GetObjectItem(json,"NXT")), nxt64bits = calc_nxt64bits(nxtstr);
                 printf("conv_InstantDEX_json: obookid.%llu base %.8f -> rel %.8f price %f vol %f\n",(long long)(*baseidp ^ *relidp),dstr(baseamount),dstr(relamount),price,volume);
+                create_orderbook_tx(polarity,&T,type,nxt64bits,*baseidp,*relidp,price,volume);
+                T.iQ.timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"time"),0);
+                *iQ = T.iQ;
             }
         }
-        create_orderbook_tx(polarity,&T,type,nxt64bits,*baseidp,*relidp,price,volume);
-        T.iQ.timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"time"),0);
-        *iQ = T.iQ;
     }
     return(_iQ_price(iQ));
 }
