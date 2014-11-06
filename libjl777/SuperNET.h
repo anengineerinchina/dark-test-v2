@@ -19,14 +19,18 @@
 #define DEADDROP_DATA 4
 #define CONTACT_DATA 5
 #define NODESTATS_DATA 6
-#define NUM_SUPERNET_DBS (NODESTATS_DATA + 1)
+#define INSTANTDEX_DATA 7
+#define ORDERBOOK_DATA 8
+#define NUM_SUPERNET_DBS (ORDERBOOK_DATA + 1)
+#define SMALLVAL .000000000000001
+
 #define MAX_COINTXID_LEN 66
 #define MAX_COINADDR_LEN 66
 
 struct storage_header
 {
     uint64_t modified,keyhash;
-    uint32_t datalen,laststored,lastaccess,createtime;
+    uint32_t size,laststored,lastaccess,createtime;
 };
 
 struct SuperNET_storage // for public and private data
@@ -71,6 +75,10 @@ struct contact_info
     uint64_t nxt64bits,deaddrop,mydrop;
     int32_t numsent,numrecv,lastrecv,lastsent,lastentry;
 };
+
+struct InstantDEX_quote { uint64_t nxt64bits,baseamount,relamount; uint32_t timestamp,type; };
+
+struct orderbook_info { uint64_t baseid,relid,obookid; };
 
 struct storage_header **copy_all_DBentries(int32_t *nump,int32_t selector);
 

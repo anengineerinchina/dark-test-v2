@@ -20,7 +20,7 @@ struct SuperNET_db
     long maxitems,total_stored;
     DB *dbp;
     int32_t *cipherids;
-    uint32_t busy,type,flags,active,minsize,maxsize;
+    uint32_t busy,type,flags,active,minsize,maxsize,duplicateflag;
 };
 
 struct dbreq { DB_TXN *txn; DBT key,*data; int32_t flags,retval; uint16_t selector,funcid,doneflag,pad; };
@@ -40,7 +40,7 @@ void *_process_SuperNET_dbqueue(void *selectorp) // serialize dbreq functions
     while ( sdb->active != 0 )
     {
         if ( sdb->busy == 0 && n == 0 )
-            usleep(10000);
+            usleep(1000);
         n = 0;
         while ( (req= queue_dequeue(&sdb->queue)) != 0 )
         {
@@ -72,7 +72,7 @@ int32_t _block_on_dbreq(struct dbreq *req)
     struct SuperNET_db *sdb = &SuperNET_dbs[req->selector];
     int32_t retval,busy;
     while ( req->doneflag == 0 )
-        usleep(1000); // if not done after the first context switch, likely to take a while
+        usleep(100); // if not done after the first context switch, likely to take a while
     retval = req->retval;
     free(req);
     sdb->busy--;
@@ -98,8 +98,6 @@ struct dbreq *_queue_dbreq(int32_t funcid,int32_t selector,DB_TXN *txn,DBT *key,
             req->key = *key;
         req->data = data;
         req->flags = flags;
-        //while ( sdb->busy > 0 )
-        //    usleep(1);
         sdb->busy++;
         queue_enqueue(&sdb->queue,req);
         usleep(10); // allow context switch so request has a chance of completing
@@ -143,7 +141,30 @@ int32_t dbsync(int32_t selector,int32_t flags)
     return(dbcmd("dbsync",'S',selector,0,0,0,flags));
 }
 
-DB *open_database(int32_t selector,char *fname,uint32_t type,uint32_t flags,int32_t minsize,int32_t maxsize)
+// < 0 if a < b, = 0 if a = b, > 0 if a > b
+int db_incrdouble(DB *dbp,const DBT *a,const DBT *b,size_t *locp)
+{
+    int ai, bi;
+    locp = NULL;
+    memcpy(&ai,a->data,sizeof(double));
+    memcpy(&bi,b->data,sizeof(double));
+    if ( ai < (bi - SMALLVAL) ) return(-1);
+    else if ( ai > (bi + SMALLVAL) ) return(1);
+    else return(0);
+}
+
+int db_decrdouble(DB *dbp,const DBT *a,const DBT *b,size_t *locp)
+{
+    int ai, bi;
+    locp = NULL;
+    memcpy(&ai,a->data,sizeof(double));
+    memcpy(&bi,b->data,sizeof(double));
+    if ( ai < (bi - SMALLVAL) ) return(1);
+    else if ( ai > (bi + SMALLVAL) ) return(-1);
+    else return(0);
+}
+
+DB *open_database(int32_t selector,char *fname,uint32_t type,uint32_t flags,int32_t minsize,int32_t maxsize,int32_t duplicateflag)
 {
     int ret;
     struct SuperNET_db *sdb = &SuperNET_dbs[selector];
@@ -158,6 +179,21 @@ DB *open_database(int32_t selector,char *fname,uint32_t type,uint32_t flags,int3
         exit(-1);
         return(0);
     } else printf("open_database %s created\n",fname);
+    if ( duplicateflag != 0 )
+    {
+        if ( (ret= sdb->dbp->set_flags(sdb->dbp,DB_DUP)) != 0 )
+        {
+            fprintf(stderr,"set_flags DB_DUPSORT error.%d %s\n",ret,fname);
+            exit(-3);
+            return(0);
+        } else printf("set_flags DB_DUPSORT %s\n",fname);
+        /*if ( (ret= sdb->dbp->set_dup_compare(sdb->dbp,(sortflag > 0) ? db_incrdouble : db_decrdouble)) != 0 )
+        {
+            fprintf(stderr,"set_dup_compare error.%d %s\n",ret,fname);
+            exit(-4);
+            return(0);
+        } else printf("set_dup_compare %s\n",fname);*/
+    }
     if ( (ret= sdb->dbp->open(sdb->dbp,NULL,fname,NULL,type,flags,0)) != 0 )
     {
         fprintf(stderr,"open_database error.%d opening %s database\n",ret,fname);
@@ -169,6 +205,7 @@ DB *open_database(int32_t selector,char *fname,uint32_t type,uint32_t flags,int3
     sdb->flags = flags;
     sdb->minsize = minsize;
     sdb->maxsize = maxsize;
+    sdb->duplicateflag = duplicateflag;
     return(sdb->dbp);
 }
 
@@ -217,13 +254,15 @@ int32_t init_SuperNET_storage()
         }
         else
         {
-            open_database(PUBLIC_DATA,"public.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096);
-            open_database(PRIVATE_DATA,"private.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096);
-            open_database(TELEPOD_DATA,"telepods.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096);
-            open_database(PRICE_DATA,"prices.db",DB_BTREE,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096);
-            open_database(DEADDROP_DATA,"deaddrops.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096);
-            open_database(CONTACT_DATA,"contacts.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct contact_info),sizeof(struct contact_info));
-            open_database(NODESTATS_DATA,"nodestats.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct nodestats),sizeof(struct nodestats));
+            open_database(PUBLIC_DATA,"public.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096,0);
+            open_database(PRIVATE_DATA,"private.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096,0);
+            open_database(TELEPOD_DATA,"telepods.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096,0);
+            open_database(PRICE_DATA,"prices.db",DB_BTREE,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096,0);
+            open_database(DEADDROP_DATA,"deaddrops.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct storage_header),4096,0);
+            open_database(CONTACT_DATA,"contacts.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct contact_info),sizeof(struct contact_info),0);
+            open_database(NODESTATS_DATA,"nodestats.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct nodestats),sizeof(struct nodestats),0);
+            open_database(INSTANTDEX_DATA,"InstantDEX.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct InstantDEX_quote),sizeof(struct InstantDEX_quote),1);
+            open_database(ORDERBOOK_DATA,"orderbooks.db",DB_HASH,DB_CREATE | DB_AUTO_COMMIT,sizeof(struct orderbook),sizeof(struct orderbook),0);
             if ( 1 && cp != 0 )
             {
                 sdb = &SuperNET_dbs[TELEPOD_DATA];
@@ -312,11 +351,10 @@ int32_t delete_storage(int32_t selector,char *keystr)
     return(-1);
 }
 
-struct storage_header *find_storage(int32_t selector,char *keystr)
+struct storage_header *find_storage(int32_t selector,char *keystr,uint32_t bulksize)
 {
-    DBT key,data;
-    int ret;
-    void *ptr = 0;
+    DBT key,data,*retdata;
+    int32_t ret,reqflags = 0;
     struct storage_header *hp;
     if ( valid_SuperNET_db("find_storage",selector) == 0 )
         return(0);
@@ -324,20 +362,32 @@ struct storage_header *find_storage(int32_t selector,char *keystr)
     clear_pair(&key,&data);
     key.data = keystr;
     key.size = (int32_t)strlen(keystr) + 1;
-    if ( (ret= dbget(selector,NULL,&key,&data,0)) != 0 || data.data == 0 || data.size < sizeof(*hp) )
+    if ( bulksize != 0 )
+    {
+        reqflags = DB_MULTIPLE;
+        data.ulen = bulksize;
+        data.flags = DB_DBT_USERMEM;
+        data.data = valloc(data.ulen);
+    }
+    if ( (ret= dbget(selector,NULL,&key,&data,reqflags)) != 0 || data.data == 0 || data.size < sizeof(*hp) )
     {
         if ( ret != DB_NOTFOUND )
             fprintf(stderr,"DB.%d get error.%d data.size %d\n",selector,ret,data.size);
         else return(0);
     }
-    ptr = decondition_storage(&data.size,&SuperNET_dbs[selector],data.data,data.size);
-    return(ptr);
+    if ( bulksize != 0 )
+    {
+        retdata = calloc(1,sizeof(*retdata));
+        *retdata = data;
+        return((void *)retdata);
+    }
+    else return(decondition_storage(&data.size,&SuperNET_dbs[selector],data.data,data.size));
 }
 
-int32_t complete_dbput(int32_t selector,char *keystr,void *databuf,int32_t datalen)
+int32_t complete_dbput(int32_t selector,char *keystr,void *databuf,int32_t datalen,int32_t bulksize)
 {
     struct SuperNET_storage *sp;
-    if ( (sp= (struct SuperNET_storage *)find_storage(selector,keystr)) != 0 )
+    if ( (sp= (struct SuperNET_storage *)find_storage(selector,keystr,bulksize)) != 0 )
     {
         if ( memcmp(sp,databuf,datalen) != 0 )
             fprintf(stderr,"data cmp error\n");
@@ -352,7 +402,7 @@ void update_storage(int32_t selector,char *keystr,struct storage_header *hp)
     DBT key,data;
     int ret;
     struct SuperNET_db *sdb;
-    if ( hp->datalen == 0 )
+    if ( hp->size == 0 )
     {
         printf("update_storage.%d zero datalen for (%s)\n",selector,keystr);
         return;
@@ -371,11 +421,11 @@ void update_storage(int32_t selector,char *keystr,struct storage_header *hp)
         hp->laststored = (uint32_t)time(NULL);
         if ( hp->createtime == 0 )
             hp->createtime = hp->laststored;
-        data.data = condition_storage(&data.size,sdb,hp,hp->datalen);
-        //fprintf(stderr,"update entry.(%s) datalen.%d -> %d\n",keystr,hp->datalen,data.size);
+        data.data = condition_storage(&data.size,sdb,hp,hp->size);
+        //fprintf(stderr,"update entry.(%s) datalen.%d -> %d\n",keystr,hp->size,data.size);
         if ( (ret= dbput(selector,0,&key,&data,0)) != 0 )
             Storage->err(Storage,ret,"Database put failed.");
-        else if ( complete_dbput(selector,keystr,hp,hp->datalen) == 0 )
+        else if ( complete_dbput(selector,keystr,hp,hp->size,0) == 0 )
             fprintf(stderr,"updated.%d (%s)\n",selector,keystr);
         if ( data.data != hp && data.data != 0 )
             free(data.data);
@@ -399,7 +449,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
     if ( datalen > sizeof(databuf) )
         return;
     decode_hex(databuf,datalen,datastr);
-    if ( (sp= (struct SuperNET_storage *)find_storage(selector,keystr)) == 0 || sp->H.datalen != datalen || memcmp(sp->data,databuf,datalen) != 0 )
+    if ( (sp= (struct SuperNET_storage *)find_storage(selector,keystr,0)) == 0 || (sp->H.size-sizeof(*sp)) != datalen || memcmp(sp->data,databuf,datalen) != 0 )
     {
         slen = (int32_t)strlen(keystr);
         if ( sp == 0 )
@@ -410,7 +460,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
             createdflag = 1;
             if ( is_decimalstr(keystr) && slen < MAX_NXTADDR_LEN )
             {
-                printf("check decimalstr.(%s)\n",keystr);
+                //printf("check decimalstr.(%s)\n",keystr);
                 hashval = calc_nxt64bits(keystr);
             }
             else hashval = calc_txid((uint8_t *)keystr,slen);
@@ -427,7 +477,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
         else if ( sp->H.keyhash != hashval )
             printf("ERROR: keyhash.%llu != hashval.%llu (%s)\n",(long long)sp->H.keyhash,(long long)hashval,keystr);
         memcpy(sp->data,databuf,datalen);
-        sp->H.datalen = (sizeof(*sp) + datalen);
+        sp->H.size = (sizeof(*sp) + datalen);
         update_storage(selector,keystr,&sp->H);
     }
 }

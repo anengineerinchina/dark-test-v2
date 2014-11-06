@@ -41,7 +41,7 @@ struct telepathy_entry *add_telepathy_entry(char *locationstr,struct contact_inf
         tel->sequenceid = sequenceid;
         if ( sequenceid > contact->lastentry )
             contact->lastentry = sequenceid;
-        if ( (sp= (struct SuperNET_storage *)find_storage(PRIVATE_DATA,locationstr)) != 0 )
+        if ( (sp= (struct SuperNET_storage *)find_storage(PRIVATE_DATA,locationstr,0)) != 0 )
         {
             if ( sequenceid > contact->lastrecv )
                 contact->lastrecv = sequenceid;
@@ -127,7 +127,7 @@ uint64_t calc_AESkeys(bits256 *AESpassword,char *AESpasswordstr,uint8_t *shared,
         AESpassword = &tmp;
     sprintf(buf,"%llu.%d",(long long)nxt64bits,sequenceid);
     calc_sha256cat(AESpassword->bytes,(uint8_t *)buf,(int32_t)strlen(buf),shared,(int32_t)sizeof(bits256));
-    init_hexbytes(AESpasswordstr,AESpassword->bytes,sizeof(bits256));
+    init_hexbytes_noT(AESpasswordstr,AESpassword->bytes,sizeof(bits256));
     return(conv_NXTpassword(secret.bytes,pubkey.bytes,AESpasswordstr));
 }
 
@@ -179,7 +179,7 @@ uint64_t calc_privatedatastr(bits256 *AESpassword,char *AESpasswordstr,char *pri
         encodedlen = AES_codec(encoded,0,msg,AESpasswordstr);
         if ( encodedlen > 0 )
         {
-            init_hexbytes(privatedatastr,encoded,encodedlen);
+            init_hexbytes_noT(privatedatastr,encoded,encodedlen);
             if ( verify_AES_codec(encoded,encodedlen,msg,AESpasswordstr) > 0 )
                 retval = location;
         }
@@ -201,7 +201,7 @@ cJSON *parse_encrypted_data(int32_t updatedb,int32_t *sequenceidp,struct contact
         {
             if ( updatedb != 0 )
             {
-                init_hexbytes(privatedatastr,data,datalen);
+                init_hexbytes_noT(privatedatastr,data,datalen);
                 add_storage(PRIVATE_DATA,key,privatedatastr);
                 printf("saved parsed decrypted.(%s)\n",decoded);
             }
@@ -246,7 +246,7 @@ char *check_privategenesis(struct contact_info *contact)
         sp = kademlia_getstored(PUBLIC_DATA,location,0);
         if ( sp != 0 ) // no need to query if we already have it
         {
-            if ( sp->data != 0 && (json= parse_encrypted_data(0,&sequenceid,contact,key,sp->data,sp->H.datalen,AESpasswordstr)) != 0 )
+            if ( sp->data != 0 && (json= parse_encrypted_data(0,&sequenceid,contact,key,sp->data,sp->H.size-sizeof(*sp),AESpasswordstr)) != 0 )
                 free_json(json);
             free(sp);
         }
@@ -359,7 +359,7 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
     if ( cp != 0 )
     {
         char datastr[4096];
-        init_hexbytes(datastr,data,datalen);
+        init_hexbytes_noT(datastr,data,datalen);
         printf("process_telepathic: key.(%s) got.(%s) len.%d from %llu dist %2d vs mydist srv %d priv %d | %s\n",key,datastr,datalen,(long long)senderbits,bitweight(keybits ^ senderbits),bitweight(keybits ^ cp->srvpubnxtbits),bitweight(keybits ^ cp->privatebits),senderip);
     }
 }
@@ -428,7 +428,7 @@ void init_telepathy_contact(struct contact_info *contact)
         free(retstr);
 }
 
-char *getdb(char *previpaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int32_t dir,char *contactstr,int32_t sequenceid,char *keystr)
+char *getdb(char *previpaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int32_t dir,char *contactstr,int32_t sequenceid,char *keystr,char *destip)
 {
     char retbuf[4096],hexstr[4096],AESpasswordstr[512],locationstr[64],*jsonstr;
     cJSON *json;
@@ -442,16 +442,23 @@ char *getdb(char *previpaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int3
     {
         if ( keystr[0] != 0 )
         {
-            if ( (sp= (struct SuperNET_storage *)find_storage(PUBLIC_DATA,keystr)) != 0 )
+            if ( (sp= (struct SuperNET_storage *)find_storage(PUBLIC_DATA,keystr,0)) != 0 )
             {
-                if ( sp->H.datalen < sizeof(hexstr)/2 )
+                if ( (sp->H.size-sizeof(*sp)) < sizeof(hexstr)/2 )
                 {
-                    init_hexbytes(hexstr,sp->data,sp->H.datalen);
-                    sprintf(retbuf,"{\"data\":\"%s\"}",hexstr);
-                } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
+                    init_hexbytes_noT(hexstr,sp->data,sp->H.size-sizeof(*sp));
+                    sprintf(retbuf,"{\"requestType\":\"dbret\",\"NXT\":\"%s\",\"key\":\"%s\",\"data\":\"%s\"}",NXTaddr,keystr,hexstr);
+                } else strcpy(retbuf,"{\"requestType\":\"dbret\",\"error\":\"cant find key\"}");
                 free(sp);
-            } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
-        } else strcpy(retbuf,"{\"error\":\"no contact and no key\"}");
+            } else strcpy(retbuf,"{\"requestType\":\"dbret\",\"error\":\"cant find key\"}");
+            if ( is_remote_access(previpaddr) != 0 )
+                send_to_ipaddr(previpaddr,retbuf,NXTACCTSECRET);
+            else
+            {
+                sprintf(retbuf,"{\"requestType\":\"getdb\",\"NXT\":\"%s\",\"key\":\"%s\"}",NXTaddr,keystr);
+                send_to_ipaddr(destip,retbuf,NXTACCTSECRET);
+            }
+        } else strcpy(retbuf,"{\"requestType\":\"dbret\",\"error\":\"no contact and no key\"}");
     }
     else
     {
@@ -463,21 +470,22 @@ char *getdb(char *previpaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int3
             if ( location != 0 )
             {
                 expand_nxt64bits(locationstr,location);
-                if ( (sp= (struct SuperNET_storage *)find_storage(PRIVATE_DATA,locationstr)) != 0 )
+                if ( (sp= (struct SuperNET_storage *)find_storage(PRIVATE_DATA,locationstr,0)) != 0 )
                 {
-                    if ( (json= parse_encrypted_data(0,&seqid,contact,locationstr,sp->data,sp->H.datalen,AESpasswordstr)) != 0 )
+                    if ( (json= parse_encrypted_data(0,&seqid,contact,locationstr,sp->data,sp->H.size-sizeof(*sp),AESpasswordstr)) != 0 )
                     {
                         jsonstr = cJSON_Print(json);
                         stripwhite_ns(jsonstr,strlen(jsonstr));
                         free_json(json);
                         return(jsonstr);
-                    } else strcpy(retbuf,"{\"error\":\"couldnt decrypt data\"}");
+                    } else strcpy(retbuf,"{\"requestType\":\"dbret\",\"error\":\"couldnt decrypt data\"}");
                     free(sp);
-                } else strcpy(retbuf,"{\"error\":\"cant find key\"}");
-            } else strcpy(retbuf,"{\"error\":\"cant get location\"}");
+                } else strcpy(retbuf,"{\"requestType\":\"dbret\",\"error\":\"cant find key\"}");
+            } else strcpy(retbuf,"{\"requestType\":\"dbret\",\"error\":\"cant get location\"}");
             free(contact);
-        } else strcpy(retbuf,"{\"error\":\"cant find contact\"}");
+        } else strcpy(retbuf,"{\"requestType\":\"dbret\",\"error\":\"cant find contact\"}");
     }
+    printf("GETDB.(%s)\n",retbuf);
     return(clonestr(retbuf));
 }
 
@@ -501,9 +509,11 @@ char *addcontact(char *handle,char *acct)
     {
         sprintf(retstr,"{\"error\":\"(%s) already has %llu\"}",contact->handle,(long long)nxt64bits);
         if ( Debuglevel > 1 )
-            printf("addcontact: (%s)\n",retstr);
+            printf("addcontact: existing (%s)\n",retstr);
         return(clonestr(retstr));
     }
+    if ( Debuglevel > 1 )
+        printf("addcontact: new (%s)\n",retstr);
     if ( (contact= find_contact(handle)) == 0 )
     {
         memset(&C,0,sizeof(C));
@@ -521,7 +531,7 @@ char *addcontact(char *handle,char *acct)
     {
         contact->nxt64bits = nxt64bits;
         contact->pubkey = issue_getpubkey(acct);
-        init_hexbytes(pubkeystr,contact->pubkey.bytes,sizeof(contact->pubkey));
+        init_hexbytes_noT(pubkeystr,contact->pubkey.bytes,sizeof(contact->pubkey));
         if ( contact->pubkey.txid == 0 )
         {
             conv_rsacctstr(RSaddr,nxt64bits);

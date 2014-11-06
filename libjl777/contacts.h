@@ -13,7 +13,7 @@ void create_telepathy_entry(struct contact_info *contact,int32_t sequenceid);
 
 struct contact_info *find_handle(char *handle)
 {
-    return((struct contact_info *)find_storage(CONTACT_DATA,handle));
+    return((struct contact_info *)find_storage(CONTACT_DATA,handle,0));
 }
 
 struct contact_info *find_contact_nxt64bits(uint64_t nxt64bits)
@@ -36,8 +36,8 @@ struct contact_info *find_contact_nxt64bits(uint64_t nxt64bits)
 
 void update_contact_info(struct contact_info *contact)
 {
-    if ( contact->H.datalen == 0 )
-        contact->H.datalen = sizeof(*contact);
+    if ( contact->H.size == 0 )
+        contact->H.size = sizeof(*contact);
     update_storage(CONTACT_DATA,contact->handle,&contact->H);
 }
 
@@ -86,8 +86,8 @@ void set_contactstr(char *contactstr,struct contact_info *contact)
     rsacctstr[0] = 0;
     conv_rsacctstr(rsacctstr,contact->nxt64bits);
     if ( strcmp(contact->handle,"myhandle") == 0 )
-        init_hexbytes(pubkeystr,Global_mp->mypubkey.bytes,sizeof(Global_mp->mypubkey));
-    else init_hexbytes(pubkeystr,contact->pubkey.bytes,sizeof(contact->pubkey));
+        init_hexbytes_noT(pubkeystr,Global_mp->mypubkey.bytes,sizeof(Global_mp->mypubkey));
+    else init_hexbytes_noT(pubkeystr,contact->pubkey.bytes,sizeof(contact->pubkey));
     sprintf(contactstr,"{\"handle\":\"%s\",\"acct\":\"%s\",\"NXT\":\"%llu\",\"pubkey\":\"%s\"}",contact->handle,rsacctstr,(long long)contact->nxt64bits,pubkeystr);
 }
 
@@ -162,6 +162,7 @@ void init_Contacts()
         }
         free(contacts[i]);
     }
+    printf("finished init contacts\n");
     free(contacts);
 }
 

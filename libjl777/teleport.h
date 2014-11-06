@@ -126,7 +126,7 @@ uint32_t calc_telepodcrc(struct telepod *pod)
 {
     uint32_t offset,crc = 0;
     offset = (uint32_t)((long)&pod->modified + sizeof(pod->modified) - (long)pod);
-    crc = _crc32(crc,(void *)((long)pod + offset),(pod->H.datalen - offset));
+    crc = _crc32(crc,(void *)((long)pod + offset),(pod->H.size - offset));
     return(crc);
 }
 
@@ -137,7 +137,7 @@ struct telepod *create_telepod(uint32_t createtime,char *coinstr,uint64_t satosh
     size = (int32_t)(sizeof(*pod) + (strlen(privkey) + 1));
     pod = calloc(1,size);
     pod->H.createtime = createtime;
-    pod->H.datalen = size;
+    pod->H.size = size;
     pod->vout = vout;
     pod->cloneout = -1;
     pod->satoshis = satoshis;
@@ -243,7 +243,7 @@ uint64_t scan_telepods(char *coinstr)
                             if ( (pod= parse_unspent_json(cp,item)) != 0 )
                             {
                                 //fprintf(stderr,"pod.%p parse_unspent\n",pod);
-                                if ( (hp= find_storage(TELEPOD_DATA,pod->txid)) == 0 )
+                                if ( (hp= find_storage(TELEPOD_DATA,pod->txid,0)) == 0 )
                                 {
                                     disp_telepod("new",pod);
                                     update_telepod(pod);
@@ -548,7 +548,7 @@ struct telepod **available_telepods(int32_t *nump,double *availp,double *maturin
         flag = 0;
         pod = pods[i];
         if ( Debuglevel > 1 )
-            fprintf(stderr,"%5s.%-4d minage.%-4d %s size.%d lag.%-8d %.8f | %s clone.%d\n",coinstr,m,minage,pod->txid,pod->H.datalen,now - pod->H.createtime,dstr(pod->satoshis),_podstate(pod->podstate),pod->clonetime==0?0:pod->clonetime-now);
+            fprintf(stderr,"%5s.%-4d minage.%-4d %s size.%d lag.%-8d %.8f | %s clone.%d\n",coinstr,m,minage,pod->txid,pod->H.size,now - pod->H.createtime,dstr(pod->satoshis),_podstate(pod->podstate),pod->clonetime==0?0:pod->clonetime-now);
         podstate = pod->podstate;
         createtime = pod->H.createtime;
         if ( minage < 0 )
@@ -950,7 +950,7 @@ struct telepod *create_debitcredit(char *txidstr,char *cmd,char *contactstr,char
     unsigned char tmp[32];
     struct telepod *pod = 0;
     randombytes(tmp,sizeof(tmp));
-    init_hexbytes(txidstr,tmp,sizeof(tmp));
+    init_hexbytes_noT(txidstr,tmp,sizeof(tmp));
     pod = create_telepod((uint32_t)time(NULL),coinstr,satoshis,contactstr,cmd,comment,txidstr,-1);
     return(pod);
 }

@@ -737,9 +737,9 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
             array = (IS_LIBTEST != 0) ? cJSON_GetObjectItem(MGWconf,"contacts") : 0;
             if ( array != 0 && is_cJSON_Array(array) != 0 ) // first three must be the gateway's addresses
             {
-                char handle[MAX_JSON_FIELD],acct[MAX_JSON_FIELD],*retstr;
+                char handle[MAX_JSON_FIELD],acct[MAX_JSON_FIELD];//,*retstr;
                 n = cJSON_GetArraySize(array);
-                printf("Initializing %d contacts\n",n);
+                printf("scanning %d contacts\n",n);
                 for (i=0; i<n; i++)
                 {
                     if ( array == 0 || n == 0 )
@@ -752,9 +752,9 @@ char *init_MGWconf(char *JSON_or_fname,char *myipaddr)
                         if ( handle[0] != 0 && acct[0] != 0 )
                         {
                             printf("addcontact (%s) <-> (%s)\n",handle,acct);
-                            retstr = addcontact(handle,acct);
-                            if ( retstr != 0 )
-                                free(retstr);
+                            //retstr = addcontact(handle,acct);
+                            //if ( retstr != 0 )
+                            //   free(retstr);
                         }
                     }
                 }
