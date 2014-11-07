@@ -349,6 +349,7 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
                     copy_cJSON(typestr,cJSON_GetObjectItem(json,"type"));
                     if ( strcmp(typestr,"teleport") == 0 && (attachjson=cJSON_GetObjectItem(json,"attach")) != 0 )
                     {
+                        printf("Got teleport packet\n");
                         void telepathic_teleport(struct contact_info *contact,cJSON *attachjson);
                         telepathic_teleport(contact,attachjson);
                     }
