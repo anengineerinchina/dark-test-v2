@@ -277,6 +277,7 @@ int32_t has_privacyServer(struct NXT_acct *np)
     else return(0);
 }
 
+// I will add support in sendmsg so you can send to NXT addr (numerical/RS), contact handle, IP addr, maybe even NXT alias
 char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int32_t msglen,char *destNXTaddr,unsigned char *data,int32_t datalen)
 {
     uint64_t txid;

@@ -1003,7 +1003,7 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
             }
             if ( isvalue != 0 && is_remote_access(previpaddr) != 0 && ismynxtbits(senderbits) == 0 )
             {
-                sp = kademlia_getstored(PUBLIC_DATA,keyhash,0);
+                sp = kademlia_getstored(PUBLIC_DATA,keyhash,0); // need special case for orderbooks
                 if ( sp != 0 )
                 {
                     if ( sp->data != 0 )
