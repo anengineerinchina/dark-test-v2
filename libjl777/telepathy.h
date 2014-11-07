@@ -389,6 +389,7 @@ void telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *contac
         if ( attachmentstr != 0 )
         {
             str2 = stringifyM(attachmentstr);
+            printf("TRANSMIT.(%s)\n",attachmentstr);
             cJSON_AddItemToObject(json,"attach",cJSON_CreateString(attachmentstr));
             free(str2);
         }
@@ -396,6 +397,7 @@ void telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *contac
     if ( (jsonstr= cJSON_Print(json)) != 0 )
     {
         stripwhite_ns(jsonstr,strlen(jsonstr));
+        printf("TRANSMIT2.(%s)\n",attachmentstr);
         retstr = private_publish(&location,contact,sequenceid,jsonstr);
         if ( retstr != 0 )
         {
