@@ -343,11 +343,6 @@ char *init_NXTservices(char *JSON_or_fname,char *myipaddr)
         stats->ipbits = calc_ipbits(cp->myipaddr);
         pserver = get_pserver(0,myipaddr,0,0);
         pserver->nxt64bits = cp->srvpubnxtbits;
-        printf("add myhandle\n");
-        addcontact(Global_mp->myhandle,cp->privateNXTADDR);
-        printf("add mypublic\n");
-        addcontact("mypublic",cp->srvNXTADDR);
-        printf("finished addcontact\n");
         init_Contacts();
     }
     return(myipaddr);
@@ -659,6 +654,11 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     }
     Historical_done = 1;
     Finished_init = 1;
+    printf("add myhandle\n");
+    addcontact(Global_mp->myhandle,cp->privateNXTADDR);
+    printf("add mypublic\n");
+    addcontact("mypublic",cp->srvNXTADDR);
+    printf("finished addcontact\n");
     return(0);
 }
 

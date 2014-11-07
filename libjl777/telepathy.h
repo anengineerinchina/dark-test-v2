@@ -41,15 +41,17 @@ struct telepathy_entry *add_telepathy_entry(char *locationstr,struct contact_inf
         tel->sequenceid = sequenceid;
         if ( sequenceid > contact->lastentry )
             contact->lastentry = sequenceid;
+        //fprintf(stderr,"check.(%s)\n",locationstr);
         if ( (sp= (struct SuperNET_storage *)find_storage(PRIVATE_DATA,locationstr,0)) != 0 )
         {
+            //fprintf(stderr,"found.(%s)\n",locationstr);
             if ( sequenceid > contact->lastrecv )
                 contact->lastrecv = sequenceid;
             contact->numrecv++;
             free(sp);
         }
-        printf("add (%s.%d) %llu\n",contact->handle,sequenceid,(long long)tel->location);
-    } else printf("add_telepathy_entry warning: already created %s.%s\n",contact->handle,locationstr);
+        fprintf(stderr,"add (%s.%d) %llu\n",contact->handle,sequenceid,(long long)tel->location);
+    } else fprintf(stderr,"add_telepathy_entry warning: already created %s.%s\n",contact->handle,locationstr);
     return(tel);
 }
 
@@ -154,16 +156,18 @@ void create_telepathy_entry(struct contact_info *contact,int32_t sequenceid)
     uint64_t location;
     bits256 AESpassword;
     char AESpasswordstr[512],locationstr[64];
-    if ( contact->lastentry != 0 && sequenceid <= contact->lastentry )
+    if ( sequenceid > 300 && contact->lastentry != 0 && sequenceid <= contact->lastentry )
     {
         printf("lastentry.%d vs seqid.%d\n",contact->lastentry,sequenceid);
         if ( sequenceid < 0 )
             exit(-1);
         return;
     }
+    //printf("lastentry.%d vs seqid.%d\n",contact->lastentry,sequenceid);
     if ( (location= calc_recvAESkeys(&AESpassword,AESpasswordstr,contact,sequenceid)) != 0 )
     {
         expand_nxt64bits(locationstr,location);
+        //printf("location.(%s)\n",locationstr);
         if ( find_telepathy_entry(locationstr) == 0 )
             add_telepathy_entry(locationstr,contact,AESpassword,sequenceid);
     }
@@ -311,8 +315,8 @@ char *private_publish(uint64_t *locationp,struct contact_info *contact,int32_t s
 
 void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderbits,char *senderip)
 {
-    struct coin_info *cp = get_coin_info("BTCD");
-    uint64_t keybits = calc_nxt64bits(key);
+    //struct coin_info *cp = get_coin_info("BTCD");
+    //uint64_t keybits = calc_nxt64bits(key);
     struct contact_info *contact;
     struct telepathy_entry *tel;
     int32_t sequenceid,i,n;
@@ -325,7 +329,7 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
         if ( contact != 0 )
         {
             init_hexbytes_noT(AESpasswordstr,tel->AESpassword.bytes,sizeof(tel->AESpassword));
-            //printf("try AESpassword.(%s)\n",AESpasswordstr);
+            //printf("contact.(%s) %p try AESpassword.(%s)\n",contact->handle,contact,AESpasswordstr);
             if ( (json= parse_encrypted_data(1,&sequenceid,contact,key,data,datalen,AESpasswordstr)) != 0 )
             {
                 if ( sequenceid == tel->sequenceid )
@@ -341,6 +345,7 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
                         for (i=contact->lastentry; i<n; i++)
                             create_telepathy_entry(contact,i);
                     }
+                    //printf("before telepathic_teleport %p (%s)\n",contact,contact->handle);
                     copy_cJSON(typestr,cJSON_GetObjectItem(json,"type"));
                     if ( strcmp(typestr,"teleport") == 0 && (attachjson=cJSON_GetObjectItem(json,"attach")) != 0 )
                     {
@@ -348,27 +353,29 @@ void process_telepathic(char *key,uint8_t *data,int32_t datalen,uint64_t senderb
                         telepathic_teleport(contact,attachjson);
                     }
                     free(jsonstr);
+                    //printf("call update_contact_info %p (%s)\n",contact,contact->handle);
                     update_contact_info(contact);
+                    //printf("back from update_contact_info.(%s)\n",contact->handle);
                 } else printf("sequenceid mismatch %d != %d\n",sequenceid,tel->sequenceid);
                 free_json(json);
             }
             free(contact);
         } else printf("dont have contact info for %llu\n",(long long)tel->contactbits);
-        printf("(%s.%d) pass.(%s) | ",contact->handle,tel->sequenceid,AESpasswordstr);
-    }
-    if ( cp != 0 )
+    } else printf("find_telepathy_entry: cant find (%s)\n",locationstr);
+    /*if ( cp != 0 )
     {
         char datastr[4096];
         init_hexbytes_noT(datastr,data,datalen);
         printf("process_telepathic: key.(%s) got.(%s) len.%d from %llu dist %2d vs mydist srv %d priv %d | %s\n",key,datastr,datalen,(long long)senderbits,bitweight(keybits ^ senderbits),bitweight(keybits ^ cp->srvpubnxtbits),bitweight(keybits ^ cp->privatebits),senderip);
-    }
+    }*/
 }
 
-cJSON *telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *contact,int32_t sequenceid,char *type,cJSON *attachmentjson)
+void telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *contact,int32_t sequenceid,char *type,char *attachmentstr)
 {
-    char numstr[64],*retstr,*jsonstr,*str,*str2;
+    char numstr[64],*retstr,*jsonstr,*str2;
     uint64_t location;
     cJSON *json = cJSON_CreateObject();
+    retbuf[0] = 0;
     if ( sequenceid < 0 )
         sequenceid = contact->lastsent+1;
     sprintf(numstr,"%llu",(long long)contact->mydrop);
@@ -378,17 +385,11 @@ cJSON *telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *cont
     if ( type != 0 && type[0] != 0 )
     {
         cJSON_AddItemToObject(json,"type",cJSON_CreateString(type));
-        if ( attachmentjson != 0 )
+        if ( attachmentstr != 0 )
         {
-            str = cJSON_Print(attachmentjson);
-            if ( str != 0 )
-            {
-                stripwhite_ns(str,strlen(str));
-                str2 = stringifyM(str);
-                cJSON_AddItemToObject(json,"attach",cJSON_CreateString(str));
-                free(str);
-                free(str2);
-            }
+            str2 = stringifyM(attachmentstr);
+            cJSON_AddItemToObject(json,"attach",cJSON_CreateString(attachmentstr));
+            free(str2);
         }
     }
     if ( (jsonstr= cJSON_Print(json)) != 0 )
@@ -403,9 +404,7 @@ cJSON *telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *cont
         } else strcpy(retbuf,"{\"error\":\"no result from private_publish\"}");
         free(jsonstr);
     } else strcpy(retbuf,"{\"error\":\"no result from cJSON_Print\"}");
-    attachmentjson = cJSON_DetachItemFromObject(json,"attach");
     free_json(json);
-    return(attachmentjson);
 }
 
 void init_telepathy_contact(struct contact_info *contact)
@@ -414,7 +413,7 @@ void init_telepathy_contact(struct contact_info *contact)
     int32_t i;
     char retbuf[MAX_JSON_FIELD],*retstr;
     uint64_t randbits;
-    for (i=0; i<=MAX_DROPPED_PACKETS; i++)
+    for (i=0; i<=MAX_DROPPED_PACKETS*3; i++)
         create_telepathy_entry(contact,i);
     if ( contact->mydrop == 0 )
     {
@@ -513,7 +512,7 @@ char *addcontact(char *handle,char *acct)
         return(clonestr(retstr));
     }
     if ( Debuglevel > 1 )
-        printf("addcontact: new (%s)\n",retstr);
+        printf("addcontact: new (%s) (%s)\n",handle,acct);
     if ( (contact= find_contact(handle)) == 0 )
     {
         memset(&C,0,sizeof(C));
@@ -567,7 +566,6 @@ char *telepathy_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
 {
     char retbuf[MAX_JSON_FIELD],contactstr[MAX_JSON_FIELD],typestr[MAX_JSON_FIELD],attachmentstr[MAX_JSON_FIELD],*retstr = 0;
     int32_t sequenceid;
-    cJSON *attachmentjson;
     struct contact_info *contact;
     if ( is_remote_access(previpaddr) != 0 )
         return(0);
@@ -578,10 +576,7 @@ char *telepathy_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
     copy_cJSON(attachmentstr,objs[3]);
     if ( contact != 0 && contactstr[0] != 0 && sender[0] != 0 && valid > 0 )
     {
-        attachmentjson = cJSON_Parse(attachmentstr);
-        attachmentjson = telepathic_transmit(retbuf,contact,sequenceid,typestr,attachmentjson);
-        if ( attachmentjson != 0 )
-            free_json(attachmentjson);
+        telepathic_transmit(retbuf,contact,sequenceid,typestr,attachmentstr);
         retstr = clonestr(retbuf);
     }
     else retstr = clonestr("{\"error\":\"invalid telepathy_func arguments\"}");

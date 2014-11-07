@@ -420,13 +420,13 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
     struct nodestats *stats = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     unsigned char *outbuf;
-    /*if ( pserver->nxt64bits == 0 || (stats= get_nodestats(pserver->nxt64bits)) == 0 || stats->ipbits == 0 )
+    if ( pserver->nxt64bits == 0 || (stats= get_nodestats(pserver->nxt64bits)) == 0 || stats->ipbits == 0 )
     {
         printf("no nxtaddr.%llu or null stats.%p ipbits.%x\n",(long long)pserver->nxt64bits,stats,stats!=0?stats->ipbits:0);
         return(0);
-    }*/
+    }
     if ( pserver->nxt64bits != 0 )
-        stats= get_nodestats(pserver->nxt64bits);
+        stats = get_nodestats(pserver->nxt64bits);
     if ( stats != 0 )
         port = stats->supernet_port != 0 ? stats->supernet_port : SUPERNET_PORT;
     else port = SUPERNET_PORT;
@@ -437,7 +437,7 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
         char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int32_t msglen,char *destNXTaddr,unsigned char *data,int32_t datalen);
         char hopNXTaddr[64],destNXTaddr[64],*retstr;
         expand_nxt64bits(destNXTaddr,stats->nxt64bits);
-        L = 0*(encrypted>1 ? MAX(encrypted,Global_mp->Lfactor) : 0);
+        L = (encrypted>1 ? MAX(encrypted,Global_mp->Lfactor) : 0);
         if ( Debuglevel > 1 )
             fprintf(stderr,"direct send via sendmessage (%s) %p %d\n",origargstr,data,datalen);
         retstr = sendmessage(hopNXTaddr,L,cp->srvNXTADDR,origargstr,len,destNXTaddr,data,datalen);

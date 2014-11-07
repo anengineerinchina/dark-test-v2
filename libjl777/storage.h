@@ -338,6 +338,7 @@ void clear_pair(DBT *key,DBT *data)
 
 int32_t delete_storage(int32_t selector,char *keystr)
 {
+    // jl777: shouldnt this be queued?
     DB *dbp = get_selected_database(selector);
     DBT key;
     if ( dbp != 0 )
@@ -360,7 +361,7 @@ struct storage_header *find_storage(int32_t selector,char *keystr,uint32_t bulks
         return(0);
     //fprintf(stderr,"in find_storage.%d %s\n",selector,keystr);
     clear_pair(&key,&data);
-    key.data = keystr;
+    key.data = (keystr);
     key.size = (int32_t)strlen(keystr) + 1;
     if ( bulksize != 0 )
     {
@@ -390,10 +391,10 @@ int32_t complete_dbput(int32_t selector,char *keystr,void *databuf,int32_t datal
     if ( (sp= (struct SuperNET_storage *)find_storage(selector,keystr,bulksize)) != 0 )
     {
         if ( memcmp(sp,databuf,datalen) != 0 )
-            fprintf(stderr,"data cmp error\n");
+            fprintf(stderr,"(%s) data.%d cmp error datalen.%d\n",keystr,selector,datalen);
         //else fprintf(stderr,"DB.%d (%s) %d verified\n",selector,keystr,datalen);
         free(sp);
-    } else { fprintf(stderr,"couldnt find sp in DB that was just added\n"); return(-1); }
+    } else { fprintf(stderr,"couldnt find sp in DB.%d that was just added.(%s)\n",selector,keystr); return(-1); }
     return(dbsync(selector,0));
 }
 
@@ -411,7 +412,7 @@ void update_storage(int32_t selector,char *keystr,struct storage_header *hp)
     {
         sdb = &SuperNET_dbs[selector];
         clear_pair(&key,&data);
-        key.data = keystr;
+        key.data = (keystr);
         key.size = (uint32_t)strlen(keystr) + 1;
         if ( hp->keyhash == 0 )
         {
@@ -422,13 +423,16 @@ void update_storage(int32_t selector,char *keystr,struct storage_header *hp)
         if ( hp->createtime == 0 )
             hp->createtime = hp->laststored;
         data.data = condition_storage(&data.size,sdb,hp,hp->size);
-        //fprintf(stderr,"update entry.(%s) datalen.%d -> %d\n",keystr,hp->size,data.size);
+        //fprintf(stderr,"update entry.(%s) datalen.%d -> %d | hp %p, data.data %p\n",keystr,hp->size,data.size,hp,data.data);
         if ( (ret= dbput(selector,0,&key,&data,0)) != 0 )
             Storage->err(Storage,ret,"Database put failed.");
         else if ( complete_dbput(selector,keystr,hp,hp->size,0) == 0 )
-            fprintf(stderr,"updated.%d (%s)\n",selector,keystr);
+            fprintf(stderr,"updated.%d (%s) hp.%p data.data %p\n",selector,keystr,hp,data.data);
         if ( data.data != hp && data.data != 0 )
+        {
+            //printf("free %p\n",data.data);
             free(data.data);
+        }
     }
 }
 

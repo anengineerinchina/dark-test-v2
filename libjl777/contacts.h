@@ -27,8 +27,12 @@ struct contact_info *find_contact_nxt64bits(uint64_t nxt64bits)
     {
         contact = contacts[i];
         if ( contact->nxt64bits == nxt64bits )
+        {
+            if ( retcontract != 0 )
+                free(retcontract);
             retcontract = contact;
-        free(contacts[i]);
+        }
+        else free(contacts[i]);
     }
     free(contacts);
     return(retcontract);
@@ -36,6 +40,7 @@ struct contact_info *find_contact_nxt64bits(uint64_t nxt64bits)
 
 void update_contact_info(struct contact_info *contact)
 {
+    //printf("update_contact_info %p (%s)\n",contact,contact->handle);
     if ( contact->H.size == 0 )
         contact->H.size = sizeof(*contact);
     update_storage(CONTACT_DATA,contact->handle,&contact->H);
