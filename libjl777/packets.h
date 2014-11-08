@@ -309,6 +309,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
         memcpy(outbuf+msglen,data,datalen);
         len += datalen;
     }
+    txid = calc_txid(outbuf,len);
     //init_jsoncodec((char *)outbuf,msglen);
     if ( Debuglevel > 1 )
         printf("\nsendmessage (%s) len.%d to %s crc.%x\n",msg,msglen,destNXTaddr,_crc32(0,outbuf,len));
@@ -335,7 +336,7 @@ char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int
             len = onionize(hopNXTaddr,maxbuf,encodedF,destNXTaddr,&outbuf,len);
         }
         len = onionize(hopNXTaddr,maxbuf,0,destNXTaddr,&outbuf,len);
-        txid = route_packet(1,0,hopNXTaddr,outbuf,len);
+        route_packet(1,0,hopNXTaddr,outbuf,len);
         if ( txid == 0 )
             sprintf(buf,"{\"error\":\"%s cant sendmessage.(%s) to %s, len.%d\"}",verifiedNXTaddr,msg,destNXTaddr,len);
         else sprintf(buf,"{\"status\":\"%s sends encrypted sendmessage to %s pending via.(%s), len.%d\"}",verifiedNXTaddr,destNXTaddr,hopNXTaddr,len);
