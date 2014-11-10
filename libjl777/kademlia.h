@@ -912,7 +912,7 @@ again:
                 {
                     destbits = sortbuf[(i<<1) + 1];
                     dist = bitweight(destbits ^ keyhash);
-                    if ( ismynxtbits(destbits) == 0 && (dist < mydist || (z == 0 && flag == 1)) )
+                    if ( ismynxtbits(destbits) == 0 && (dist < mydist || (flag == 1 && dist < KADEMLIA_MINTHRESHOLD)) )
                     {
                         if ( (stats= get_nodestats(destbits)) != 0 && memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
                             send_kademlia_cmd(destbits,0,"ping",NXTACCTSECRET,0,0);
