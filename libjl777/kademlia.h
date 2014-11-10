@@ -328,7 +328,7 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
     {
         //C SuperNET_gotpacket.([{"requestType":"ping","NXT":"17572279667799017517","time":1413706981,"pubkey":"0514b7ba1da50363f3ad19ef46611754a1beb9815b9828bbc2ba9f0ea8f73f75","ipaddr":"89.212.19.49"},{"token":"3mtbe505lnpm60t52tgkdropg6srt8akoatih62ruuk0t7tqm65act9vu1v0n1g1hk7aiq2e88b0rp536o25rvkeibck3dmhmq68jc5bqb6gape8c2k21frtcdtq26pku0amfvdcvjrbcihed0jce1u0cq93nvoi"}]) from 89.212.19.49:47717 size.344 ascii txid.14809915081856697906 | flood.0
 
-        printf("send_kademlia_cmd.%s srvpubaddr or cp.%p\n",kadcmd,cp);
+        printf("send_kademlia_cmd.%s srvpubaddr or cp.%p dest.%llu\n",kadcmd,cp,(long long)nxt64bits);
         strcpy(NXTACCTSECRET,cp->srvNXTACCTSECRET);
     }
     init_hexbytes_noT(pubkeystr,Global_mp->loopback_pubkey,sizeof(Global_mp->loopback_pubkey));
@@ -426,6 +426,7 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
         sprintf(cmdstr+strlen(cmdstr),",\"key\":\"%s\"",key);
     data = replace_datafield(cmdstr,databuf,&len,datastr);
     strcat(cmdstr,"}");
+    printf("call _send_kademlia_cmd (%s)\n",cmdstr);
     return(_send_kademlia_cmd(encrypted,pserver,cmdstr,NXTACCTSECRET,data,len));
 }
 
@@ -659,7 +660,6 @@ int32_t kademlia_pushstore(int32_t selector,uint64_t refbits,uint64_t newbits)
 
 uint64_t process_storageQ()
 {
-    //uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char *kadcmd,char *NXTACCTSECRET,char *key,char *datastr);
     struct storage_queue_entry *ptr;
     char key[64],datastr[8193];
     uint64_t txid = 0;
@@ -691,7 +691,6 @@ void do_localstore(uint64_t *txidp,char *keystr,char *datastr,char *NXTACCTSECRE
     struct NXT_acct *keynp;
     struct SuperNET_storage *sp;
     keybits = calc_nxt64bits(keystr);
-    //printf("halflen.%ld\n",strlen(datastr)/2);
     fprintf(stderr,"do_localstore(%s) <- (%s)\n",keystr,datastr);
     keynp = get_NXTacct(&createdflag,Global_mp,keystr);
     *txidp = 0;
@@ -858,7 +857,7 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
     char retstr[32768],databuf[32768],ipaddr[64],_previpaddr[64],destNXTaddr[64],*value;
     uint64_t keyhash,senderbits,destbits,txid = 0;
     uint64_t sortbuf[2 * KADEMLIA_NUMBUCKETS * KADEMLIA_NUMK];
-    int32_t z,i,n,isvalue,createdflag,datalen,mydist,dist,remoteflag = 0;
+    int32_t z,i,n,flag,isvalue,createdflag,datalen,mydist,dist,remoteflag = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     struct NXT_acct *keynp,*np;
     cJSON *array,*item;
@@ -901,17 +900,19 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
         n = sort_all_buckets(sortbuf,keyhash);
         if ( n != 0 )
         {
-            //printf("search n.%d sorted\n",n);
+            printf("search n.%d sorted mydist.%d remoteflag.%d remoteaccess.%d\n",n,mydist,remoteflag,is_remote_access(previpaddr));
             if ( is_remote_access(previpaddr) == 0 || remoteflag != 0 ) // user invoked
             {
                 keynp = get_NXTacct(&createdflag,Global_mp,key);
                 keynp->bestdist = 10000;
                 keynp->bestbits = 0;
+                flag = 0;
+again:
                 for (i=0; i<n; i++) //&&i<KADEMLIA_ALPHA
                 {
                     destbits = sortbuf[(i<<1) + 1];
                     dist = bitweight(destbits ^ keyhash);
-                    if ( ismynxtbits(destbits) == 0 && dist < mydist )
+                    if ( ismynxtbits(destbits) == 0 && (dist < mydist || (z == 0 && flag == 1)) )
                     {
                         if ( (stats= get_nodestats(destbits)) != 0 && memcmp(stats->pubkey,zerokey,sizeof(stats->pubkey)) == 0 )
                             send_kademlia_cmd(destbits,0,"ping",NXTACCTSECRET,0,0);
@@ -945,7 +946,7 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
                                                 outbuf = encoded;
                                                 len = (int32_t)strlen(origargstr)+1;
                                                 memcpy(encoded,origargstr,len);
-                                                memcpy(outbuf+len,data,datalen);
+                                                memcpy(encoded+len,data,datalen);
                                                 len += datalen;
                                                 hopNXTaddr[0] = 0;
                                                 len = onionize(hopNXTaddr,maxbuf,0,destNXTaddr,&outbuf,len);
@@ -960,6 +961,11 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
                         }
                     }
                 }
+                if ( z == 0 && flag == 0 )
+                {
+                    flag = 1;
+                    goto again;
+                }
             }
             if ( is_remote_access(previpaddr) != 0 && ismynxtbits(senderbits) == 0 && remoteflag == 0 ) // need to respond to sender
             {
@@ -973,11 +979,11 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
                 value = cJSON_Print(array);
                 free_json(array);
                 stripwhite_ns(value,strlen(value));
-                printf("send back.(%s) to %llu\n",value,(long long)senderbits);
+                fprintf(stderr,"send back.(%s) to %llu | (%s)\n",value,(long long)senderbits,NXTACCTSECRET);
                 txid = send_kademlia_cmd(senderbits,0,isvalue==0?"havenode":"havenodeB",NXTACCTSECRET,key,value);
                 free(value);
             }
-            if ( z < 2 && isvalue != 0 && is_remote_access(previpaddr) != 0 && ismynxtbits(senderbits) == 0 )
+            if ( isvalue != 0 )
             {
                 char decoded[MAX_JSON_FIELD];
                 int32_t len;
@@ -990,29 +996,28 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
                         int32_t filtered_orderbook(char *retdatastr,char *jsonstr);
                         if ( filtered_orderbook(databuf,decoded) > 0 )
                         {
-                            txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
+                            if ( ismynxtbits(senderbits) == 0 && is_remote_access(previpaddr) != 0 )
+                                txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
                             sprintf(retstr,"{\"data\":\"%s\",\"instantDEX\":\"%s\"}",databuf,datastr);
                             printf("FOUND_InstantDEX.(%s)\n",retstr);
                             return(clonestr(retstr));
                         }
                     }
                 }
-                else
+                sp = kademlia_getstored(PUBLIC_DATA,keyhash,0);
+                if ( sp != 0 )
                 {
-                    sp = kademlia_getstored(PUBLIC_DATA,keyhash,0);
-                    if ( sp != 0 )
+                    if ( sp->data != 0 )
                     {
-                        if ( sp->data != 0 )
-                        {
-                            init_hexbytes_noT(databuf,sp->data,sp->H.size-sizeof(*sp));
-                            printf("found value for (%s)! call store\n",key);
+                        init_hexbytes_noT(databuf,sp->data,sp->H.size-sizeof(*sp));
+                        printf("found value for (%s)! call store.%ld previpaddr.(%s) senderbits.%llu\n",key,sp->H.size-sizeof(*sp),previpaddr,(long long)senderbits);
+                        if ( ismynxtbits(senderbits) == 0 && is_remote_access(previpaddr) != 0 )
                             txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
-                            sprintf(retstr,"{\"data\":\"%s\"}",databuf);
-                        }
-                        free(sp);
-                        printf("FOUND.(%s)\n",retstr);
-                        return(clonestr(retstr));
+                        sprintf(retstr,"{\"data\":\"%s\"}",databuf);
                     }
+                    free(sp);
+                    printf("FOUND.(%s)\n",retstr);
+                    return(clonestr(retstr));
                 }
             }
         } else if ( Debuglevel > 0 )

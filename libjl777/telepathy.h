@@ -97,7 +97,9 @@ int32_t AES_codec(uint8_t *buf,int32_t decryptflag,char *msg,char *AESpasswordst
         len = decryptflag;
         retdata = ciphers_codec(1,privkeys,cipherids,buf,&len);
         //printf("cipher decrypted.(%s)\n",retdata);
-        memcpy(msg,retdata,len);
+        if ( retdata != 0 )
+            memcpy(msg,retdata,len);
+        else len = 0;
     }
     if ( retdata != 0 )
         free(retdata);
@@ -113,9 +115,7 @@ int32_t verify_AES_codec(uint8_t *encoded,int32_t encodedlen,char *msg,char *AES
     if ( decodedlen > 0 )
     {
         if ( strcmp(msg,decoded) == 0 )
-        {
             printf("decrypted.(%s) len.%d\n",decoded,decodedlen);
-        }
         else { printf("AES_codec error on msg.(%s) != (%s)\n",msg,decoded); decodedlen = -1; }
     } else printf("AES_codec unexpected decode error.%d\n",decodedlen);
     return(decodedlen);
@@ -198,6 +198,7 @@ cJSON *parse_encrypted_data(int32_t updatedb,int32_t *sequenceidp,struct contact
     int32_t i,decodedlen,hint,retransmit;
     char deaddropstr[MAX_JSON_FIELD],decoded[4096],privatedatastr[8192];
     *sequenceidp = -1;
+    memset(decoded,0,sizeof(decoded));
     decodedlen = AES_codec(data,datalen,decoded,AESpasswordstr);
     if ( decodedlen > 0 )
     {
@@ -250,6 +251,7 @@ char *check_privategenesis(struct contact_info *contact)
         sp = kademlia_getstored(PUBLIC_DATA,location,0);
         if ( sp != 0 ) // no need to query if we already have it
         {
+            printf("check.%llu  private sp.%p data.%p size %ld\n",(long long)location,sp,sp->data,sp->H.size-sizeof(*sp));
             if ( sp->data != 0 && (json= parse_encrypted_data(0,&sequenceid,contact,key,sp->data,sp->H.size-sizeof(*sp),AESpasswordstr)) != 0 )
                 free_json(json);
             free(sp);
@@ -267,7 +269,7 @@ char *private_publish(uint64_t *locationp,struct contact_info *contact,int32_t s
 {
     char privatedatastr[8192],AESpasswordstr[512],seqacct[64],key[64],*retstr = 0;
     uint64_t location;
-    if ( 0 && contact->deaddrop == 0 )
+    if ( 1 && contact->deaddrop == 0 )
     {
         if ( (retstr= check_privategenesis(contact)) != 0 )
             free(retstr);
@@ -286,7 +288,7 @@ char *private_publish(uint64_t *locationp,struct contact_info *contact,int32_t s
         expand_nxt64bits(key,location);
         if ( sequenceid == 0 )
         {
-            printf("store.(%s) len.%ld -> %llu %llu\n",privatedatastr,strlen(privatedatastr)/2,(long long)seqacct,(long long)location);
+            printf("store.(%s) len.%ld -> %llu DDisat %llu\n",privatedatastr,strlen(privatedatastr)/2,(long long)seqacct,(long long)location);
             retstr = kademlia_storedata(0,seqacct,AESpasswordstr,seqacct,key,privatedatastr);
             if ( IS_LIBTEST != 0 )
             {
@@ -397,12 +399,12 @@ void telepathic_transmit(char retbuf[MAX_JSON_FIELD],struct contact_info *contac
     if ( (jsonstr= cJSON_Print(json)) != 0 )
     {
         stripwhite_ns(jsonstr,strlen(jsonstr));
-        printf("TRANSMIT2.(%s)\n",attachmentstr);
+        printf("TRANSMIT2.(%s)\n",jsonstr);
         retstr = private_publish(&location,contact,sequenceid,jsonstr);
         if ( retstr != 0 )
         {
             strcpy(retbuf,retstr);
-            printf("telepathy.(%s) -> (%s).%d @ %llu\n",jsonstr,contact->handle,sequenceid,(long long)location);
+            printf("telepathic_transmit.(%s) -> (%s).%d @ %llu\n",jsonstr,contact->handle,sequenceid,(long long)location);
             free(retstr);
         } else strcpy(retbuf,"{\"error\":\"no result from private_publish\"}");
         free(jsonstr);
@@ -452,14 +454,16 @@ char *getdb(char *previpaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int3
                     sprintf(retbuf,"{\"requestType\":\"dbret\",\"NXT\":\"%s\",\"key\":\"%s\",\"data\":\"%s\"}",NXTaddr,keystr,hexstr);
                 } else sprintf(retbuf,"{\"requestType\":\"dbret\",\"NXT\":\"%s\",\"key\":\"%s\",\"error\":\"cant find key\"}",NXTaddr,keystr);
                 free(sp);
-            } else strcpy(retbuf,"{\"requestType\":\"dbret\",\"error\":\"cant find key\"}");
+            } else sprintf(retbuf,"{\"requestType\":\"dbret\",\"error\":\"cant find key\",\"key\":\"%s\"}",keystr);
             if ( is_remote_access(previpaddr) != 0 )
                 send_to_ipaddr(previpaddr,retbuf,NXTACCTSECRET);
-            else
+            else if ( destip[0] != 0 )
             {
                 sprintf(retbuf,"{\"requestType\":\"getdb\",\"NXT\":\"%s\",\"key\":\"%s\"}",NXTaddr,keystr);
                 send_to_ipaddr(destip,retbuf,NXTACCTSECRET);
             }
+            else if ( retbuf[0] == 0 )
+                sprintf(retbuf,"{\"result\":\"nodata\",\"key\":\"%s\"}",keystr);
         } else sprintf(retbuf,"{\"requestType\":\"dbret\",\"NXT\":\"%s\",\"key\":\"%s\",\"error\":\"no contact and no key\"}",NXTaddr,keystr);
     }
     else
@@ -583,6 +587,7 @@ char *telepathy_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *se
         retstr = clonestr(retbuf);
     }
     else retstr = clonestr("{\"error\":\"invalid telepathy_func arguments\"}");
+    printf("TELEPATHY.(%s)\n",retbuf);
     return(retstr);
 }
 

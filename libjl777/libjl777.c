@@ -239,8 +239,11 @@ void SuperNET_idler(uv_idle_t *handle)
             printf("findaddress completed (%s)\n",retstr);
             free(retstr);
         }
-        if ( (counter % 10) == 3 )
+        if ( 1 && (counter % 10) == 3 )
+        {
             poll_telepods("BTCD");
+            poll_telepods("BTC");
+        }
         if ( (counter % 60) == 17 )
         {
             every_minute(counter/60);
