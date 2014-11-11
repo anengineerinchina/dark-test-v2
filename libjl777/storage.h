@@ -374,9 +374,11 @@ struct storage_header *find_storage(int32_t selector,char *keystr,uint32_t bulks
         {
             if ( ptr != 0 )
                 free(ptr);
+            //fprintf(stderr,"find_storage.%d %s not found\n",selector,keystr);
             return(0);
         }
     }
+    //fprintf(stderr,"find_storage.%d %s found\n",selector,keystr);
     if ( bulksize != 0 )
     {
         retdata = calloc(1,sizeof(*retdata));
@@ -395,8 +397,9 @@ int32_t delete_storage(int32_t selector,char *keystr)
     memset(&key,0,sizeof(key));
     key.data = keystr;
     key.size = (int32_t)strlen(keystr) + 1;
+    fprintf(stderr,"delete_storage.%d\n",selector);
     if ( (ret= dbdel(selector,0,&key,0,0)) != 0 )
-        printf("error deleting (%s) from DB.%d\n",keystr,selector);
+        fprintf(stderr,"error deleting (%s) from DB.%d\n",keystr,selector);
     else return(dbsync(selector,0));
     return(-1);
 }
@@ -408,7 +411,7 @@ int32_t complete_dbput(int32_t selector,char *keystr,void *databuf,int32_t datal
     {
         if ( memcmp(sp,databuf,datalen) != 0 )
             fprintf(stderr,"(%s) data.%d cmp error datalen.%d\n",keystr,selector,datalen);
-        else fprintf(stderr,"DB.%d (%s) %d verified\n",selector,keystr,datalen);
+        //else fprintf(stderr,"DB.%d (%s) %d verified\n",selector,keystr,datalen);
         free(sp);
     } else { fprintf(stderr,"couldnt find sp in DB.%d that was just added.(%s)\n",selector,keystr); return(-1); }
     return(dbsync(selector,0));
@@ -436,19 +439,13 @@ void update_storage(int32_t selector,char *keystr,struct storage_header *hp)
             hp->createtime = (uint32_t)time(NULL);
         }
         data.data = condition_storage(&data.size,sdb,hp,hp->size);
-        fprintf(stderr,"updateDB.%d entry.(%s) datalen.%d -> %d | hp %p, data.data %p\n",selector,keystr,hp->size,data.size,hp,data.data);
-        if ( data.size <= 1 ) getchar();
+        //fprintf(stderr,"updateDB.%d entry.(%s) datalen.%d -> %d | hp %p, data.data %p\n",selector,keystr,hp->size,data.size,hp,data.data);
         if ( (ret= dbput(selector,0,&key,&data,0)) != 0 )
             Storage->err(Storage,ret,"Database put failed.");
-        else if ( complete_dbput(selector,keystr,hp,hp->size,0) == 0 )
-        {
+        else if ( complete_dbput(selector,keystr,hp,hp->size,0) == 0 && Debuglevel > 2 )
             fprintf(stderr,"updated.%d (%s) hp.%p data.data %p\n",selector,keystr,hp,data.data);
-        }
         if ( data.data != hp && data.data != 0 )
-        {
-            //printf("free %p\n",data.data);
             free(data.data);
-        }
     }
 }
 
@@ -469,6 +466,7 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
     if ( datalen > sizeof(databuf) )
         return;
     decode_hex(databuf,datalen,datastr);
+    //fprintf(stderr,"add_storage.%d\n",selector);
     if ( (sp= (struct SuperNET_storage *)find_storage(selector,keystr,0)) == 0 || (sp->H.size-sizeof(*sp)) != datalen || memcmp(sp->data,databuf,datalen) != 0 )
     {
         slen = (int32_t)strlen(keystr);
@@ -492,11 +490,11 @@ void add_storage(int32_t selector,char *keystr,char *datastr)
         if ( createdflag != 0 )
             sp->H.keyhash = hashval;
         else if ( sp->H.keyhash != hashval )
-            printf("ERROR: keyhash.%llu != hashval.%llu (%s)\n",(long long)sp->H.keyhash,(long long)hashval,keystr);
+            fprintf(stderr,"ERROR: keyhash.%llu != hashval.%llu (%s)\n",(long long)sp->H.keyhash,(long long)hashval,keystr);
         memcpy(sp->data,databuf,datalen);
         sp->H.size = (sizeof(*sp) + datalen);
         update_storage(selector,keystr,&sp->H);
-    } else printf("(%s) <- (%s) already there\n",keystr,datastr);
+    } else fprintf(stderr,"(%s) <- (%s) already there\n",keystr,datastr);
 }
 
 struct storage_header **copy_all_DBentries(int32_t *nump,int32_t selector)
@@ -512,6 +510,7 @@ struct storage_header **copy_all_DBentries(int32_t *nump,int32_t selector)
     max = (int32_t)max_in_db(selector);
     max += 100;
     m = 0;
+    //fprintf(stderr,"copy all dB.%d\n",selector);
     dbp->cursor(dbp,NULL,&cursorp,0);
     if ( cursorp != 0 )
     {
@@ -531,6 +530,7 @@ struct storage_header **copy_all_DBentries(int32_t *nump,int32_t selector)
         }
         cursorp->close(cursorp);
     }
+    //fprintf(stderr,"done copy all dB.%d\n",selector);
     if ( m > max_in_db(selector) )
         set_max_in_db(selector,m);
     if ( ptrs != 0 )
@@ -549,6 +549,7 @@ int dbreplace_iQ(int32_t selector,char *keystr,struct InstantDEX_quote *refiQ)
     DBT key,data;
     if ( dbp == 0 )
         return(0);
+    //fprintf(stderr,"dbreplace_iQ.%d\n",selector);
     if ( 1 && (ret = Storage->txn_begin(Storage,NULL,&txn,0)) != 0 )
     {
         Storage->err(Storage,ret,"Transaction begin failed.");
@@ -608,6 +609,7 @@ int dbreplace_iQ(int32_t selector,char *keystr,struct InstantDEX_quote *refiQ)
         //printf("queue sync\n");
         dbsync(selector,0);
     }
+    //fprintf(stderr,"done dbreplace_iQ.%d\n",selector);
     return(ret);
 }
 
