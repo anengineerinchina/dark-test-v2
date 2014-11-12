@@ -193,7 +193,7 @@ void addto_hasnxt(struct pserver_info *pserver,uint64_t nxtbits)
 
 int32_t sort_all_buckets(uint64_t *sortbuf,uint64_t hash)
 {
-    uint32_t now = (uint32_t)time(NULL);
+    //uint32_t now = (uint32_t)time(NULL);
     struct nodestats *stats;
     struct pserver_info *pserver;
     int32_t i,j,n;
@@ -208,7 +208,7 @@ int32_t sort_all_buckets(uint64_t *sortbuf,uint64_t hash)
             {
                 expand_ipbits(ipaddr,stats->ipbits);
                 pserver = get_pserver(0,ipaddr,0,0);
-                if ( (now - stats->lastcontact) < 600 )//pserver->decrypterrs == 0 && 
+                //if ( (now - stats->lastcontact) < 600 )//pserver->decrypterrs == 0 &&
                 {
                     sortbuf[n<<1] = bitweight(stats->nxt64bits ^ hash);// + ((stats->gotencrypted == 0) ? 64 : 0);
                     sortbuf[(n<<1) + 1] = stats->nxt64bits;
@@ -996,7 +996,7 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
                         break;
                 }
             }
-        }
+        } else printf("no candidate destaddrs\n");
         if ( is_remote_access(previpaddr) != 0 && ismynxtbits(senderbits) == 0 && remoteflag == 0 ) // need to respond to sender
         {
             if ( get_public_datastr(retstr,databuf,keyhash) == 0 )
