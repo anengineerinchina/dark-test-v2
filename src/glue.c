@@ -32,7 +32,13 @@ void *_launch_SuperNET(void *_myip)
     if ( fread(&retval,1,sizeof(retval),fp) != sizeof(retval) )
         retval = -2;
     fclose(fp);
-    printf("SuperNET file found! retval.%d\n",retval);
+    switch ( retval )
+    {
+        case 0: printf("SuperNET file found!\n"); break;
+        case -1: printf("SuperNET file NOT found. It must be in the same directory as SuperNET\n"); break;
+        case -2: printf("handshake file error\n"); break;
+    }
+    
     if ( retval == 0 )
     {
         processptr = portable_thread_create(poll_for_broadcasts,0);
