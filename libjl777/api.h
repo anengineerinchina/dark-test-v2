@@ -170,7 +170,7 @@ void return_http_str(struct libwebsocket *wsi,char *retstr,char *insertstr,char 
         strcat((char *)buffer,insertstr);
     libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
     libwebsocket_write(wsi,(unsigned char *)retstr,strlen(retstr),LWS_WRITE_HTTP);
-    //if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         printf("SuperNET >>>>>>>>>>>>>> sends back (%s)\n",mediatype);
 }
 
