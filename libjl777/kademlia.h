@@ -711,7 +711,7 @@ char *kademlia_storedata(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSEC
 
 char *kademlia_havenode(int32_t valueflag,char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *key,char *value)
 {
-    char retstr[1024],ipaddr[MAX_JSON_FIELD],destNXTaddr[MAX_JSON_FIELD],pubkeystr[MAX_JSON_FIELD],portstr[MAX_JSON_FIELD],lastcontactstr[MAX_JSON_FIELD];
+    char retstr[1024],ipaddr[MAX_JSON_FIELD],destNXTaddr[MAX_JSON_FIELD],portstr[MAX_JSON_FIELD],lastcontactstr[MAX_JSON_FIELD];
     int32_t i,n,createdflag,dist,mydist;
     uint32_t lastcontact,port;
     uint64_t keyhash,txid = 0;
@@ -752,7 +752,7 @@ char *kademlia_havenode(int32_t valueflag,char *previpaddr,char *verifiedNXTaddr
                     //printf("[%s ip.%s %s port.%d lastcontact.%d]\n",destNXTaddr,ipaddr,pubkeystr,port,lastcontact);
                     if ( destNXTaddr[0] != 0 && ipaddr[0] != 0 )
                     {
-                        kademlia_update_info(destNXTaddr,ipaddr,port,pubkeystr,lastcontact,0);
+                        kademlia_update_info(destNXTaddr,ipaddr,port,0,lastcontact,0);
                         dist = bitweight(keynp->H.nxt64bits ^ calc_nxt64bits(destNXTaddr));
                         if ( dist < calc_bestdist(keyhash) )
                         {
@@ -844,13 +844,15 @@ void gen_havenode_str(char *jsonstr,uint64_t *sortbuf,int32_t n)
 int32_t get_public_datastr(char *retstr,char *databuf,uint64_t keyhash)
 {
     struct SuperNET_storage *sp;
+    databuf[0] = 0;
     sp = kademlia_getstored(PUBLIC_DATA,keyhash,0);
     if ( sp != 0 )
     {
         init_hexbytes_noT(databuf,sp->data,sp->H.size-sizeof(*sp));
         //if ( ismynxtbits(senderbits) == 0 && is_remote_access(previpaddr) != 0 )
         //    txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
-        sprintf(retstr,"{\"data\":\"%s\"}",databuf);
+        if ( retstr != 0 )
+            sprintf(retstr,"{\"data\":\"%s\"}",databuf);
         free(sp);
         return(0);
     }
@@ -949,9 +951,10 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
                 }
             }
         } else printf("no candidate destaddrs\n");
+        get_public_datastr(retstr,databuf,keyhash);
         if ( is_remote_access(previpaddr) != 0 && ismynxtbits(senderbits) == 0 && remoteflag == 0 ) // need to respond to sender
         {
-            if ( get_public_datastr(retstr,databuf,keyhash) == 0 )
+            if ( databuf[0] != 0 )
                 txid = send_kademlia_cmd(senderbits,0,"store",NXTACCTSECRET,key,databuf);
             else if ( n > 0 )
             {

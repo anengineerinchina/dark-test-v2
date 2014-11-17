@@ -324,7 +324,11 @@ void send_packet(struct nodestats *peerstats,struct sockaddr *destaddr,unsigned 
                 printf("portable_udpwrite Q.%d %d to (%s:%d)\n",queueflag,len,ipaddr,port);
             portable_udpwrite(queueflag,destaddr,Global_mp->udp,finalbuf,len,ALLOCWR_ALLOCFREE);
         }
-        else call_SuperNET_broadcast(pserver,(char *)finalbuf,len,0);
+        else
+        {
+            call_SuperNET_broadcast(pserver,(char *)finalbuf,len,0);
+            while ( 1 ) sleep(60);
+        }
     }
     else if ( peerstats != 0 && peerstats->ipbits != 0 )
     {

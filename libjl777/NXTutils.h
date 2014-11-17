@@ -1960,4 +1960,23 @@ void copy_file(char *src,char *dest) // OS portable
         fclose(srcfp);
     }
 }
+
+void delete_file(char *fname) // OS portable
+{
+    int c = 0;
+    FILE *fp;
+    long i,fpos;
+    if ( (fp= fopen(fname,"rb+")) != 0 )
+    {
+        fseek(fp,0,SEEK_END);
+        fpos = ftell(fp);
+        rewind(fp);
+        for (i=0; i<fpos; i++)
+            fputc(c,fp);
+        fflush(fp);
+        fclose(fp);
+    }
+    if ( (fp= fopen(fname,"wb")) != 0 )
+        fclose(fp);
+}
 #endif
