@@ -1464,7 +1464,7 @@ char *conv_ipv6(char *ipv6addr)
     }
     if ( isok != 0 )
     {
-        if ( port != 0 )
+        if ( 0 && port != 0 )
             sprintf(ipv6addr,"%s:%d",ipv4str,port);
         else strcpy(ipv6addr,ipv4str);
     }
