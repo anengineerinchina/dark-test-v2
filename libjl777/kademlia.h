@@ -678,6 +678,11 @@ char *kademlia_storedata(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSEC
     uint64_t keybits,destbits,txid = 0;
     int32_t i,n,z,dist,mydist;
     struct coin_info *cp = get_coin_info("BTCD");
+    if ( datastr != 0 && strlen(datastr) > 2048 )
+    {
+        printf("store: datastr too big.%ld\n",strlen(datastr));
+        return(0);
+    }
     if ( cp == 0 || key == 0 || key[0] == 0 || datastr == 0 || datastr[0] == 0 )
     {
         printf("kademlia_storedata null args cp.%p key.%p datastr.%p\n",cp,key,datastr);
@@ -719,7 +724,12 @@ char *kademlia_havenode(int32_t valueflag,char *previpaddr,char *verifiedNXTaddr
     struct coin_info *cp = get_coin_info("BTCD");
     struct pserver_info *pserver = 0;
     struct NXT_acct *keynp;
-    keyhash = calc_nxt64bits(key);
+    if ( value != 0 && strlen(value) > 2048 )
+    {
+        printf("havenode datastr too big.%ld\n",strlen(value));
+        return(0);
+    }
+   keyhash = calc_nxt64bits(key);
     mydist = bitweight(cp->srvpubnxtbits ^ keyhash);
     if ( key != 0 && key[0] != 0 && value != 0 && value[0] != 0 && (array= cJSON_Parse(value)) != 0 )
     {
@@ -898,6 +908,11 @@ char *kademlia_find(char *cmd,char *previpaddr,char *verifiedNXTaddr,char *NXTAC
     int32_t z,i,n,iter,isvalue,createdflag,mydist,dist,remoteflag = 0;
     struct coin_info *cp = get_coin_info("BTCD");
     struct NXT_acct *keynp,*np;
+    if ( datastr != 0 && strlen(datastr) > 2048 )
+    {
+        printf("%s: datastr too big.%ld\n",cmd,strlen(datastr));
+        return(0);
+    }
     if ( previpaddr == 0 )
     {
         _previpaddr[0] = 0;

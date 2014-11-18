@@ -320,7 +320,7 @@ char *mofn_savefile(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,c
     uint64_t keyhash,txids[1000];
     cJSON *array;
     int32_t n,sharei,err,*cipherids=0;//,status = 0;
-    unsigned char buf[768],sharenrs[255],*buffer;
+    unsigned char buf[1024],sharenrs[255],*buffer;
     char *retstr,savefname[512],key[64],datastr[sizeof(buf)*3+1],*str,**privkeys = 0;
     i = n = 0;
     array = cJSON_CreateArray();
