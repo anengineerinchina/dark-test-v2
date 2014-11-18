@@ -320,7 +320,7 @@ char *mofn_savefile(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,c
     uint64_t keyhash,txids[1000];
     cJSON *array;
     int32_t n,sharei,err,*cipherids=0;//,status = 0;
-    unsigned char buf[1024],sharenrs[255],*buffer;
+    unsigned char buf[768],sharenrs[255],*buffer;
     char *retstr,savefname[512],key[64],datastr[sizeof(buf)*3+1],*str,**privkeys = 0;
     i = n = 0;
     array = cJSON_CreateArray();
@@ -590,7 +590,6 @@ char *publish_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
     copy_cJSON(usbname,objs[4]);
     copy_cJSON(password,objs[5]);
     copy_cJSON(pin,objs[6]);
-    copy_cJSON(mediatype,objs[7]);
     array = objs[0];
     if ( sender[0] != 0 && valid > 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
     {
@@ -599,7 +598,7 @@ char *publish_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
             item = cJSON_GetArrayItem(array,i);
             copy_cJSON(fname,cJSON_GetArrayItem(item,0));
             mediatype[0] = 0;
-            if ( cJSON_GetArraySize(array) > 1 )
+            if ( cJSON_GetArraySize(item) > 1 )
                 copy_cJSON(mediatype,cJSON_GetArrayItem(item,1));
             if ( mediatype[0] == 0 )
                 strcpy(mediatype,"text/html");

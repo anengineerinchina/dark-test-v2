@@ -148,11 +148,11 @@ const char * get_mimetype(const char *file)
 	return NULL;
 }
 
-void return_http_str(struct libwebsocket *wsi,char *retstr,char *insertstr,char *mediatype)
+void return_http_str(struct libwebsocket *wsi,uint8_t *retstr,int32_t retlen,char *insertstr,char *mediatype)
 {
     int32_t len;
     unsigned char buffer[8192];
-    len = (int32_t)strlen(retstr);
+    len = retlen;
     if ( insertstr != 0 && insertstr[0] != 0 )
         len += (int32_t)strlen(insertstr);
     sprintf((char *)buffer,
@@ -169,9 +169,9 @@ void return_http_str(struct libwebsocket *wsi,char *retstr,char *insertstr,char 
     if ( insertstr != 0 && insertstr[0] != 0 )
         strcat((char *)buffer,insertstr);
     libwebsocket_write(wsi,buffer,strlen((char *)buffer),LWS_WRITE_HTTP);
-    libwebsocket_write(wsi,(unsigned char *)retstr,strlen(retstr),LWS_WRITE_HTTP);
-    if ( Debuglevel > 2 )
-        printf("SuperNET >>>>>>>>>>>>>> sends back (%s)\n",mediatype);
+    libwebsocket_write(wsi,(unsigned char *)retstr,retlen,LWS_WRITE_HTTP);
+    if ( Debuglevel > 1 )
+        printf("SuperNET >>>>>>>>>>>>>> sends back (%s) retlen.%d\n",mediatype,retlen);
 }
 
 uint64_t conv_URL64(char *password,char *pin,char *str)
@@ -332,8 +332,8 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 }
                 else filestr = load_file(fname,&filebuf,&filelen,&allocsize);
                 if ( filestr != 0 )
-                    return_http_str(wsi,filestr,buf,mediatype);
-                else return_http_str(wsi,str,"ERROR LOADING: ",mediatype);
+                    return_http_str(wsi,(uint8_t *)filestr,(int32_t)filelen,buf,mediatype);
+                else return_http_str(wsi,(uint8_t *)str,(int32_t)strlen(str),"ERROR LOADING: ",mediatype);
             }
             else
             {
@@ -342,7 +342,7 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                     retstr = block_on_SuperNET(is_BTCD_command(json) == 0,str);
                     if ( retstr != 0 )
                     {
-                        return_http_str(wsi,retstr,0,"text/html");
+                        return_http_str(wsi,(uint8_t *)retstr,(int32_t)strlen(retstr),0,"text/html");
                         free(retstr);
                     }
                     free_json(json);
@@ -373,12 +373,12 @@ static int callback_http(struct libwebsocket_context *context,struct libwebsocke
                 else retstr = block_on_SuperNET(is_BTCD_command(json) == 0,str);
                 if ( retstr != 0 )
                 {
-                    return_http_str(wsi,retstr,0,mediatype);
+                    return_http_str(wsi,(uint8_t *)retstr,(int32_t)strlen(retstr),0,mediatype);
                     free(retstr);
                 }
                 free_json(json);
             }
-            else return_http_str(wsi,str,0,mediatype);
+            else return_http_str(wsi,(uint8_t *)str,(int32_t)strlen(str),0,mediatype);
             free(str);
             return(-1);
             break;
