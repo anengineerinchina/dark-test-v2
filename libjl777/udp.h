@@ -34,7 +34,7 @@ queue_t ALL_messages; //RPC_6777_response
 struct pNXT_info
 {
     //void **coinptrs;
-    //char privacyServer_NXTaddr[64],privacyServer_ipaddr[32],privacyServer_port[16];
+    //char privacyServer_NXTaddr[64],privacyServer_ipaddr[64],privacyServer_port[16];
     // uint64_t privacyServer;
     struct hashtable **orderbook_txidsp,*msg_txids;
 };
@@ -588,7 +588,7 @@ void add_SuperNET_peer(char *ip_port)
 {
     struct pserver_info *pserver;
     int32_t createdflag,p2pport;
-    char ipaddr[16];
+    char ipaddr[64];
     p2pport = parse_ipaddr(ipaddr,ip_port);
     if ( p2pport == 0 )
         p2pport = BTCD_PORT;

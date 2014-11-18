@@ -149,7 +149,7 @@ int32_t sort_all_buckets(uint64_t *sortbuf,uint64_t hash)
     struct nodestats *stats;
     struct pserver_info *pserver;
     int32_t i,j,n;
-    char ipaddr[32];
+    char ipaddr[64];
     for (i=n=0; i<KADEMLIA_NUMBUCKETS; i++)
     {
         for (j=0; j<KADEMLIA_NUMK; j++)
