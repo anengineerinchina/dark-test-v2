@@ -951,6 +951,26 @@ char *findaddress_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     return(retstr);
 }*/
 
+char *passthru_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
+{
+    char coinstr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],params[MAX_JSON_FIELD],*retstr = 0;
+    struct coin_info *cp = 0;
+    if ( is_remote_access(previpaddr) != 0 )
+        return(0);
+    copy_cJSON(coinstr,objs[0]);
+    copy_cJSON(method,objs[1]);
+    copy_cJSON(params,objs[2]);
+    unstringify(params);
+    if ( coinstr[0] != 0 )
+        cp = get_coin_info(coinstr);
+    printf("passthru.(%s) %p method=%s [%s]\n",coinstr,cp,method,params);
+    //printf("pong got pubkey.(%s) ipaddr.(%s) port.%d \n",pubkey,ipaddr,port);
+    if ( cp != 0 && method[0] != 0 )
+        retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,method,params);
+    else retstr = clonestr("{\"error\":\"invalid pong_func arguments\"}");
+    return(retstr);
+}
+
 char *ping_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     int32_t port;
@@ -1385,6 +1405,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *GUIpoll[] = { (char *)GUIpoll_func, "GUIpoll", "", 0 };
     static char *stop[] = { (char *)stop_func, "stop", "", 0 };
     static char *settings[] = { (char *)settings_func, "settings", "", "field", "value", "reinit", 0 };
+    static char *passthru[] = { (char *)passthru_func, "passthru", "", "coin", "method", "params", 0 };
 
     // multisig
     static char *cosign[] = { (char *)cosign_func, "cosign", "V", "otheracct", "seed", "text", 0 };
@@ -1434,7 +1455,7 @@ char *SuperNET_json_commands(struct NXThandler_info *mp,char *previpaddr,cJSON *
     static char *getquotes[] = { (char *)getquotes_func, "getquotes", "V", "exchange", "base", "rel", "oldest", 0 };
     static char *tradebot[] = { (char *)tradebot_func, "tradebot", "V", "code", 0 };
 
-     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes  };
+     static char **commands[] = { stop, GUIpoll, BTCDpoll, settings, gotjson, gotpacket, gotnewpeer, getdb, cosign, cosigned, telepathy, addcontact, dispcontact, removecontact, findaddress, ping, pong, store, findnode, havenode, havenodeB, findvalue, publish, getpeers, maketelepods, tradebot, respondtx, processutx, checkmsg, placebid, placeask, makeoffer, sendmsg, sendbinary, orderbook, teleport, telepodacct, savefile, restorefile, pricedb, getquotes, passthru  };
     int32_t i,j;
     struct coin_info *cp;
     cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
