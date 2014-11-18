@@ -639,8 +639,6 @@ char *publish_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *send
         }
     }
     else retstr = clonestr("{\"error\":\"invalid publish arguments\"}");
-    if ( fp != 0 )
-        fclose(fp);
     printf("publish_func.(%s)\n",retstr);
     return(retstr);
 }
