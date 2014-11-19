@@ -4213,9 +4213,15 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     int32_t retflag = 0;
     CPubAddr *pubaddr = new CPubAddr;
     std::string supernetmsg = "";
-    CNode *peer = FindNode((CService)destip);
+    CNode *peer;
     if ( SuperNET_retval < 0 )
         return(-1);
+    peer = FindNode((CService)destip);
+    if ( peer == NULL )
+    {
+        opennetworkconnection((CService)destip);
+        peer = FindNode((CService)destip);
+    }
     if ( peer == NULL )
         return(-1); // Not a known peer
     for(int32_t i=0; i<len; i++)
