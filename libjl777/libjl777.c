@@ -635,7 +635,7 @@ int SuperNET_start(char *JSON_or_fname,char *myipaddr)
     if ( myipaddr != 0 )
         myipaddr = clonestr(myipaddr);
     printf("SuperNET_start(%s) %p ipaddr.(%s)\n",JSON_or_fname,myipaddr,myipaddr);
-    getchar();
+    //getchar();
     if ( JSON_or_fname != 0 && JSON_or_fname[0] != '{' )
     {
         fp = fopen(JSON_or_fname,"rb");
