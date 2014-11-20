@@ -951,23 +951,49 @@ char *findaddress_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *
     return(retstr);
 }*/
 
+int32_t in_jsonarray(cJSON *array,char *value)
+{
+    int32_t i,n;
+    char remote[MAX_JSON_FIELD];
+    if ( array != 0 && is_cJSON_Array(array) != 0 )
+    {
+        n = cJSON_GetArraySize(array);
+        for (i=0; i<n; i++)
+        {
+            if ( array == 0 || n == 0 )
+                break;
+            copy_cJSON(remote,cJSON_GetArrayItem(array,i));
+            if ( strcmp(remote,value) == 0 )
+                return(1);
+        }
+    }
+    return(0);
+}
+
 char *passthru_func(char *NXTaddr,char *NXTACCTSECRET,char *previpaddr,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     char coinstr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],params[MAX_JSON_FIELD],*retstr = 0;
     struct coin_info *cp = 0;
-    if ( is_remote_access(previpaddr) != 0 )
-        return(0);
     copy_cJSON(coinstr,objs[0]);
     copy_cJSON(method,objs[1]);
-    copy_cJSON(params,objs[2]);
-    unstringify(params);
     if ( coinstr[0] != 0 )
         cp = get_coin_info(coinstr);
+    if ( is_remote_access(previpaddr) != 0 )
+    {
+        if ( in_jsonarray(cJSON_GetObjectItem(MGWconf,"remote"),method) == 0 && in_jsonarray(cJSON_GetObjectItem(cp->json,"remote"),method) == 0 )
+            return(0);
+    }
+    copy_cJSON(params,objs[2]);
+    unstringify(params);
     printf("passthru.(%s) %p method=%s [%s]\n",coinstr,cp,method,params);
     //printf("pong got pubkey.(%s) ipaddr.(%s) port.%d \n",pubkey,ipaddr,port);
     if ( cp != 0 && method[0] != 0 )
         retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,method,params);
     else retstr = clonestr("{\"error\":\"invalid pong_func arguments\"}");
+    if ( is_remote_access(previpaddr) != 0 )
+    {
+        
+    }
     return(retstr);
 }
 

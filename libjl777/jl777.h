@@ -345,6 +345,7 @@ struct coin_info
     int32_t timestamps[100];
     struct coincache_info CACHE;
     //struct pingpong_queue podQ;
+    cJSON *json;
     struct hashtable *telepods; void *changepod; uint64_t min_telepod_satoshis;
     void **logs;
     cJSON *ciphersobj;

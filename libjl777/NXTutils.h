@@ -1448,14 +1448,16 @@ char *conv_ipv6(char *ipv6addr)
     struct sockaddr_in6 ipv6sa;
     in_addr_t *ipv4bin;
     unsigned char *bytes;
-    int32_t isok,port = 0;
-    isok = inet_pton(AF_INET6,ipv6addr,&ipv6sa.sin6_addr);
+    int32_t isok;
+    strcpy(ipv4str,ipv6addr);
+    isok = !uv_inet_pton(AF_INET,(const char*)ipv6addr,&ipv6sa.sin6_addr);
+    printf("isok.%d\n",isok);
+    //isok = inet_pton(AF_INET6,ipv6addr,&ipv6sa.sin6_addr);
     if ( isok != 0 )
     {
         bytes = ((struct sockaddr_in6 *)&ipv6sa)->sin6_addr.s6_addr;
         if ( memcmp(bytes,IPV4CHECK,sizeof(IPV4CHECK)) != 0 ) // check its IPV4 really
         {
-            port = ((struct sockaddr_in6 *)&ipv6sa)->sin6_port;
             bytes += 12;
             ipv4bin = (in_addr_t *)bytes;
             if ( inet_ntop(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str)) == 0 )
@@ -1463,12 +1465,8 @@ char *conv_ipv6(char *ipv6addr)
         } else isok = 0;
     }
     if ( isok != 0 )
-    {
-        if ( 0 && port != 0 )
-            sprintf(ipv6addr,"%s:%d",ipv4str,port);
-        else strcpy(ipv6addr,ipv4str);
-    }
-    return(ipv6addr);
+        strcpy(ipv6addr,ipv4str);
+    return(ipv6addr); // it is ipv4 now
 }
 
 int32_t parse_ipaddr(char *ipaddr,char *ip_port)
