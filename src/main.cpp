@@ -89,11 +89,6 @@ int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
 
-<<<<<<< HEAD
-=======
-extern "C" int32_t BTCDDEV_RPC(char *cmd, char *args);
-
->>>>>>> 3ba539d6f3d47d02d733b41676dcf0ded8989970
 //////////////////////////////////////////////////////////////////////////////
 //
 // dispatching functions
@@ -3749,8 +3744,6 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
     static int didinit;
     if ( didinit == 0 )
     {
-        BTCDDEV_RPC((char*)"getblockhash", (char*)"5");
-
         char *ipaddr = (char *)addrSeenByPeer.ToString().c_str();
         if ( strcmp("[::]:0",ipaddr) != 0 && strcmp("0.0.0.0:0",ipaddr) != 0 )
         {
@@ -3940,11 +3933,7 @@ void set_pubaddr(CPubAddr &pubaddr,std::string msg,int32_t duration)
         throw runtime_error("Failed to Unserialize PubAddr");
 
     //if ( pubaddr.ProcessPubAddr() == 0 )
-<<<<<<< HEAD
     //  throw runtime_error("set_pubaddr: Failed to process pubaddr.\n");
-=======
-      //  throw runtime_error("set_pubaddr: Failed to process pubaddr.\n");
->>>>>>> 3ba539d6f3d47d02d733b41676dcf0ded8989970
 }
 
 void broadcastPubAddr(char *msg,int32_t duration)
@@ -4330,32 +4319,3 @@ void init_jl777(char *myip)
     std::cout << "back from start" << std::endl;
 }
 
-<<<<<<< HEAD
-=======
-extern "C" int32_t BTCDDEV_RPC(char *cmd, char *args)
-{
-//CRPCTable *table = new CRPCTable;
-//json_spirit::Array p;
-//string arg = "'[{}]'"
-//p =
-//json_spirit::Object val = table->execute(std::string(cmd), );
-
-//json_spirit::Value params = "'[{}]'";
-
-//json_spirit::Object param;
-//json_spirit::Array p;
-//pair<string, json_spirit::Value> p = make_pair<string, json_spirit::Value>("test", param);
-//param.push_back(0);
-//param.push_back(make_pair<string, string>("", ""));
-char *argv[3];
-argv[1] = cmd;
-argv[2] = args;
-CommandLineRPC(3, argv);
-//std::cout << getdifficulty();
-
-//std::cout << val.get_str();
-//std::cout << CallRPC(string(cmd), args);
-//delete table;
-return 0;
-}
->>>>>>> 3ba539d6f3d47d02d733b41676dcf0ded8989970
