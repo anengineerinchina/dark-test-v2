@@ -510,7 +510,6 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
         // Add node
         CNode* pnode = new CNode(hSocket, addrConnect, pszDest ? pszDest : "", false);
         pnode->AddRef();
-
         {
             LOCK(cs_vNodes);
             vNodes.push_back(pnode);
