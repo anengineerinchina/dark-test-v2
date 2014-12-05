@@ -4217,21 +4217,31 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
     if ( SuperNET_retval < 0 )
         return(-1);
     peer = FindNode((CService)destip);
-    /*if ( peer == NULL )
-    {
-        opennetworkconnection((CService)destip);
-        peer = FindNode((CService)destip);
-    }*/
     if ( peer == NULL )
+    {
+        std::cout << "<<<<<<< narrowcast sent to null peer. Trying to find node " << destip << std::endl;
+        CService *serv = new CService(destip);
+        CAddress *addrConnect = new CAddress(*serv);
+        peer = ConnectNode(*addrConnect, destip);
+        free(serv);
+        free(addrConnect);
+        // opennetworkconnection((CService)destip);
+        //   peer = FindNode((CService)destip);
+    }
+    if ( peer == NULL )
+    {
+        std::cout << destip << " could not be located for narrowcast." << std::endl;
         return(-1); // Not a known peer
+    }
+    std::cout << destip << " was located for narrowcast." << std::endl;
     for(int32_t i=0; i<len; i++)
         supernetmsg += msg[i];//std::string(msg[i]);
     set_pubaddr(*pubaddr,supernetmsg,60); // just one minute should be plenty of time
-	if ( pubaddr->RelayTo(peer) != true )
-		retflag = -2;
+    if ( pubaddr->RelayTo(peer) != true )
+        retflag = -2;
     delete pubaddr;
     //printf("SuperNET_narrowcast  relay error\n");
-	return(retflag);
+    return(retflag);
 }
 
 extern "C" void *poll_for_broadcasts(void *args)
