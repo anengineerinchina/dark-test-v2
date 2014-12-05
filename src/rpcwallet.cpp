@@ -827,9 +827,13 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     CScript inner;
     inner.SetMultisig(nRequired, pubkeys);
     CScriptID innerID = inner.GetID();
-    if (!pwalletMain->AddCScript(inner))
-        throw runtime_error("AddCScript() failed");
-
+#ifdef MULTISIG_MYSTERY_SOLVED
+    //if (!pwalletMain->AddCScript(inner))
+    //    throw runtime_error("AddCScript() failed");
+#else
+    pwalletMain->AddCScript(inner);
+#endif
+    
     pwalletMain->SetAddressBookName(innerID, strAccount);
     return CBitcoinAddress(innerID).ToString();
 }

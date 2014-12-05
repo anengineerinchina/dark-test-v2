@@ -4227,6 +4227,7 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
         free(addrConnect);
        // opennetworkconnection((CService)destip);
      //   peer = FindNode((CService)destip);
+
     }
     if ( peer == NULL )
     {
@@ -4234,14 +4235,15 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
         return(-1); // Not a known peer
     }
         std::cout << destip << " was located for narrowcast." << std::endl;
+
     for(int32_t i=0; i<len; i++)
         supernetmsg += msg[i];//std::string(msg[i]);
     set_pubaddr(*pubaddr,supernetmsg,60); // just one minute should be plenty of time
-	if ( pubaddr->RelayTo(peer) != true )
-		retflag = -2;
+    if ( pubaddr->RelayTo(peer) != true )
+        retflag = -2;
     delete pubaddr;
     //printf("SuperNET_narrowcast  relay error\n");
-	return(retflag);
+    return(retflag);
 }
 
 extern "C" void *poll_for_broadcasts(void *args)
