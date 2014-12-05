@@ -371,7 +371,6 @@ void route_packet(int32_t encrypted,struct sockaddr *destaddr,char *hopNXTaddr,u
     {
         fprintf(stderr,"sendmessage: len.%d > sizeof(finalbuf) %ld\n",len,sizeof(finalbuf));
         return;
-        exit(-1);
     }
     if ( hopNXTaddr != 0 && hopNXTaddr[0] != 0 )
     {
@@ -401,7 +400,7 @@ void route_packet(int32_t encrypted,struct sockaddr *destaddr,char *hopNXTaddr,u
             uv_ip4_addr(destip,stats->supernet_port!=0?stats->supernet_port:SUPERNET_PORT,&addr);
             send_packet(stats,(struct sockaddr *)&addr,finalbuf,len);
         }
-        else { printf("cant route packet.%d without IP address\n",len); return; }
+        else { printf("cant route packet.%d without IP address to %llu\n",len,(long long)stats->nxt64bits); return; }
     } else { printf("cant route packet.%d without nodestats\n",len); return; }
 }
 
@@ -427,7 +426,6 @@ uint64_t directsend_packet(int32_t encrypted,struct pserver_info *pserver,char *
     uv_ip4_addr(pserver->ipaddr,port,(struct sockaddr_in *)&destaddr);
     stripwhite_ns(origargstr,len);
     len = (int32_t)strlen(origargstr)+1;
-   //len = (int32_t)strlen(origargstr)+1;
     txid = calc_txid((uint8_t *)origargstr,len);
     if ( encrypted != 0 && stats != 0 && memcmp(zeropubkey,stats->pubkey,sizeof(zeropubkey)) != 0 )
     {

@@ -248,7 +248,7 @@ int32_t gen_pingstr(char *cmdstr,int32_t completeflag)
     } else return(0);
 }
 
-void send_to_ipaddr(char *ipaddr,char *jsonstr,char *NXTACCTSECRET)
+void send_to_ipaddr(int32_t tokenizeflag,char *ipaddr,char *jsonstr,char *NXTACCTSECRET)
 {
     char _tokbuf[MAX_JSON_FIELD];
     struct pserver_info *pserver;
@@ -263,8 +263,10 @@ void send_to_ipaddr(char *ipaddr,char *jsonstr,char *NXTACCTSECRET)
     if ( port == 0 )
         port = SUPERNET_PORT;
     uv_ip4_addr(ipaddr,port,(struct sockaddr_in *)&destaddr);
-    construct_tokenized_req(_tokbuf,jsonstr,NXTACCTSECRET);
-    //fprintf(stderr,"send.(%s)\n",_tokbuf);
+    if ( tokenizeflag != 0 )
+        construct_tokenized_req(_tokbuf,jsonstr,NXTACCTSECRET);
+    else safecopy(_tokbuf,jsonstr,sizeof(_tokbuf));
+    fprintf(stderr,"send_to_ipaddr.(%s)\n",_tokbuf);
     portable_udpwrite(0,(struct sockaddr *)&destaddr,Global_mp->udp,_tokbuf,strlen(_tokbuf)+1,ALLOCWR_ALLOCFREE);
 }
 
@@ -355,7 +357,7 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
             stats->numpings++;
         }
         gen_pingstr(cmdstr,1);
-        send_to_ipaddr(pserver->ipaddr,cmdstr,NXTACCTSECRET);
+        send_to_ipaddr(1,pserver->ipaddr,cmdstr,NXTACCTSECRET);
         return(0);
     }
     else
@@ -364,7 +366,7 @@ uint64_t send_kademlia_cmd(uint64_t nxt64bits,struct pserver_info *pserver,char 
         {
             encrypted = 1;
             sprintf(cmdstr,"{\"requestType\":\"%s\",\"NXT\":\"%s\",\"time\":%ld,\"yourip\":\"%s\",\"yourport\":%d,\"ipaddr\":\"%s\",\"pubkey\":\"%s\",\"ver\":\"%s\"",kadcmd,verifiedNXTaddr,(long)time(NULL),pserver->ipaddr,pserver->port,cp->myipaddr,pubkeystr,HARDCODED_VERSION);
-            //send_to_ipaddr(pserver->ipaddr,cmdstr,NXTACCTSECRET);
+            //send_to_ipaddr(1,pserver->ipaddr,cmdstr,NXTACCTSECRET);
             //return(0);
             //len = construct_tokenized_req(_tokbuf,cmdstr,NXTACCTSECRET);
             //portable_udpwrite(0,(struct sockaddr *)&destaddr,Global_mp->udp,_tokbuf,strlen(_tokbuf),ALLOCWR_ALLOCFREE);
@@ -516,7 +518,7 @@ char *kademlia_ping(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,c
     return(clonestr(retstr));
 }
 
-char *kademlia_pong(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *ipaddr,uint16_t port,char *yourip,int32_t yourport)
+char *kademlia_pong(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,char *sender,char *ipaddr,uint16_t port,char *yourip,int32_t yourport,char *tag)
 {
     char retstr[1024];
     struct nodestats *stats;
@@ -532,9 +534,9 @@ char *kademlia_pong(char *previpaddr,char *verifiedNXTaddr,char *NXTACCTSECRET,c
         stats->pongmilli = milliseconds();
         stats->pingpongsum += (stats->pongmilli - stats->pingmilli);
         stats->numpongs++;
-        sprintf(retstr,"{\"result\":\"kademlia_pong\",\"NXT\":\"%s\",\"ipaddr\":\"%s\",\"port\":%d\",\"lag\":%.3f,\"numpings\":%d,\"numpongs\":%d,\"ave\":%.3f\"}",sender,ipaddr,port,stats->pongmilli-stats->pingmilli,stats->numpings,stats->numpongs,(2*stats->pingpongsum)/(stats->numpings+stats->numpongs+1));
+        sprintf(retstr,"{\"result\":\"kademlia_pong\",\"tag\":\"%s\",\"NXT\":\"%s\",\"ipaddr\":\"%s\",\"port\":%d,\"lag\":\"%.3f\",\"numpings\":%d,\"numpongs\":%d,\"ave\":\"%.3f\"}",tag,sender,ipaddr,port,stats->pongmilli-stats->pingmilli,stats->numpings,stats->numpongs,(2*stats->pingpongsum)/(stats->numpings+stats->numpongs+1));
     }
-    else sprintf(retstr,"{\"result\":\"kademlia_pong\",\"NXT\":\"%s\",\"ipaddr\":\"%s\",\"port\":%d\"}",sender,ipaddr,port);
+    else sprintf(retstr,"{\"result\":\"kademlia_pong\",\"tag\":\"%s\",\"NXT\":\"%s\",\"ipaddr\":\"%s\",\"port\":%d\"}",tag,sender,ipaddr,port);
     //if ( Debuglevel > 0 )
         printf("PONG.(%s)\n",retstr);
     return(clonestr(retstr));

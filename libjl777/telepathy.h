@@ -50,7 +50,8 @@ struct telepathy_entry *add_telepathy_entry(char *locationstr,struct contact_inf
             contact->numrecv++;
             free(sp);
         }
-        fprintf(stderr,"add (%s.%d) %llu\n",contact->handle,sequenceid,(long long)tel->location);
+        if ( Debuglevel > 2 )
+            fprintf(stderr,"add (%s.%d) %llu\n",contact->handle,sequenceid,(long long)tel->location);
     } else fprintf(stderr,"add_telepathy_entry warning: already created %s.%s\n",contact->handle,locationstr);
     return(tel);
 }
@@ -457,11 +458,11 @@ char *getdb(char *previpaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,int3
                 free(sp);
             } else sprintf(retbuf,"{\"requestType\":\"dbret\",\"error\":\"cant find key\",\"key\":\"%s\"}",keystr);
             if ( is_remote_access(previpaddr) != 0 )
-                send_to_ipaddr(previpaddr,retbuf,NXTACCTSECRET);
+                send_to_ipaddr(1,previpaddr,retbuf,NXTACCTSECRET);
             else if ( destip[0] != 0 )
             {
                 sprintf(retbuf,"{\"requestType\":\"getdb\",\"NXT\":\"%s\",\"key\":\"%s\"}",NXTaddr,keystr);
-                send_to_ipaddr(destip,retbuf,NXTACCTSECRET);
+                send_to_ipaddr(1,destip,retbuf,NXTACCTSECRET);
             }
             else if ( retbuf[0] == 0 )
                 sprintf(retbuf,"{\"result\":\"nodata\",\"key\":\"%s\"}",keystr);
