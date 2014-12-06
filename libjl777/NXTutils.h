@@ -340,9 +340,9 @@ uint64_t issue_transferAsset(char **retstrp,CURL *curl_handle,char *secret,char 
     sprintf(cmd,"%s=transferAsset&secretPhrase=%s&recipient=%s&asset=%s&quantityQNT=%lld&feeNQT=%lld&deadline=%d",_NXTSERVER,secret,recipient,asset,(long long)quantity,(long long)feeNQT,deadline);
     if ( comment != 0 )
     {
-        if ( Global_mp->NXTheight >= DGSBLOCK )
+        //if ( Global_mp->NXTheight >= DGSBLOCK )
             strcat(cmd,"&message=");
-        else strcat(cmd,"&comment=");
+        //else strcat(cmd,"&comment=");
         strcat(cmd,comment);
     }
     jsontxt = issue_NXTPOST(curl_handle,cmd);
@@ -420,6 +420,52 @@ cJSON *issue_getAccountInfo(CURL *curl_handle,int64_t *amountp,char *name,char *
     return(json);
 }
 
+char *issue_getAsset(CURL *curl_handle,char *assetidstr)
+{
+    char cmd[4096];
+    sprintf(cmd,"%s=getAsset&asset=%s",_NXTSERVER,assetidstr);
+    //printf("cmd.(%s)\n",cmd);
+    return(issue_NXTPOST(curl_handle,cmd));
+    //printf("calculated.(%s)\n",ret.str);
+}
+
+struct NXT_asset *init_asset(struct NXT_asset *ap,char *assetidstr)
+{
+    cJSON *json;
+    uint64_t mult = 1;
+    char *jsonstr,buf[4096];
+    int32_t i;
+    jsonstr = issue_getAsset(0,assetidstr);
+    if ( jsonstr != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            ap->decimals = (int32_t)get_cJSON_int(json,"decimals");
+            for (i=7-ap->decimals; i>=0; i--)
+                mult *= 10;
+            ap->mult = mult;
+            if ( extract_cJSON_str(buf,sizeof(buf),json,"quantityQNT") > 0 )
+                ap->issued = calc_nxt64bits(buf);
+            if ( extract_cJSON_str(buf,sizeof(buf),json,"account") > 0 )
+                ap->issuer = calc_nxt64bits(buf);
+            if ( extract_cJSON_str(buf,sizeof(buf),json,"description") > 0 )
+                ap->description = clonestr(buf);
+            if ( extract_cJSON_str(buf,sizeof(buf),json,"name") > 0 )
+            {
+                int32_t conv_coinstr(char *);
+                if ( tolower(buf[0]) == 'm' && tolower(buf[1]) == 'g' && tolower(buf[2]) == 'w' && conv_coinstr(buf+3) >= 0 )
+                    ap->name = clonestr(buf+3);
+                else ap->name = clonestr(buf);
+            }
+            free_json(json);
+        }
+        free(jsonstr);
+        //printf("init_asset(%s) decimals.%d mult.%ld\n",assetidstr,ap->decimals,(long)ap->mult);
+        return(ap);
+    }
+    printf("ERROR init_asset(%s)\n",assetidstr);
+    return(0);
+}
 
 struct NXT_asset *get_NXTasset(int32_t *createdp,struct NXThandler_info *mp,char *assetidstr)
 {
@@ -427,6 +473,7 @@ struct NXT_asset *get_NXTasset(int32_t *createdp,struct NXThandler_info *mp,char
     ap = MTadd_hashtable(createdp,mp->NXTassets_tablep,assetidstr);
     if ( *createdp != 0 )
     {
+        init_asset(ap,assetidstr);
         ap->assetbits = ap->H.nxt64bits = calc_nxt64bits(assetidstr);
     }
     return(ap);
@@ -584,6 +631,26 @@ char *issue_getTransaction(CURL *curl_handle,char *txidstr)
     return(issue_curl(curl_handle,cmd));
 }
 
+uint64_t get_sender(uint64_t *amountp,char *txidstr)
+{
+    cJSON *json,*attachobj;
+    char *jsonstr,numstr[1024];
+    uint64_t senderbits = 0;
+    jsonstr = issue_getTransaction(0,txidstr);
+    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+    {
+        copy_cJSON(numstr,cJSON_GetObjectItem(json,"sender"));
+        senderbits = calc_nxt64bits(numstr);
+        if ( (attachobj= cJSON_GetObjectItem(json,"quantityQNT")) != 0 )
+        {
+            copy_cJSON(numstr,cJSON_GetObjectItem(attachobj,"attachment"));
+            *amountp = calc_nxt64bits(numstr);
+        }
+        free_json(json);
+    }
+    return(senderbits);
+}
+
 uint64_t gen_randacct(char *randaddr)
 {
     char secret[33];
@@ -691,15 +758,6 @@ uint64_t *issue_getAssetIds(int32_t *nump)
     return(assetids);
 }
 
-char *issue_getAsset(CURL *curl_handle,char *assetidstr)
-{
-    char cmd[4096];
-    sprintf(cmd,"%s=getAsset&asset=%s",_NXTSERVER,assetidstr);
-    //printf("cmd.(%s)\n",cmd);
-    return(issue_NXTPOST(curl_handle,cmd));
-    //printf("calculated.(%s)\n",ret.str);
-}
-
 uint64_t get_asset_mult(uint64_t assetidbits)
 {
     cJSON *json;
@@ -762,7 +820,6 @@ uint64_t calc_assetoshis(uint64_t assetidbits,double amount)
     //printf("assetoshis.%llu\n",(long long)assetoshis);
     return(assetoshis);
 }
-
 
 double conv_assetoshis(uint64_t assetidbits,uint64_t assetoshis)
 {
@@ -910,11 +967,9 @@ char *submit_AM(CURL *curl_handle,char *recipient,struct NXT_AMhdr *ap,char *ref
         printf("issue_sendMessage illegal len %d\n",len);
         return(0);
     }
-    // jl777: here is where the entire message could be signed;
-   // printf("in submit_AM\n");
     memset(hexbytes,0,sizeof(hexbytes));
     init_hexbytes_truncate(hexbytes,(void *)ap,len);
-    sprintf(cmd,"%s=sendMessage&secretPhrase=%s&recipient=%s&message=%s&deadline=%u%s&feeNQT=%lld",_NXTSERVER,NXTACCTSECRET,recipient,hexbytes,deadline,reftxid!=0?reftxid:"",(long long)MIN_NQTFEE);
+    sprintf(cmd,"%s=sendMessage&secretPhrase=%s&recipient=%s&message=%s&deadline=%u%s&feeNQT=%lld&messageIsText=false",_NXTSERVER,NXTACCTSECRET,recipient,hexbytes,deadline,reftxid!=0?reftxid:"",(long long)MIN_NQTFEE);
     //printf("submit_AM.(%s)\n",cmd);
     jsonstr = issue_NXTPOST(curl_handle,cmd);
     printf("back from issue_NXTPOST.(%s) %p\n",jsonstr,curl_handle);
@@ -1107,6 +1162,38 @@ int32_t set_current_NXTblock(int32_t *isrescanp,CURL *curl_handle,char *blockids
     return(numblocks);
 }
 
+int32_t get_NXTblock(int32_t *timestampp)
+{
+    int32_t isrescan,numblocks = 0;
+    cJSON *scanjson,*json;
+    char cmd[256],scanstr[256],*retstr;
+    sprintf(cmd,"%s=getBlockchainStatus",_NXTSERVER);
+    isrescan = 0;
+    if ( (retstr = issue_NXTPOST(0,cmd)) != 0 )
+    {
+        //printf("get_NXTblock status.(%s)\n",retstr);
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            numblocks = (int32_t)get_cJSON_int(json,"numberOfBlocks");
+            if ( timestampp != 0 )
+                *timestampp = (int32_t)get_cJSON_int(json,"timestamp");
+            scanjson = cJSON_GetObjectItem(json,"isScanning");
+            if ( scanjson != 0 )
+            {
+                copy_cJSON(scanstr,scanjson);
+                if ( strcmp(scanstr,"true") == 0 )
+                    isrescan = 1;
+            }
+            free_json(json);
+        }
+        free(retstr);
+    }
+    //printf("isrescan.%d numblocks.%d\n",isrescan,numblocks);
+    if ( isrescan != 0 )
+        return(0);
+    return(numblocks - 1);
+}
+
 int32_t gen_randomacct(CURL *curl_handle,uint32_t randchars,char *NXTaddr,char *NXTsecret,char *randfilename)
 {
     uint32_t i,j,x,iter,bitwidth = 6;
@@ -1220,26 +1307,21 @@ struct NXT_acct *add_NXT_acct(char *NXTaddr,struct NXThandler_info *mp,cJSON *ob
     return(0);
 }
 
-struct NXT_assettxid *add_NXT_assettxid(struct NXT_asset **app,char *assetidstr,struct NXThandler_info *mp,cJSON *obj,char *txid,int32_t timestamp)
+struct NXT_assettxid *add_NXT_assettxid(struct NXT_asset **app,char *assetidstr,cJSON *obj,char *txid,int32_t timestamp)
 {
     int32_t createdflag;
     struct NXT_asset *ap;
     struct NXT_assettxid *tp;
     if ( obj != 0 )
         copy_cJSON(assetidstr,obj);
-    
-    // printf("add_NXT_assettxid A\n");
     *app = ap = get_NXTasset(&createdflag,Global_mp,assetidstr);
-    //printf("add_NXT_assettxid B\n");
-    tp = MTadd_hashtable(&createdflag,mp->NXTasset_txids_tablep,txid);
+    tp = MTadd_hashtable(&createdflag,Global_mp->NXTasset_txids_tablep,txid);
     if ( createdflag != 0 )
     {
         tp->assetbits = ap->assetbits;
         tp->txidbits = calc_nxt64bits(txid);
         tp->timestamp = timestamp;
-        printf("%d) %s t%d %s txid.%s\n",ap->num,ap->name,timestamp,assetidstr,txid);
-        //if ( strcmp(ap->name,"MGW") == 0 && ap->num == 125 )
-        //    while ( 1 ) sleep(1);
+        //printf("%d) %s t%d %s txid.%s\n",ap->num,ap->name,timestamp,assetidstr,txid);
         if ( ap->num >= ap->max )
         {
             ap->max = ap->num + NXT_ASSETLIST_INCR;
@@ -1310,7 +1392,7 @@ struct NXT_assettxid *update_assettxid_list(char *sender,char *receiver,char *as
     struct NXT_acct *np;
     struct NXT_asset *ap;
     struct NXT_assettxid *tp;
-    tp = add_NXT_assettxid(&ap,assetidstr,Global_mp,0,txid,timestamp);
+    tp = add_NXT_assettxid(&ap,assetidstr,0,txid,timestamp);
     if ( tp != 0 )
     {
         tp->receiverbits = calc_nxt64bits(receiver);
@@ -1337,6 +1419,52 @@ struct NXT_assettxid *update_assettxid_list(char *sender,char *receiver,char *as
     return(tp);
 }
 
+struct acct_coin *find_NXT_coininfo(struct NXT_acct **npp,uint64_t nxt64bits,char *coinstr)
+{
+    char NXTaddr[64];
+    struct NXT_acct *np;
+    int32_t i,createdflag;
+    expand_nxt64bits(NXTaddr,nxt64bits);
+    np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
+    if ( npp != 0 )
+        (*npp) = np;
+    if ( np->numcoins > 0 )
+    {
+        for (i=0; i<np->numcoins; i++)
+            if ( np->coins[i] != 0 && strcmp(np->coins[i]->name,coinstr) == 0 )
+                return(np->coins[i]);
+    }
+    return(0);
+}
+
+struct acct_coin *get_NXT_coininfo(char *acctcoinaddr,char *pubkey,uint64_t nxt64bits,char *coinstr)
+{
+    struct acct_coin *acp = 0;
+    acctcoinaddr[0] = pubkey[0] = 0;
+    if ( (acp= find_NXT_coininfo(0,nxt64bits,coinstr)) != 0 )
+    {
+        if ( acp->pubkey != 0 )
+            strcpy(pubkey,acp->pubkey);
+        if ( acp->acctcoinaddr != 0 )
+            strcpy(acctcoinaddr,acp->acctcoinaddr);
+    }
+    return(acp);
+}
+
+void add_NXT_coininfo(uint64_t nxt64bits,char *coinstr,char *acctcoinaddr,char *pubkey)
+{
+    struct NXT_acct *np;
+    struct acct_coin *acp;
+    if ( (acp= find_NXT_coininfo(&np,nxt64bits,coinstr)) == 0 )
+    {
+        np->coins[np->numcoins++] = acp = calloc(1,sizeof(*acp));
+        safecopy(acp->name,coinstr,sizeof(acp->name));
+    }
+    printf("ADDCOININFO.(%s %s) for %llu\n",acctcoinaddr,pubkey,(long long)nxt64bits);
+    acp->pubkey = clonestr(pubkey);
+    acp->acctcoinaddr = clonestr(acctcoinaddr);
+}
+
 void calc_NXTcointxid(char *NXTcointxid,char *cointxid,int32_t vout)
 {
     uint64_t hashval;
@@ -1346,39 +1474,6 @@ void calc_NXTcointxid(char *NXTcointxid,char *cointxid,int32_t vout)
     else hashval ^= (1L << vout);
     expand_nxt64bits(NXTcointxid,hashval);
 }
-
-#ifdef BTC_COINID
-struct NXT_assettxid *search_cointxid(int32_t coinid,char *NXTaddr,char *cointxid,int32_t vout)
-{
-    char *assetid_str();
-    char NXTcointxid[64];
-    int32_t createdflag,ind,i,n;
-    struct NXT_acct *np;
-    struct NXT_asset *ap;
-    struct NXT_assettxid **txids,*tp;
-    if ( cointxid[0] == 0 || NXTaddr[0] == 0 )
-    {
-        printf("search_cointxid: cointxid.(%s) vout.%d NXT.%s\n",cointxid,vout,NXTaddr);
-        return(0);
-    }
-    calc_NXTcointxid(NXTcointxid,cointxid,vout);
-    np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
-    ap = get_NXTasset(&createdflag,Global_mp,assetid_str(coinid));
-    ind = get_asset_in_acct(np,ap,0);
-    if ( ind >= 0 )
-    {
-        txids = np->txlists[ind]->txids;
-        n = np->txlists[ind]->num;
-        for (i=0; i<n; i++)
-        {
-            tp = txids[i];
-            if ( strcmp(tp->H.txid,NXTcointxid) == 0 )
-                return(tp);
-        }
-    }
-    return(0);
-}
-#endif
 
 int32_t construct_tokenized_req(char *tokenized,char *cmdjson,char *NXTACCTSECRET)
 {
@@ -1444,7 +1539,7 @@ struct sockaddr_in conv_ipbits(uint32_t ipbits,int32_t port)
 char *conv_ipv6(char *ipv6addr)
 {
     static unsigned char IPV4CHECK[10]; // 80 ZERO BITS for testing
-    char ipv4str[64];
+    char ipv4str[4096];
     struct sockaddr_in6 ipv6sa;
     in_addr_t *ipv4bin;
     unsigned char *bytes;
@@ -1762,23 +1857,6 @@ int32_t is_valid_NXTtxid(char *txid)
     return(1);
 }
 
-void ensure_directory(char *dirname) // jl777: does this work in windows?
-{
-    FILE *fp;
-    char fname[512],cmd[512];
-    sprintf(fname,"%s/tmp",dirname);
-    if ( (fp= fopen(fname,"rb")) == 0 )
-    {
-        sprintf(cmd,"mkdir %s",dirname);
-        if ( system(cmd) != 0 )
-            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
-        fp = fopen(fname,"wb");
-        if ( fp != 0 )
-            fclose(fp);
-    }
-    else fclose(fp);
-}
-
 int32_t gen_tokenjson(CURL *curl_handle,char *jsonstr,char *NXTaddr,long nonce,char *NXTACCTSECRET,char *ipaddr,uint32_t port)
 {
     int32_t createdflag;
@@ -1898,6 +1976,8 @@ char *verify_tokenized_json(unsigned char *pubkey,char *sender,int32_t *validp,c
     {
         parmsobj = cJSON_GetArrayItem(json,0);
         copy_cJSON(NXTaddr,cJSON_GetObjectItem(parmsobj,"NXT"));
+        if ( NXTaddr[0] == 0 )
+            copy_cJSON(NXTaddr,cJSON_GetObjectItem(parmsobj,"sender"));
         secondobj = cJSON_GetArrayItem(json,1);
         tokenobj = cJSON_GetObjectItem(secondobj,"token");
         copy_cJSON((char *)encoded,tokenobj);
@@ -1932,6 +2012,60 @@ char *verify_tokenized_json(unsigned char *pubkey,char *sender,int32_t *validp,c
     }
     return(0);
 }
+
+void ensure_directory(char *dirname) // jl777: does this work in windows?
+{
+    FILE *fp;
+    char fname[512],cmd[512];
+    sprintf(fname,"%s/tmp",dirname);
+    if ( (fp= fopen(fname,"rb")) == 0 )
+    {
+        sprintf(cmd,"mkdir %s",dirname);
+        if ( system(cmd) != 0 )
+            printf("error making subdirectory (%s) %s (%s)\n",cmd,dirname,fname);
+        fp = fopen(fname,"wb");
+        if ( fp != 0 )
+            fclose(fp);
+    }
+    else fclose(fp);
+}
+
+void copy_file(char *src,char *dest) // OS portable
+{
+    int c;
+    FILE *srcfp,*destfp;
+    if ( (srcfp= fopen(src,"rb")) != 0 )
+    {
+        if ( (destfp= fopen(dest,"wb")) != 0 )
+        {
+            while ( (c= fgetc(srcfp)) != EOF )
+                fputc(c,destfp);
+            fclose(destfp);
+        }
+        fclose(srcfp);
+    }
+}
+
+void delete_file(char *fname) // OS portable
+{
+    int c = 0;
+    FILE *fp;
+    long i,fpos;
+    if ( (fp= fopen(fname,"rb+")) != 0 )
+    {
+        fseek(fp,0,SEEK_END);
+        fpos = ftell(fp);
+        rewind(fp);
+        for (i=0; i<fpos; i++)
+            fputc(c,fp);
+        fflush(fp);
+        fclose(fp);
+    }
+    if ( (fp= fopen(fname,"wb")) != 0 )
+        fclose(fp);
+}
+
+#ifdef oldway
 
 int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr)
 {
@@ -1973,38 +2107,210 @@ int64_t get_asset_quantity(int64_t *unconfirmedp,char *NXTaddr,char *assetidstr)
     return(quantity);
 }
 
-void copy_file(char *src,char *dest) // OS portable
+void **addto_listptr(int32_t *nump,void **list,void *ptr)
 {
-    int c;
-    FILE *srcfp,*destfp;
-    if ( (srcfp= fopen(src,"rb")) != 0 )
+    int32_t i,n = *nump;
+    for (i=0; i<n; i++)
     {
-        if ( (destfp= fopen(dest,"wb")) != 0 )
-        {
-            while ( (c= fgetc(srcfp)) != EOF )
-                fputc(c,destfp);
-            fclose(destfp);
-        }
-        fclose(srcfp);
+        if ( list[i] == ptr )
+            return(list);
     }
+    list = realloc(list,sizeof(*list) * (n+1));
+    list[n++] = ptr;
+    *nump = n;
+    return(list);
 }
 
-void delete_file(char *fname) // OS portable
+struct NXT_acct **clear_workingvars(struct NXT_acct **accts,int32_t *nump,char *sender,char *receiver)
 {
-    int c = 0;
-    FILE *fp;
-    long i,fpos;
-    if ( (fp= fopen(fname,"rb+")) != 0 )
+    int32_t createdflag;
+    struct NXT_acct *seller,*buyer;
+    if ( sender != 0 )
     {
-        fseek(fp,0,SEEK_END);
-        fpos = ftell(fp);
-        rewind(fp);
-        for (i=0; i<fpos; i++)
-            fputc(c,fp);
-        fflush(fp);
-        fclose(fp);
+        seller = get_NXTacct(&createdflag,Global_mp,sender);
+        seller->quantity = seller->buysum = seller->buyqty = seller->sellsum = seller->sellqty = 0;
+        if ( nump != 0 )
+            accts = (struct NXT_acct **)addto_listptr(nump,(void **)accts,seller);
     }
-    if ( (fp= fopen(fname,"wb")) != 0 )
-        fclose(fp);
+    if ( receiver != 0 )
+    {
+        buyer = get_NXTacct(&createdflag,Global_mp,receiver);
+        buyer->quantity = buyer->buysum = buyer->buyqty = buyer->sellsum = buyer->sellqty = 0;
+        if ( nump != 0 )
+            accts = (struct NXT_acct **)addto_listptr(nump,(void **)accts,buyer);
+        
+    }
+    return(accts);
 }
+
+cJSON *update_workingvars(struct NXT_acct *seller,struct NXT_acct *buyer,struct NXT_assettxid *txid,uint64_t ap_mult)
+{
+    cJSON *json,*commentobj;
+    double dir = 1.;
+    char numstr[1024];
+    json = cJSON_CreateObject();
+    if ( seller != 0 )
+        seller->quantity -= txid->quantity;
+    if ( buyer != 0 )
+        buyer->quantity += txid->quantity;
+    if ( seller != 0 && buyer == 0 )
+        dir = -1.;
+    if ( txid->quantity != 0 && txid->U.price > 0 )
+    {
+        if ( buyer != 0 )
+        {
+            buyer->buyqty += txid->quantity;
+            buyer->buysum += txid->quantity*txid->U.price;
+        }
+        if ( seller != 0 )
+        {
+            seller->sellqty += txid->quantity;
+            seller->sellsum += txid->quantity*txid->U.price;
+        }
+        if ( buyer != 0 && seller != 0 )
+        {
+            cJSON_AddItemToObject(json,"seller",cJSON_CreateString(seller->H.U.NXTaddr));
+            cJSON_AddItemToObject(json,"buyer",cJSON_CreateString(buyer->H.U.NXTaddr));
+        }
+        sprintf(numstr,"%.8f",dstr(txid->U.price));
+        cJSON_AddItemToObject(json,"price",cJSON_CreateString(numstr));
+    }
+    else
+    {
+        //printf("buyer.%p seller.%p\n",buyer,seller);
+        if ( buyer != 0 && seller != 0 )
+        {
+            if ( txid->comment == 0 )
+                commentobj = 0;
+            else commentobj = cJSON_Parse(txid->comment);
+            if ( strcmp(seller->H.U.NXTaddr,NXTISSUERACCT) == 0 )
+            {
+                if ( txid->quantity != 0 )
+                    cJSON_AddItemToObject(json,"MGW transfer",commentobj);
+                else
+                {
+                    cJSON_AddItemToObject(json,"MGW deposit",commentobj);
+                    cJSON_AddItemToObject(json,"assetoshis",cJSON_CreateNumber(txid->U.assetoshis));
+                }
+                if ( txid->cointxid != 0 )
+                    cJSON_AddItemToObject(json,"MGW cointxid",cJSON_CreateString(txid->cointxid));
+            }
+            else if ( strcmp(buyer->H.U.NXTaddr,NXTISSUERACCT) == 0 || strcmp(buyer->H.U.NXTaddr,seller->H.U.NXTaddr) == 0 )
+            {
+                if ( txid->quantity != 0 )
+                {
+                    if ( txid->completed == 0 )
+                        txid->completed = MGW_PENDING_WITHDRAW;
+                    cJSON_AddItemToObject(json,"MGW withdraw",commentobj);
+                }
+                else
+                {
+                    cJSON_AddItemToObject(json,"seller",cJSON_CreateString(seller->H.U.NXTaddr));
+                    cJSON_AddItemToObject(json,"buyer",cJSON_CreateString(buyer->H.U.NXTaddr));
+                    if ( txid->cointxid != 0 )
+                    {
+                        sprintf(numstr,"%llu",(long long)txid->redeemtxid);
+                        cJSON_AddItemToObject(json,"MGW redeem",cJSON_CreateString(numstr));
+                        cJSON_AddItemToObject(json,"cointxid",cJSON_CreateString(txid->cointxid));
+                        sprintf(numstr,"%.8f",dstr(txid->U.price));
+                        cJSON_AddItemToObject(json,"price",cJSON_CreateString(numstr));
+                    }
+                }
+            }
+        }
+    }
+    sprintf(numstr,"%.8f",dir * dstr(txid->quantity * ap_mult));
+    cJSON_AddItemToObject(json,"qty",cJSON_CreateString(numstr));
+    if ( txid->timestamp != 0 )
+        cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(txid->timestamp));
+    if ( txid->completed == MGW_PENDING_WITHDRAW )
+    {
+        cJSON_AddItemToObject(json,"redeemtxid",cJSON_CreateString(txid->H.U.txid));
+        txid->redeemtxid = calc_nxt64bits(txid->H.U.txid);
+    }
+    else cJSON_AddItemToObject(json,"txid",cJSON_CreateString(txid->H.U.txid));
+    cJSON_AddItemToObject(json,"completed",cJSON_CreateNumber(txid->completed));
+    //printf("%d) %-12s t%-8d NXT.%-21s %16.8f -> NXT.%-21s %16.8f %16.8f @ %13.8f\n",i,ap->name,txid->timestamp,sender,dstr(seller->quantity)*ap->mult,receiver,dstr(buyer->quantity)*ap->mult,dstr(txid->quantity)*ap->mult,dstr(txid->price));
+    return(json);
+}
+
+struct NXT_acct **get_assetaccts(int32_t *nump,char *assetidstr,int32_t maxtimestamp)
+{
+    struct NXT_acct **accts = 0;
+    int32_t n = 0;
+    cJSON *tmp;
+    int32_t i,iter,createdflag;
+    char sender[1024],receiver[1024];
+    struct NXT_acct *seller,*buyer;
+    struct NXT_asset *ap;
+    struct NXT_assettxid *txid;
+    *nump = 0;
+    if ( assetidstr == 0 || assetidstr[0] == 0 || strcmp(assetidstr,ILLEGAL_COINASSET) == 0 || strcmp(assetidstr,NXT_COINASSET) == 0 )
+        return(0);
+    printf("maxtime.%d emit ownership percentages of %s\n",maxtimestamp,assetidstr);
+    if ( maxtimestamp <= 0 )
+        maxtimestamp = (1 << 30);
+    ap = MTadd_hashtable(&createdflag,Global_mp->NXTassets_tablep,assetidstr);
+    if ( createdflag == 0 )
+    {
+        //printf("maxtime.%d Numtransfers.%d num.%d emit ownership percentages of %s %s from %d txid\n",maxtimestamp,Numtransfers,ap->num,ap->name,assetidstr,ap->num);
+        for (iter=0; iter<2; iter++)
+            for (i=0; i<ap->num; i++)
+            {
+                txid = ap->txids[i];
+                if ( txid->timestamp <= maxtimestamp )
+                {
+                    expand_nxt64bits(sender,txid->senderbits);
+                    expand_nxt64bits(receiver,txid->receiverbits);
+                    seller = get_NXTacct(&createdflag,Global_mp,sender);
+                    buyer = get_NXTacct(&createdflag,Global_mp,receiver);
+                    if ( iter == 0 )
+                        accts = clear_workingvars(accts,&n,sender,receiver);
+                    else
+                    {
+                        tmp = update_workingvars(seller,buyer,txid,ap->mult);
+                        if ( tmp != 0 )
+                            free_json(tmp);
+                    }
+                }
+            }
+    }
+    *nump = n;
+    return(accts);
+}
+
+#ifdef BTC_COINID
+struct NXT_assettxid *search_cointxid(int32_t coinid,char *NXTaddr,char *cointxid,int32_t vout)
+{
+    char *assetid_str();
+    char NXTcointxid[64];
+    int32_t createdflag,ind,i,n;
+    struct NXT_acct *np;
+    struct NXT_asset *ap;
+    struct NXT_assettxid **txids,*tp;
+    if ( cointxid[0] == 0 || NXTaddr[0] == 0 )
+    {
+        printf("search_cointxid: cointxid.(%s) vout.%d NXT.%s\n",cointxid,vout,NXTaddr);
+        return(0);
+    }
+    calc_NXTcointxid(NXTcointxid,cointxid,vout);
+    np = get_NXTacct(&createdflag,Global_mp,NXTaddr);
+    ap = get_NXTasset(&createdflag,Global_mp,assetid_str(coinid));
+    ind = get_asset_in_acct(np,ap,0);
+    if ( ind >= 0 )
+    {
+        txids = np->txlists[ind]->txids;
+        n = np->txlists[ind]->num;
+        for (i=0; i<n; i++)
+        {
+            tp = txids[i];
+            if ( strcmp(tp->H.txid,NXTcointxid) == 0 )
+                return(tp);
+        }
+    }
+    return(0);
+}
+#endif
+#endif
+
 #endif

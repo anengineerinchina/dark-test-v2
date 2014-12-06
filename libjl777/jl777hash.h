@@ -195,8 +195,8 @@ void **hashtable_gather_modified(int64_t *changedp,struct hashtable *hp,int32_t 
     void *ptr,**list = 0;
     if ( hp == 0 )
         return(0);
-    while ( Global_mp->hashprocessing != 0 )
-        usleep(100);
+    //while ( Global_mp->hashprocessing != 0 )
+    //    usleep(100);
     Global_mp->hashprocessing++;
     for (i=0; i<hp->hashsize; i++)
     {
@@ -339,7 +339,7 @@ void *MTadd_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key)
     struct hashpacket *ptr;
     if ( key == 0 || key[0] == 0 || hp_ptr == 0 || *hp_ptr == 0  || strlen(key) >= (*hp_ptr)->keysize )
     {
-        printf("MTadd_hashtable illegal key?? (%s)\n",key);
+        printf("MTadd_hashtable. illegal key?? (%s)\n",key);
 #ifdef __APPLE__
         //while ( 1 )
        //     sleep(1);
@@ -350,8 +350,8 @@ void *MTadd_hashtable(int32_t *createdflagp,struct hashtable **hp_ptr,char *key)
     ptr->hp_ptr = hp_ptr;
     ptr->key = key;
     ptr->funcid = 'A';
-    while ( Global_mp->hashprocessing != 0 )
-        usleep(1);
+    //while ( Global_mp->hashprocessing != 0 )
+    //    usleep(1);
     Global_mp->hashprocessing++;
     queue_enqueue(&Global_mp->hashtable_queue[1],ptr);
     usleep(1);
@@ -371,8 +371,8 @@ uint64_t MTsearch_hashtable(struct hashtable **hp_ptr,char *key)
     ptr->hp_ptr = hp_ptr;
     ptr->key = key;
     ptr->funcid = 'S';
-    while ( Global_mp->hashprocessing != 0 )
-        usleep(1);
+    //while ( Global_mp->hashprocessing != 0 )
+    //    usleep(1);
     Global_mp->hashprocessing++;
     queue_enqueue(&Global_mp->hashtable_queue[0],ptr);
     usleep(1);

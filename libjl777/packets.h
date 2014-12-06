@@ -265,7 +265,6 @@ int32_t prep_outbuf(uint8_t *outbuf,char *msg,int32_t msglen,uint8_t *data,int32
     return(len);
 }
 
-// I will add support in sendmsg so you can send to NXT addr (numerical/RS), contact handle, IP addr, maybe even NXT alias
 char *sendmessage(char *hopNXTaddr,int32_t L,char *verifiedNXTaddr,char *msg,int32_t msglen,char *destNXTaddr,unsigned char *data,int32_t datalen)
 {
     uint64_t txid;
@@ -513,7 +512,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                     {
                         if ( strcmp("ping",checkstr) == 0 && internalflag == 0 && dontupdate == 0 )
                             update_routing_probs(tokenized_np->H.U.NXTaddr,1,udp == 0,&tokenized_np->stats,nxtip,nxtport,pubkey);
-                        if ( strcmp("ping",checkstr) == 0 || strcmp("getdb",checkstr) == 0 )
+                        if ( strcmp("ping",checkstr) == 0 || strcmp("getdb",checkstr) == 0 || strcmp("genmultisig",checkstr) == 0 || strcmp("MGWaddr",checkstr) == 0 )
                             strcpy(checkstr,"valid");
                     }
                     else
@@ -548,7 +547,7 @@ struct NXT_acct *process_packet(int32_t internalflag,char *retjsonstr,unsigned c
                         if ( prevaddr != 0 )
                             extract_nameport(previpaddr,sizeof(previpaddr),(struct sockaddr_in *)prevaddr);
                         else previpaddr[0] = 0;
-                        //fprintf(stderr,"GOT.(%s) np.%p\n",parmstxt,tokenized_np);
+                        //fprintf(stderr,"GOT.(%s) decoded.%p (%s)\n",parmstxt,decoded,decoded);
                         if ( 1 )
                         {
                             qp = calloc(1,sizeof(*qp));

@@ -16,9 +16,17 @@ struct contact_info *find_handle(char *handle)
     return((struct contact_info *)find_storage(CONTACT_DATA,handle,0));
 }
 
+void update_contact_info(struct contact_info *contact)
+{
+    //printf("update_contact_info %p (%s)\n",contact,contact->handle);
+    if ( contact->H.size == 0 )
+        contact->H.size = sizeof(*contact);
+    update_storage(&SuperNET_dbs[CONTACT_DATA],contact->handle,&contact->H);
+}
+
 struct contact_info *find_contact_nxt64bits(uint64_t nxt64bits)
 {
-    struct contact_info **contacts,*contact,*retcontract = 0;
+    struct contact_info **contacts,*contact,*retcontact = 0;
     int32_t i,numcontacts;
     contacts = (struct contact_info **)copy_all_DBentries(&numcontacts,CONTACT_DATA);
     if ( contacts == 0 )
@@ -28,22 +36,21 @@ struct contact_info *find_contact_nxt64bits(uint64_t nxt64bits)
         contact = contacts[i];
         if ( contact->nxt64bits == nxt64bits )
         {
-            if ( retcontract != 0 )
-                free(retcontract);
-            retcontract = contact;
+            if ( retcontact != 0 )
+                free(retcontact);
+            retcontact = contact;
         }
         else free(contacts[i]);
     }
     free(contacts);
-    return(retcontract);
-}
-
-void update_contact_info(struct contact_info *contact)
-{
-    //printf("update_contact_info %p (%s)\n",contact,contact->handle);
-    if ( contact->H.size == 0 )
-        contact->H.size = sizeof(*contact);
-    update_storage(&SuperNET_dbs[CONTACT_DATA],contact->handle,&contact->H);
+    if ( retcontact == 0 )
+    {
+        retcontact = calloc(1,sizeof(*contact));
+        retcontact->nxt64bits = nxt64bits;
+        expand_nxt64bits(retcontact->handle,nxt64bits);
+        update_contact_info(retcontact);
+    }
+    return(retcontact);
 }
 
 uint64_t conv_acctstr(char *acctstr)
@@ -70,6 +77,38 @@ struct contact_info *find_contact(char *contactstr)
             contact = find_contact_nxt64bits(nxt64bits);
     }
     return(contact);
+}
+
+struct contact_info **conv_contacts_json(int32_t *nump,cJSON *array)
+{
+    int32_t i,j,n;
+    char contactstr[MAX_JSON_FIELD];
+    struct contact_info *contact,**contacts = 0;
+    cJSON *item;
+    *nump = 0;
+    if ( array == 0 || is_cJSON_Array(array) == 0 || (n= cJSON_GetArraySize(array)) <= 0 )
+        return(0);
+    contacts = calloc(n+1,sizeof(*contacts));
+    for (i=j=0; i<n; i++)
+    {
+        item = cJSON_GetArrayItem(array,i);
+        copy_cJSON(contactstr,item);
+        if ( contactstr[0] > 0 )
+        {
+            if ( (contact= find_contact(contactstr)) != 0 )
+            {
+                if ( contact->nxt64bits != 0 )
+                    contacts[j++] = contact;
+                //free(contact);
+            }
+        }
+    }
+    if ( (*nump= j) == 0 )
+    {
+        free(contacts);
+        contacts = 0;
+    }
+    return(contacts);
 }
 
 char *removecontact(char *previpaddr,char *NXTaddr,char *NXTACCTSECRET,char *sender,char *handle)

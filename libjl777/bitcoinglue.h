@@ -9,25 +9,24 @@
 #ifndef xcode_bitcoinglue_h
 #define xcode_bitcoinglue_h
 
-
-struct coin_value *conv_telepod(struct telepod *pod)
+struct coin_txidind *conv_telepod(struct telepod *pod)
 {
-    struct coin_value *vp;
+    struct coin_txidind *vp;
     vp = calloc(1,sizeof(*vp));
     vp->value = pod->satoshis;
-    vp->txid = pod->txid;
-    vp->parent_vout = pod->vout;
+    safecopy(vp->txid,pod->txid,sizeof(vp->txid));
+    vp->entry.v = pod->vout;
     safecopy(vp->coinaddr,pod->coinaddr,sizeof(vp->coinaddr));
-    vp->U.script = clonestr(pod->script);
+    vp->script = clonestr(pod->script);
     return(vp);
 }
 
-void free_coin_value(struct coin_value *vp)
+void free_coin_txidind(struct coin_txidind *vp)
 {
     if ( vp != 0 )
     {
-        if ( vp->U.script != 0 )
-            free(vp->U.script);
+        if ( vp->script != 0 )
+            free(vp->script);
         free(vp);
     }
 }
@@ -41,7 +40,7 @@ void purge_rawtransaction(struct rawtransaction *raw)
         free(raw->signedtx);
     for (i=0; i<raw->numinputs; i++)
         if ( raw->inputs[i] != 0 )
-            free_coin_value(raw->inputs[i]);
+            free_coin_txidind(raw->inputs[i]);
 }
 
 char *get_telepod_privkey(char **podaddrp,char *pubkey,struct coin_info *cp)
@@ -54,7 +53,7 @@ char *get_telepod_privkey(char **podaddrp,char *pubkey,struct coin_info *cp)
     (*podaddrp) = podaddr;
     if ( podaddr != 0 )
     {
-        sprintf(args,"\"%s\"",podaddr);
+        sprintf(args,"[\"%s\"]",podaddr);
         privkey = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"dumpprivkey",args);
         //fprintf(stderr,"got podaddr.(%s) privkey.%p\n",podaddr,privkey);
         if ( privkey != 0 )
@@ -76,37 +75,58 @@ char *get_telepod_privkey(char **podaddrp,char *pubkey,struct coin_info *cp)
     return(privkey);
 }
 
-cJSON *create_privkeys_json_params(struct coin_info *cp,char **privkeys,int32_t numinputs)
+cJSON *create_privkeys_json_params(struct coin_info *cp,struct rawtransaction *rp,char **privkeys,int32_t numinputs)
 {
-    int32_t i,nonz = 0;
+    int32_t allocflag,i,nonz = 0;
     cJSON *array;
+    char args[1024];
+    printf("create privkeys %p numinputs.%d\n",privkeys,numinputs);
+    if ( privkeys == 0 )
+    {
+        privkeys = calloc(numinputs,sizeof(*privkeys));
+        for (i=0; i<numinputs; i++)
+        {
+            sprintf(args,"[\"%s\"]",rp->inputs[i]->coinaddr);
+            fprintf(stderr,"(%s).%d ",rp->inputs[i]->coinaddr,i);
+            privkeys[i] = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"dumpprivkey",args);
+        }
+        allocflag = 1;
+        fprintf(stderr,"allocated\n");
+    } else allocflag = 0;
     array = cJSON_CreateArray();
     for (i=0; i<numinputs; i++)
     {
         if ( cp != 0 && privkeys[i] != 0 )
         {
             nonz++;
-            //printf("%s ",localcoinaddrs[i]);
+            printf("(%s %s) ",privkeys[i],rp->inputs[i]->coinaddr);
             cJSON_AddItemToArray(array,cJSON_CreateString(privkeys[i]));
         }
     }
     if ( nonz == 0 )
         free_json(array), array = 0;
-    //else printf("privkeys.%d of %d: %s\n",nonz,numinputs,cJSON_Print(array));
+    else printf("privkeys.%d of %d: %s\n",nonz,numinputs,cJSON_Print(array));
+    if ( allocflag != 0 )
+    {
+        for (i=0; i<numinputs; i++)
+            if ( privkeys[i] != 0 )
+                free(privkeys[i]);
+        free(privkeys);
+    }
     return(array);
 }
 
 char *createsignraw_json_params(struct coin_info *cp,struct rawtransaction *rp,char *rawbytes,char **privkeys)
 {
     char *paramstr = 0;
-    cJSON *array,*rawobj,*vinsobj,*keysobj;
+    cJSON *array,*rawobj,*vinsobj=0,*keysobj=0;
     rawobj = cJSON_CreateString(rawbytes);
     if ( rawobj != 0 )
     {
         vinsobj = create_vins_json_params(0,cp,rp);
         if ( vinsobj != 0 )
         {
-            keysobj = create_privkeys_json_params(cp,privkeys,rp->numinputs);
+            keysobj = create_privkeys_json_params(cp,rp,privkeys,rp->numinputs);
             if ( keysobj != 0 )
             {
                 array = cJSON_CreateArray();
@@ -119,6 +139,7 @@ char *createsignraw_json_params(struct coin_info *cp,struct rawtransaction *rp,c
             else free_json(vinsobj);
         }
         else free_json(rawobj);
+        printf("vinsobj.%p keysobj.%p rawobj.%p\n",vinsobj,keysobj,rawobj);
     }
     return(paramstr);
 }
@@ -145,16 +166,6 @@ char *createrawtxid_json_params(struct coin_info *cp,struct rawtransaction *rp)
     return(paramstr);
 }
 
-int32_t is_limbotx(char *txid)
-{
-    return(0);
-    if ( strcmp(txid,"d768035999fe7d92bb55581530789ab68fc93d352264e14ad755ea247e2471c0") == 0 )
-        return(1);
-    if ( strcmp(txid,"211d78e93255395dc9272afa759f8ab9905f9eb7b3bb9224fd99e16338a622c6") == 0 )
-        return(1);
-    return(0);
-}
-
 struct telepod *parse_unspent_json(struct coin_info *cp,cJSON *json)
 {
     struct telepod *create_telepod(uint32_t createtime,char *coinstr,uint64_t satoshis,char *podaddr,char *script,char *privkey,char *txid,int32_t vout);
@@ -166,8 +177,8 @@ struct telepod *parse_unspent_json(struct coin_info *cp,cJSON *json)
     M = N = 1;
     memset(sharenrs,0,sizeof(sharenrs));
     copy_cJSON(txid,cJSON_GetObjectItem(json,"txid"));
-    if ( is_limbotx(txid) != 0 )
-        return(0);
+    //if ( is_limbotx(txid) != 0 )
+     //   return(0);
     copy_cJSON(podaddr,cJSON_GetObjectItem(json,"address"));
     copy_cJSON(script,cJSON_GetObjectItem(json,"scriptPubKey"));
     amount = (uint64_t)(SATOSHIDEN * get_API_float(cJSON_GetObjectItem(json,"amount")));
@@ -270,7 +281,7 @@ int32_t sign_rawtransaction(char *deststr,unsigned long destsize,struct coin_inf
     int32_t completed = -1;
     char *retstr,*signparams;
     deststr[0] = 0;
-    printf("sign_rawtransaction rawbytes.(%s)\n",rawbytes);
+    printf("sign_rawtransaction rawbytes.(%s) %p\n",rawbytes,privkeys);
     signparams = createsignraw_json_params(cp,rp,rawbytes,privkeys);
     if ( signparams != 0 )
     {
@@ -298,6 +309,56 @@ int32_t sign_rawtransaction(char *deststr,unsigned long destsize,struct coin_inf
         //free(signparams);
     } else printf("error generating signparams\n");
     return(completed);
+}
+
+char *submit_withdraw(struct coin_info *cp,struct batch_info *wp,struct batch_info *otherwp)
+{
+    FILE *fp;
+    long len;
+    int32_t i,retval = 0;//createdflag
+    char fname[512],cointxid[4096],*signed2transaction,*retstr;
+    //struct coin_txidind *tp;
+    struct rawtransaction *rp = &wp->rawtx;
+    if ( cp == 0 )
+        return(0);
+    
+    len = strlen(otherwp->rawtx.batchsigned);
+    fprintf(stderr,"submit_withdraw len.%ld\n",len);
+    signed2transaction = calloc(1,2*len);
+    if ( Global_mp->gatewayid >= 0 && (retval=sign_rawtransaction(signed2transaction+2,len+4000,cp,rp,otherwp->rawtx.batchsigned,0)) > 0 )
+    {
+        signed2transaction[0] = '[';
+        signed2transaction[1] = '"';
+        strcat(signed2transaction,"\"]");
+        //printf("sign2.(%s)\n",signed2transaction);
+        retstr = bitcoind_RPC(0,cp->name,cp->serverport,cp->userpass,"sendrawtransaction",signed2transaction);
+        if ( retstr != 0 )
+        {
+            //printf("got submitraw.(%s)\n",cointxid);
+            safecopy(cointxid,retstr,sizeof(cointxid));
+            free(retstr);
+            if ( cointxid[0] != 0 )
+            {
+                sprintf(fname,"%s/%s",cp->backupdir,cointxid);
+                if ( (fp= fopen(fname,"w")) != 0 )
+                {
+                    fprintf(fp,"%s\n",signed2transaction);
+                    fclose(fp);
+                    printf("wrote.(%s) to file.(%s)\n",signed2transaction,fname);
+                }
+                //tp = MTadd_hashtable(&createdflag,Global_mp->coin_txids,cointxid);
+                //if ( createdflag != 0 )
+                //    tp->hasinternal = 1;
+                else printf("unexpected %s cointxid.%s already there before submit??\n",cp->name,cointxid);
+                printf("rawtxid len.%ld submitted.%s\n",strlen(signed2transaction),cointxid);
+                for (i=0; i<wp->rawtx.numinputs; i++)
+                    ((struct coin_txidind *)wp->rawtx.inputs[i])->entry.spent = 1;
+                return(clonestr(cointxid));
+            } else printf("error null cointxid\n");
+        } else printf("error submit raw.%s\n",signed2transaction);
+    } else printf("error 2nd sign.%s retval.%d\n",otherwp->rawtx.batchsigned,retval);
+    free(signed2transaction);
+    return(0);
 }
 
 uint64_t listunspent(struct telepod *inputpods[MAX_COIN_INPUTS],struct coin_info *cp,int32_t minconfirms,char *coinaddr)
@@ -396,8 +457,8 @@ uint64_t check_txid(uint32_t *createtimep,struct coin_info *cp,int32_t minconfir
                     {
                         copy_cJSON(addr,cJSON_GetObjectItem(item,"address"));
                         copy_cJSON(txid,cJSON_GetObjectItem(item,"txid"));
-                        if ( is_limbotx(txid) != 0 )
-                            continue;
+                       // if ( is_limbotx(txid) != 0 )
+                       //     continue;
                         if ( strcmp(addr,coinaddr) == 0 && strcmp(txid,reftxid) == 0 )
                         {
                             if ( refscript != 0 )
@@ -616,7 +677,7 @@ uint64_t get_txid_vout(int32_t *nump,struct coin_info *cp,char *txid,uint32_t vo
 
 uint64_t get_unspent_value(char *script,struct coin_info *cp,struct telepod *pod)
 {
-    uint64_t unspentB,unspent = 0;
+    /*uint64_t unspentB,unspent = 0;
     struct coin_txid *tp;
     int32_t createdflag;
     //script[0] = 0;
@@ -636,6 +697,7 @@ uint64_t get_unspent_value(char *script,struct coin_info *cp,struct telepod *pod
         else unspent = unspentB;
     }
     printf("%s) txid unspent %.8f\n",pod->txid,dstr(unspent));
-    return(unspent);
+    return(unspent);*/
+    return(0);
 }
 #endif

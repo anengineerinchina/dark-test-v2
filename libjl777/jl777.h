@@ -7,7 +7,7 @@
 #ifndef gateway_jl777_h
 #define gateway_jl777_h
 
-#define HARDCODED_VERSION "0.199"
+#define HARDCODED_VERSION "0.256"
 
 #define NXT_GENESISTIME 1385294400
 #define MAX_LFACTOR 10
@@ -16,9 +16,16 @@
 #define MAX_ONION_LAYERS 7
 #define pNXT_SIG 0x99999999
 #define MAX_DROPPED_PACKETS 64
+#define MAX_MULTISIG_OUTPUTS 16
+#define MAX_MULTISIG_INPUTS 256
+#define MULTIGATEWAY_VARIANT 3
+#define MULTIGATEWAY_SYNCWITHDRAW 0
 
 #define ORDERBOOK_NXTID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
 #define GENESIS_SECRET "It was a bright cold day in April, and the clocks were striking thirteen."
+#define rand16() ((uint16_t)((rand() >> 8) & 0xffff))
+#define rand32() (((uint32_t)rand16()<<16) | rand16())
+#define rand64() ((long long)(((uint64_t)rand32()<<32) | rand32()))
 
 #define MAX_PRICE 1000000.f
 #define NUM_BARPRICES 16
@@ -57,7 +64,6 @@
 #define NODECOIN_SIG 0x63968736
 //#define NXTCOINSCO_PORT 8777
 //#define NXTPROTOCOL_WEBJSON 7777
-#define SUPERNET_PORT 7777
 #define BTCD_PORT 14631
 
 #define NUM_GATEWAYS 3
@@ -72,9 +78,6 @@
 #define DEFAULT_NXT_DEADLINE 720
 #define SATOSHIDEN 100000000L
 #define NXT_TOKEN_LEN 160
-#define MAX_NXT_STRLEN 24
-#define MAX_NXTTXID_LEN MAX_NXT_STRLEN
-#define MAX_NXTADDR_LEN MAX_NXT_STRLEN
 #define POLL_SECONDS 10
 #define NXT_ASSETLIST_INCR 100
 #define SATOSHIDEN 100000000L
@@ -251,7 +254,7 @@ struct NXThandler_info
     void *handlerdata;
     char *origblockidstr,lastblock[256],blockidstr[256];
     queue_t hashtable_queue[2];
-    struct hashtable **Pservers_tablep,**NXTaccts_tablep,**NXTassets_tablep,**NXTasset_txids_tablep,**NXTguid_tablep,**otheraddrs_tablep,**Telepathy_tablep;//,**Storage_tablep,**Private_tablep;
+    struct hashtable **Pservers_tablep,**NXTaccts_tablep,**NXTassets_tablep,**NXTasset_txids_tablep,**otheraddrs_tablep,**Telepathy_tablep,**redeemtxids,**coin_txidinds,**coin_txidmap;//,**Storage_tablep,**Private_tablep;,**NXTguid_tablep,
     cJSON *accountjson;
     //FILE *storage_fps[2];
     uv_udp_t *udp;
@@ -259,7 +262,7 @@ struct NXThandler_info
     char pubkeystr[crypto_box_PUBLICKEYBYTES*2+1],myhandle[64];
     bits256 mypubkey,myprivkey;
     uint64_t coins[4];
-    int32_t initassets,Lfactor;
+    int32_t initassets,Lfactor,gatewayid,gensocks[256];
     int32_t height,extraconfirms,maxpopdepth,maxpopheight,lastchanged,GLEFU,numblocks,timestamps[1000 * 365 * 10];
     int32_t isudpserver,istcpserver,numPrivacyServers;
     char ipaddr[64],dispname[128],groupname[128];
@@ -301,60 +304,101 @@ struct NXT_protocol
 
 struct NXT_protocol *NXThandlers[1000]; int Num_NXThandlers;
 
-struct rawtransaction
+//union _coin_value_ptr { char *script; char *coinbase; };
+
+struct coin_txidind
 {
-    struct coin_value *inputs[MAX_COIN_INPUTS];
-    char *destaddrs[MAX_COIN_OUTPUTS],txid[MAX_COINADDR_LEN];
-    int64_t amount,change,inputsum,destamounts[MAX_COIN_OUTPUTS];
-    int32_t numoutputs,numinputs,completed,broadcast,confirmed;
-    char *rawtxbytes,*signedtx;
+    int64_t modified;
+    uint64_t redeemtxid,value,unspent;
+    struct address_entry entry;
+    int32_t numvouts,numinputs;
+    uint32_t seq0,seq1;
+    char coinaddr[MAX_COINADDR_LEN],txid[MAX_COINTXID_LEN],indstr[MAX_NXTADDR_LEN],*script;
 };
 
-union _coin_value_ptr { char *script; char *coinbase; };
+struct coin_txidmap
+{
+    uint64_t modified;
+    uint32_t blocknum;
+    uint16_t txind,v;
+    char txidmapstr[MAX_COINTXID_LEN];
+};
 
-struct coin_value
+/*struct coin_value
 {
     int64_t modified,value;
     char *txid;
-    struct coin_txid *parent,*spent,*pendingspend;
+    struct coin_txidind *parent,*spent,*pendingspend;
     union _coin_value_ptr U;
     int32_t parent_vout,spent_vin,pending_spendvin,isconfirmed,iscoinbase,isinternal;
     char coinaddr[MAX_COINADDR_LEN];
-};
+};*/
 
-struct coin_txid
+struct unspent_info
 {
-    int64_t modified;
-    uint64_t confirmedAMbits,NXTxferbits,redeemtxid;
-    char *decodedrawtx;
-    int32_t numvins,numvouts,hasinternal,height;
-    struct coin_value **vins,**vouts;
-    char txid[MAX_COINTXID_LEN];
+    int64_t maxunspent,unspent,maxavail,minavail;
+    struct coin_txidind **vps,*maxvp,*minvp;
+    int32_t maxvps,num;
 };
 
-struct coincache_info
+struct rawtransaction
+{
+    struct coin_txidind *inputs[MAX_MULTISIG_INPUTS];
+    char *destaddrs[MAX_MULTISIG_OUTPUTS],txid[MAX_COINADDR_LEN];
+    uint64_t redeems[MAX_MULTISIG_OUTPUTS+MAX_MULTISIG_INPUTS];
+    int64_t amount,change,inputsum,destamounts[MAX_MULTISIG_OUTPUTS];
+    int32_t numoutputs,numinputs,completed,broadcast,confirmed,numredeems;
+    uint32_t batchcrc;
+    long batchsize;
+    char *rawtxbytes,*signedtx;
+    char batchsigned[56000];
+};
+
+struct server_request_header { int32_t retsize,argsize,variant,funcid; };
+
+struct withdraw_info
+{
+    struct server_request_header H;
+    uint64_t modified,AMtxidbits,approved[16];
+    int64_t amount,moneysent;
+    int32_t coinid,srcgateway,destgateway,twofactor,authenticated,submitted,confirmed;
+    char withdrawaddr[64],NXTaddr[MAX_NXTADDR_LEN],redeemtxid[MAX_NXTADDR_LEN],comment[1024];
+    //struct rawtransaction rawtx;
+    char cointxid[MAX_COINTXID_LEN];
+};
+
+struct batch_info
+{
+    struct withdraw_info W;
+    struct rawtransaction rawtx;
+};
+
+/*struct coincache_info
 {
     FILE *cachefp,*blocksfp;
     struct hashtable *coin_txids;
     char **blocks,*ignorelist;
     int32_t ignoresize,lastignore,numblocks,purgedblock;
-};
+};*/
 
 struct coin_info
 {
     int32_t timestamps[100];
-    struct coincache_info CACHE;
+    struct batch_info BATCH,withdrawinfos[16];
+    //struct coincache_info CACHE;
+    struct unspent_info unspent;
+    portable_mutex_t consensus_mutex;
     //struct pingpong_queue podQ;
     cJSON *json;
     struct hashtable *telepods; void *changepod; uint64_t min_telepod_satoshis;
-    void **logs;
+    //void **logs;
     cJSON *ciphersobj;
     char privateaddr[128],privateNXTACCTSECRET[2048],coinpubkey[1024],privateNXTADDR[64];
     char srvpubaddr[128],srvNXTACCTSECRET[2048],srvcoinpubkey[1024],srvNXTADDR[64];
     
     char name[64],backupdir[512],privacyserver[64],myipaddr[64],transporteraddr[128];
     char *userpass,*serverport,assetid[64],*marker,*tradebotfname,*pending_ptr;
-    uint64_t srvpubnxtbits,privatebits,dust,NXTfee_equiv,txfee,markeramount,lastheighttime,height,blockheight,RTblockheight,nxtaccts[512];
+    uint64_t *limboarray,srvpubnxtbits,privatebits,dust,NXTfee_equiv,txfee,markeramount,lastheighttime,blockheight,RTblockheight,nxtaccts[512];
     int32_t coinid,maxevolveiters,initdone,nohexout,use_addmultisig,min_confirms,minconfirms,estblocktime,forkheight,backupcount,enabled,savedtelepods,M,N,numlogs,clonesmear,pending_ptrmaxlen,srvport,numnxtaccts;
 };
 
@@ -562,12 +606,11 @@ char Server_NXTaddrs[256][MAX_JSON_FIELD],SERVER_PORTSTR[MAX_JSON_FIELD];
 char *MGW_blacklist[256],*MGW_whitelist[256],ORIGBLOCK[MAX_JSON_FIELD],NXTISSUERACCT[MAX_JSON_FIELD];
 cJSON *MGWconf,**MGWcoins;
 uint64_t MIN_NQTFEE = SATOSHIDEN;
-int32_t MIN_NXTCONFIRMS = 10;
+int32_t SERVER_PORT,MIN_NXTCONFIRMS = 10;
 uint32_t GATEWAY_SIG;   // 3134975738 = 0xbadbeefa;
 int32_t DGSBLOCK = 213000;
 int32_t NXT_FORKHEIGHT,Finished_init,Finished_loading,Historical_done,Debuglevel = 0;
-char NXTAPIURL[MAX_JSON_FIELD] = { "http://127.0.0.1:6876/nxt" };
-char NXTSERVER[MAX_JSON_FIELD] = { "http://127.0.0.1:6876/nxt?requestType" };
+char NXTSERVER[MAX_JSON_FIELD],NXTAPIURL[MAX_JSON_FIELD];
 
 struct hashtable *orderbook_txids;
 
@@ -578,7 +621,7 @@ static long server_xferred;
 int Servers_started;
 queue_t P2P_Q,sendQ,JSON_Q,udp_JSON,storageQ,cacheQ,BroadcastQ,NarrowQ,ResultsQ;
 //struct pingpong_queue PeerQ;
-int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP,USESSL;
+int32_t Num_in_whitelist,IS_LIBTEST,APIPORT,APISLEEP,USESSL,ENABLE_GUIPOLL;
 uint32_t *SuperNET_whitelist;
 int32_t Historical_done;
 struct NXThandler_info *Global_mp;
@@ -645,9 +688,7 @@ uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,char *
     uint64_t addr;
     uint8_t hash[32];
     calc_sha256(0,mysecret,(unsigned char *)pass,(int32_t)strlen(pass));
-    mysecret[0] &= 248;
-    mysecret[31] &= 127;
-    mysecret[31] |= 64;
+    mysecret[0] &= 248, mysecret[31] &= 127, mysecret[31] |= 64;
     curve25519_donna(mypublic,mysecret,basepoint);
     calc_sha256(0,hash,mypublic,32);
     memcpy(&addr,hash,sizeof(addr));
@@ -678,16 +719,18 @@ double _pairave(float valA,float valB)
 #include "dbqueue.h"
 #include "storage.h"
 #include "udp.h"
-#include "coincache.h"
+//#include "coincache.h"
 #include "kademlia.h"
 #include "packets.h"
 #include "mofnfs.h"
 #include "contacts.h"
 #include "deaddrop.h"
 #include "telepathy.h"
+#include "NXTsock.h"
 #include "bitcoind.h"
 #include "atomic.h"
 #include "teleport.h"
+#include "mgw.h"
 
 #include "feeds.h"
 #include "orders.h"
