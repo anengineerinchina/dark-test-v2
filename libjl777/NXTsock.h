@@ -6,6 +6,10 @@
 #ifndef NXTAPI_NXTsock_h
 #define NXTAPI_NXTsock_h
 
+#ifdef _WIN32
+#define AI_NUMERICSERV 0x00000008
+#endif
+
 typedef int32_t (*handler)();
 //struct server_request_header { int32_t retsize,argsize,variant,funcid; };
 struct handler_info { handler variant_handler; int32_t variant,funcid; long argsize,retsize; char **whitelist; };
@@ -307,7 +311,11 @@ int32_t wait_for_client(int32_t *sdp,char str[INET6_ADDRSTRLEN],int32_t variant)
 		else
 		{
 			getpeername(sdconn, (struct sockaddr *)&clientaddr,&addrlen);
-			if ( inet_ntop(AF_INET, &clientaddr.sin_addr, str, INET_ADDRSTRLEN) != 0 )
+	    	  #ifdef _WIN32
+	    	  if ( getnameinfo(AF_INET,&clientaddr.sin_addr,str,sizeof(clientaddr.sin_addr),0,0,NI_NUMERICHOST) == 0 )
+            	  #else
+               	  if ( inet_ntop(AF_INET, &clientaddr.sin_addr, str, INET_ADDRSTRLEN) != 0 )
+	   	  #endif		
               //  if ( inet_ntop(AF_INET6, &clientaddr.sin6_addr, str, INET6_ADDRSTRLEN) != 0 )
 			{
                 printf("variant.%d [Client address is %20s | Client port is %6d] sdconn.%d\n",variant,str,ntohs(clientaddr.sin_port),sdconn);
