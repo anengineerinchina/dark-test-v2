@@ -19,12 +19,12 @@ endef
 define $(PKG)_BUILD
     cd '$(1)' && ./configure \
         $(MXE_CONFIGURE_OPTS) \
-        --with-gnutls \
+        --without-gnutls \
         --without-ssl \
-        --with-libidn \
+        --without-libidn \
         --enable-sspi \
         --enable-ipv6 \
-        --with-libssh2
+        --without-libssh2
     $(MAKE) -C '$(1)' -j '$(JOBS)' install $(MXE_DISABLE_DOCS)
     ln -sf '$(PREFIX)/$(TARGET)/bin/curl-config' '$(PREFIX)/bin/$(TARGET)-curl-config'
 
