@@ -83,12 +83,18 @@ uint64_t _align16(uint64_t ptrval) { if ( (ptrval & 15) != 0 ) ptrval += 16 - (p
 
 void *alloc_aligned_buffer(uint64_t allocsize)
 {
+	#ifndef _WIN32
 	extern int posix_memalign (void **__memptr, size_t __alignment, size_t __size);
+	#endif
 	if ( allocsize > ((uint64_t)192L)*1024*1024*1024 )
 		printf("%llu\n",(long long)allocsize),fatal("negative allocsize");
 	void *ptr;
 	allocsize = _align16(allocsize);
+	#ifndef _WIN32
 	if ( posix_memalign(&ptr,16,allocsize) != 0 )
+	#else
+	if ( ptr = _aligned_malloc(16,allocsize) != 0 )
+	#endif
 	{
 		printf("alloc_aligned_buffer can't get allocsize %llu\n",(long long)allocsize);
 		//fatal("can't posix_memalign()");

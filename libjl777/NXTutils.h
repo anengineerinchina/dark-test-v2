@@ -6,6 +6,9 @@
 #ifndef gateway_NXTutils_h
 #define gateway_NXTutils_h
 
+#ifndef in_addr_t
+#define in_addr_t uint32_t
+#endif
 
 char *load_file(char *fname,char **bufp,int64_t  *lenp,int64_t  *allocsizep)
 {
@@ -1555,7 +1558,12 @@ char *conv_ipv6(char *ipv6addr)
         {
             bytes += 12;
             ipv4bin = (in_addr_t *)bytes;
+
+	    #ifdef _WIN32
+	    if ( getnameinfo(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str),0,0,NI_NUMERICHOST) == 0 )
+            #else
             if ( inet_ntop(AF_INET,ipv4bin,ipv4str,sizeof(ipv4str)) == 0 )
+	    #endif
                 isok = 0;
         } else isok = 0;
     }
