@@ -4,7 +4,7 @@
 PKG             := libwebsockets
 $(PKG)_IGNORE   :=
 $(PKG)_VERSION  := 1.3-chrome37-firefox30
-$(PKG)_CHECKSUM := ee1005165346d2217db4a9c40c4711f741213557
+$(PKG)_CHECKSUM := 796835109651375848818b82a6eba5d8f24edb15
 $(PKG)_SUBDIR   := $(PKG)-$($(PKG)_VERSION)
 $(PKG)_FILE     := $(PKG)-$($(PKG)_VERSION).tar.gz
 $(PKG)_URL      := http://git.libwebsockets.org/cgi-bin/cgit/libwebsockets/snapshot/$($(PKG)_FILE)
